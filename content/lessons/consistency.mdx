@@ -1,0 +1,20 @@
+Copies can briefly disagree: your profile update reached the primary but not yet a replica. A **consistency model** is the promise about what a read returns after a write.
+
+| Model | Promise | Use it for |
+| --- | --- | --- |
+| **Strong** | Every later read, anywhere, sees the write, as if there were one copy. Costs latency and availability. | Balances, payments, inventory, permissions. Deposit ₹10, and an immediate ₹10 payment must see the deposit. |
+| **Eventual** | Replicas converge once updates stop. Fast and available, but reads may be stale. | Likes, views, follower counts, feeds. A replica showing 69k followers while the primary has 70k is harmless. |
+| **Causal** | Effects never appear before their causes. | Comments: a reply never shows up before the post it replies to. |
+| **Read-your-writes** | You see your own updates at once; others may see them later. | Your new post tops your own feed while fan-out to followers takes a few seconds. |
+
+<Callout type="idea" title={"Ask \"what does a stale read cost?\""}>
+
+If a stale read could lose money or double-sell a seat, you need strong consistency. If the worst case is a like count that's a few seconds behind, eventual is fine and much cheaper.
+
+</Callout>
+
+<Callout type="analogy" title="The family WhatsApp group">
+
+Mum's message reaches some phones before others (eventual). Nobody sees a reply before the message it answers (causal). And you always see the message you just sent (read-your-writes).
+
+</Callout>

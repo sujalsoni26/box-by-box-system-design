@@ -1,0 +1,19 @@
+```text
+normalized:   users(id, name)   posts(id, user_id, text)
+denormalized: posts(id, user_id, author_name, text, like_count)
+```
+
+|  | Normalized: each fact stored once | Denormalized: data duplicated for reads |
+| --- | --- | --- |
+| Reads | Need JOINs (slower at scale) | No joins (fast) |
+| Writes | One place to update | Many rows (a rename is a mass update) |
+| Integrity | Strong | Copies can drift |
+| Good for | Write-heavy, correctness-critical data (banking, orders) | Read-heavy hot paths (feeds, dashboards, analytics) |
+
+<Callout type="idea" title="Rule of thumb">
+
+<mark>Normalize by default; denormalize the hot read paths that measurements show are bottlenecked.</mark> NoSQL designs are often denormalized by nature.
+
+</Callout>
+
+In our app, the feed shows the author's name and like count on every post. Joining `users` and counting likes for every feed view is expensive, so storing `author_name` and `like_count` on the post is a classic denormalization. The price: when someone renames their account, many rows change.

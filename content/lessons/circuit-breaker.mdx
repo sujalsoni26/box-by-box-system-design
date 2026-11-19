@@ -1,0 +1,30 @@
+When a dependency is dead, every caller waiting on timeouts and retries ties up threads and spreads the outage: a **cascading failure**. A **circuit breaker** tracks failures and stops calling a failing dependency, like a house's electrical breaker that trips before the wiring catches fire.
+
+- **Closed:** calls pass; failures are counted.
+- **Open:** past the threshold, calls <mark>fail fast</mark> with a fallback (cached data, a default), giving the dependency room to recover.
+- **Half-open:** after a cooldown, a few trial calls go through; success closes the breaker, failure reopens it.
+
+<Interactive name="circuit-breaker" />
+
+<Mermaid caption="Circuit-breaker states. Open fails fast; Half-open lets a few trial calls decide." chart={`stateDiagram-v2
+    state "Half-open" as HalfOpen
+    [*] --> Closed
+    Closed --> Open: failures pass the threshold
+    Open --> HalfOpen: cooldown ends
+    HalfOpen --> Closed: trial calls succeed
+    HalfOpen --> Open: a trial call fails
+`} />
+
+<Callout type="idea" title="Timeouts feed the breaker">
+
+A breaker counts timeouts as failures, so the two work together: the timeout stops one call from hanging, and the breaker stops thousands of calls from even trying.
+
+</Callout>
+
+Tools: Resilience4j, service meshes (Istio/Envoy). Netflix's Hystrix popularized the pattern and is now in maintenance mode.
+
+<DeepDive title="Go deeper: bulkheads">
+
+A ship is split into watertight compartments (bulkheads) so one leak can't sink it. The software version gives each dependency its own limited pool of threads or connections. If the recommendations service hangs, it can exhaust only its own pool, and calls to payments still have threads to run on. Breakers stop the calls; bulkheads limit the damage while they happen.
+
+</DeepDive>

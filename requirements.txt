@@ -1,0 +1,35 @@
+# Box by Box: requirements
+#
+# This is a Node.js project. `npm install` reads package.json / package-lock.json,
+# not this file. It lists what you need and the exact versions the app is built and tested with.
+
+# --- System requirements ---
+node>=20.9            # tested with Node.js 26.13.1 (LTS)
+npm>=10               # tested with npm 11.20.0
+# A modern browser: Chrome, Edge, Firefox or Safari
+
+# --- Runtime dependencies ---
+next==16.4.6
+react==19.3.0
+react-dom==19.3.0
+@next/mdx==16.4.6
+@mdx-js/loader==3.1.1
+@mdx-js/react==3.1.1
+remark-gfm==4.0.1
+shiki==4.6.0
+@shikijs/rehype==4.6.0
+mermaid==12.3.0
+motion==14.14.0
+zustand==5.1.0
+lucide-react==1.76.0
+
+# --- Development dependencies ---
+typescript==5.9.3
+tailwindcss==4.3.3
+@tailwindcss/turbopack==4.3.3
+eslint==9.39.5
+eslint-config-next==16.4.6
+@types/node==20.19.43
+@types/react==19.3.0
+@types/react-dom==19.3.0
+@types/mdx==2.0.14

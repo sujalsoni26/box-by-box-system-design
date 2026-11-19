@@ -1,0 +1,24 @@
+| What | Formula |
+| --- | --- |
+| Average QPS | DAU × actions per user per day ÷ 10⁵ |
+| Peak QPS | average × 2–3 (5–10× for IPL matches, flash sales, ticket drops) |
+| Read QPS | write QPS × reads per write |
+| Storage | writes per day × object size × retention days × replication factor (3) |
+| Ingress bandwidth | write QPS × average upload size |
+| Egress bandwidth | read QPS × average response size |
+| Cache size | ≈ 20% of the daily read volume (80/20 rule: a fifth of the data gets most reads) |
+| Servers | peak QPS ÷ QPS per server, plus headroom |
+| Requests in flight (Little's Law) | QPS × average latency → threads and DB connections needed |
+
+- QPS (queries per second) is also called RPS or TPS.
+- Only MAU given? Assume DAU ≈ 25–50% of MAU.
+- **Design for peak, not average:** LeetCode sees its surge in a contest's first 5 minutes.
+- Write ratios as reads:writes (a URL shortener is 100:1), and say every assumption out loud before you compute.
+
+<Interactive name="estimator" />
+
+<Callout type="interview" title="Talk while you compute">
+
+"Assume 100M DAU, 5 posts read per user per day, so 5 × 10⁸ reads ÷ 10⁵ s ≈ 5k QPS average, maybe 15k at peak." The interviewer is grading the reasoning, not the decimal places, and can correct an assumption before it snowballs.
+
+</Callout>

@@ -1,0 +1,31 @@
+**SQL / relational** databases (PostgreSQL, MySQL) store tables with a fixed schema, foreign keys and JOINs, and give strong ACID transactions (the [next lesson](/learn/acid)).
+
+**NoSQL** is a family, not one thing:
+
+| Type | Data shape | Examples | Good for |
+| --- | --- | --- | --- |
+| Key-value | key → value | Redis, DynamoDB | Sessions, caching, simple lookups |
+| Document | JSON-like documents | MongoDB | Profiles, catalogs, flexible fields |
+| Wide-column | Rows with large, flexible column sets spread over many nodes | Cassandra, HBase | Massive write-heavy data: messages, events, time series |
+| Graph | Nodes + edges | Neo4j | Social graphs, recommendations, fraud detection |
+
+<Callout type="warning" title={"Myth: \"SQL can't scale, NoSQL always does\""}>
+
+Relational databases scale far with replicas and sharding, and distributed SQL databases such as Spanner and CockroachDB exist. Many NoSQL databases now support transactions too.
+
+</Callout>
+
+## How to choose
+
+- **Data model**: relational, or flexible?
+- **Access patterns**: complex joins, or key lookups at huge scale?
+- **Consistency**: is it money, or likes?
+- **Expected scale**.
+
+<mark>Default to relational.</mark> Large systems often run both, which is called **polyglot persistence**: Instagram has used PostgreSQL alongside Cassandra.
+
+<Callout type="idea" title="Capacity to remember">
+
+One PostgreSQL node handles roughly **1–5k writes/s** and about **10× more reads** (see [Numbers to memorize](/learn/estimation-numbers)).
+
+</Callout>

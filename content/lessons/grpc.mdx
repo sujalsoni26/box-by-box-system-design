@@ -1,0 +1,54 @@
+**RPC** (Remote Procedure Call) means calling a function on another machine as if it were local: `userService.GetUser(42)`. **gRPC** is Google's open-source RPC framework, built for chatty internal service-to-service traffic.
+
+## How it works
+
+<Steps>
+
+1. Define services and messages in a `.proto` file (**Protocol Buffers**).
+2. **Generate** client and server code in many languages.
+3. Send compact **binary** messages over **HTTP/2**.
+
+</Steps>
+
+```protobuf
+service UserService {
+  rpc GetUser (GetUserRequest) returns (User);
+}
+```
+
+**Serialization** turns in-memory data into bytes. Protobuf is <mark>smaller and faster to parse than JSON</mark>.
+
+<Comparison>
+
+<ComparisonItem title="Pros">
+
+- Fast, compact binary messages
+- Strongly typed contract: mismatches are caught at build time
+- Streaming in both directions
+- Many calls share one connection
+
+</ComparisonItem>
+
+<ComparisonItem title="Cons">
+
+- Not human-readable
+- Browsers need gRPC-Web or a proxy
+- Services couple to the shared schema
+
+</ComparisonItem>
+
+</Comparison>
+
+<Callout type="idea" title="Rule of thumb">
+
+Use gRPC for internal calls; keep REST for public and browser APIs.
+
+</Callout>
+
+Trivia: the "g" isn't officially "Google". The project gives it a new meaning each release.
+
+<DeepDive title="Go deeper: how protobuf stays small and compatible">
+
+Protobuf sends **field numbers**, not field names. `string name = 2;` travels as a tiny tag "2" plus the value, while JSON repeats `"name":` in every message. Because fields are identified by number, you can add new fields and old clients simply ignore them. The one rule: never reuse or renumber a field.
+
+</DeepDive>

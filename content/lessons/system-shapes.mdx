@@ -1,0 +1,17 @@
+| Shape | Examples | Design focus |
+| --- | --- | --- |
+| Read-heavy, tiny objects | URL shortener, timelines, news feeds | Caching, read replicas |
+| Storage- and bandwidth-heavy | Google Drive, YouTube, Netflix, Dropbox | Object storage, CDN, chunking, deduplication, delta sync, metadata DB |
+| Write-heavy streams | Chat, metrics, logs, event pipelines | Append-only logs (Kafka), sequential I/O, queues, partitioning |
+
+<Callout type="interview" title="Find the dominant number">
+
+Ask the interviewer which number dominates (QPS, storage or bandwidth), confirm your assumptions, then design for that number.
+
+</Callout>
+
+<DeepDive title="Go deeper: why write-heavy systems love append-only logs">
+
+Recall the latency table (see [Latency, throughput and the numbers to know](/learn/latency)): one disk seek costs about as much as reading half a megabyte sequentially. Appending every write to the end of a log turns random writes into sequential ones, which is why Kafka and LSM-tree databases (Cassandra, RocksDB) handle enormous write rates on ordinary disks.
+
+</DeepDive>
