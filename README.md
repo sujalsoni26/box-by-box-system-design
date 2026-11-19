@@ -14,7 +14,7 @@ Built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, MDX, Zustand, Motio
 
 ## Run
 
-Requires Node.js 20.9 or newer (see `requirements.txt`).
+Requires Node.js 20.9 or newer. Versions of everything used are in [TECH_STACK.md](TECH_STACK.md).
 
 ```bash
 npm install
