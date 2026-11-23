@@ -344,7 +344,7 @@ function IndexScan() {
                 size="sm"
                 variant="ghost"
                 aria-pressed={Math.abs(pr.exp - exp) < 1e-6}
-                className="aria-pressed:bg-accent-soft aria-pressed:text-accent"
+                className="aria-pressed:bg-accent-soft aria-pressed:text-link"
                 onClick={() => changeExp(pr.exp)}
               >
                 {pr.label}

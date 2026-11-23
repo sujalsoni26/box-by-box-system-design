@@ -16,15 +16,21 @@ export interface PreferencesState {
   theme: ThemePreference;
   /** Glossary terms the learner knows; their inline hints are no longer shown. */
   knownTerms: string[];
+  /**
+   * Site-wide animation speed for pages and the companion. `null` follows the system:
+   * reduced when the OS asks for reduced motion, otherwise normal.
+   */
+  animationSpeed: AnimationLevel | null;
   companion: CompanionSettings;
 }
 
 interface PreferencesActions {
   setTheme: (theme: ThemePreference) => void;
   setTermKnown: (term: string, known: boolean) => void;
+  /** Pass null to follow the system's reduced-motion setting again. */
+  setAnimationSpeed: (speed: AnimationLevel | null) => void;
   setCompanion: (patch: Partial<CompanionSettings>) => void;
   setCompanionPosition: (position: CompanionPosition | null) => void;
-  setAnimations: (level: AnimationLevel) => void;
   resetCompanion: () => void;
   bumpCompanionStat: (stat: keyof CompanionStats) => void;
   /** Wear an accessory in its slot, or pass null to take the slot's accessory off. */
@@ -36,7 +42,6 @@ export const defaultCompanionStats: CompanionStats = { feeds: 0, pets: 0, plays:
 
 export const defaultCompanionSettings: CompanionSettings = {
   enabled: true,
-  animations: "normal",
   physics: true,
   studyTips: true,
   sound: false,
@@ -46,20 +51,34 @@ export const defaultCompanionSettings: CompanionSettings = {
   announced: [],
 };
 
+const ANIMATION_LEVELS: readonly AnimationLevel[] = ["normal", "slow", "reduced"];
+
+/**
+ * Reads the saved speed. Before this setting existed, the companion had its own
+ * "Animations: normal | reduced | off"; reduced and off map to "reduced", normal to "follow the system".
+ */
+function migrateAnimationSpeed(p: Record<string, unknown>): AnimationLevel | null {
+  const saved = p.animationSpeed;
+  if (typeof saved === "string" && (ANIMATION_LEVELS as readonly string[]).includes(saved)) return saved as AnimationLevel;
+  const legacy = (p.companion as { animations?: unknown } | undefined)?.animations;
+  return legacy === "reduced" || legacy === "off" ? "reduced" : null;
+}
+
 export const usePreferencesStore = create<PreferencesState & PreferencesActions>()(
   persist(
     (set) => ({
       theme: "system",
       knownTerms: [],
+      animationSpeed: null,
       companion: defaultCompanionSettings,
       setTheme: (theme) => set({ theme }),
       setTermKnown: (term, known) =>
         set((s) => ({
           knownTerms: known ? Array.from(new Set([...s.knownTerms, term])) : s.knownTerms.filter((t) => t !== term),
         })),
+      setAnimationSpeed: (animationSpeed) => set({ animationSpeed }),
       setCompanion: (patch) => set((s) => ({ companion: { ...s.companion, ...patch } })),
       setCompanionPosition: (position) => set((s) => ({ companion: { ...s.companion, position } })),
-      setAnimations: (animations) => set((s) => ({ companion: { ...s.companion, animations } })),
       resetCompanion: () => set({ companion: defaultCompanionSettings }),
       bumpCompanionStat: (stat) =>
         set((s) => ({
@@ -82,12 +101,15 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
       version: 1,
       storage: createJSONStorage(() => persistenceAdapter),
       skipHydration: true,
+      partialize: (s) => ({ theme: s.theme, knownTerms: s.knownTerms, animationSpeed: s.animationSpeed, companion: s.companion }),
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<PreferencesState>;
-        const c: Partial<CompanionSettings> = p.companion ?? {};
+        const p = (persisted ?? {}) as Partial<PreferencesState> & Record<string, unknown>;
+        const c = { ...(p.companion ?? {}) } as Partial<CompanionSettings> & { animations?: unknown };
+        delete c.animations;
         return {
           ...current,
           ...p,
+          animationSpeed: migrateAnimationSpeed(p),
           companion: {
             ...defaultCompanionSettings,
             ...c,

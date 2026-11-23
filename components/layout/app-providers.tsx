@@ -40,11 +40,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   useThemeSync();
   const motionLevel = useMotionLevel();
 
+  // data-motion drives the CSS side (globals.css): "slow" doubles durations, "reduced" removes motion.
+  // Always set (also "normal") so an explicit choice overrides the OS media-query fallback.
   useEffect(() => {
-    const root = document.documentElement;
-    if (motionLevel === "normal") root.removeAttribute("data-motion");
-    else root.setAttribute("data-motion", motionLevel);
+    document.documentElement.setAttribute("data-motion", motionLevel);
   }, [motionLevel]);
 
-  return <MotionConfig reducedMotion={motionLevel === "normal" ? "never" : "always"}>{children}</MotionConfig>;
+  return <MotionConfig reducedMotion={motionLevel === "reduced" ? "always" : "never"}>{children}</MotionConfig>;
 }

@@ -97,7 +97,7 @@ function SequenceRow({ row, reduced }: { row: Row; reduced: boolean }) {
             {row.lost ? <span className="font-sans font-bold"> · lost on the network</span> : null}
           </span>
           {row.detail ? (
-            <span className={cn("rounded bg-surface-2 px-1 font-mono text-[0.72rem]", row.detail.startsWith("no ") ? "text-ink-3" : "text-accent")}>{row.detail}</span>
+            <span className={cn("rounded bg-surface-2 px-1 font-mono text-[0.72rem]", row.detail.startsWith("no ") ? "text-ink-3" : "text-link")}>{row.detail}</span>
           ) : null}
           <span className="sr-only">{row.dir === "out" ? "Client to server" : "Server to client"}</span>
           <div className="w-full">
@@ -211,7 +211,7 @@ function KeyStore({ store, hitKey }: { store: FlowState["store"]; hitKey: string
             ) : null}
             {store.map((k) => (
               <tr key={k.key} className={cn("border-t border-line transition-colors duration-500", k.key === hitKey && "bg-good-soft")}>
-                <td className="py-1 pr-2 font-mono text-accent">{k.key}</td>
+                <td className="py-1 pr-2 font-mono text-link">{k.key}</td>
                 <td className="py-1 pr-2 font-mono">201 · order #{k.order}</td>
                 <td className={cn("py-1 text-right tabular-nums", k.hits > 0 && "font-bold text-good")}>{k.hits}</td>
               </tr>

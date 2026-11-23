@@ -128,7 +128,7 @@ function WindowView({ sim, onDemo }: { sim: LimiterSim; onDemo: () => void }) {
           Run the boundary burst
         </Button>
         {armedIn !== null ? (
-          <span className="font-mono text-[0.82rem] tabular-nums text-accent">
+          <span className="font-mono text-[0.82rem] tabular-nums text-link">
             {armedIn > 0 ? `armed: fires in ${armedIn.toFixed(1)} s` : "firing…"}
           </span>
         ) : null}
@@ -154,7 +154,7 @@ function Timeline({ sim, reduced }: { sim: LimiterSim; reduced: boolean }) {
         {sim.mode === "fixed"
           ? boundariesInView(sim).map((b) => (
               <span key={b} className="absolute inset-y-0 border-l-2 border-accent/60" style={{ left: pos(sim.now, b) }}>
-                <span className="absolute left-1 top-1 whitespace-nowrap font-mono text-[0.6rem] text-accent">reset</span>
+                <span className="absolute left-1 top-1 whitespace-nowrap font-mono text-[0.6rem] text-link">reset</span>
               </span>
             ))
           : null}

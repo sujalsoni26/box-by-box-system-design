@@ -359,7 +359,7 @@ function FeedCard({ s }: { s: RepState }) {
         ) : null}
       </ul>
       {pinned ? (
-        <p className="font-mono text-[0.72rem] tabular-nums text-accent">
+        <p className="font-mono text-[0.72rem] tabular-nums text-link">
           your reads are pinned to the primary for {Math.ceil((s.rywUntil - s.now) / 1000)} s
         </p>
       ) : null}

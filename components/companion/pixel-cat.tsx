@@ -197,21 +197,21 @@ export interface PixelCatProps {
   className?: string;
 }
 
-function hopFor(mood: CompanionMood, animated: boolean): { y: number | number[]; transition: Transition } {
+function hopFor(mood: CompanionMood, animated: boolean, k = 1): { y: number | number[]; transition: Transition } {
   if (!animated) return { y: 0, transition: { duration: 0 } };
   switch (mood) {
     case "walking":
-      return { y: [0, -1.6, 0], transition: { y: { duration: 0.36, repeat: Infinity, ease: "easeInOut" } } };
+      return { y: [0, -1.6, 0], transition: { y: { duration: 0.36 * k, repeat: Infinity, ease: "easeInOut" } } };
     case "celebrating":
-      return { y: [0, -12, 0, -4, 0], transition: { y: { duration: 0.9, ease: "easeOut" } } };
+      return { y: [0, -12, 0, -4, 0], transition: { y: { duration: 0.9 * k, ease: "easeOut" } } };
     case "happy":
-      return { y: [0, -5, 0], transition: { y: { duration: 0.45, ease: "easeOut" } } };
+      return { y: [0, -5, 0], transition: { y: { duration: 0.45 * k, ease: "easeOut" } } };
     case "eating":
-      return { y: [0, 1.6, 0], transition: { y: { duration: 0.32, repeat: 4, ease: "easeInOut" } } };
+      return { y: [0, 1.6, 0], transition: { y: { duration: 0.32 * k, repeat: 4, ease: "easeInOut" } } };
     case "playing":
-      return { y: [0, -3, 0], transition: { y: { duration: 0.3, ease: "easeOut" } } };
+      return { y: [0, -3, 0], transition: { y: { duration: 0.3 * k, ease: "easeOut" } } };
     default:
-      return { y: 0, transition: { y: { duration: 0.25, ease: "easeOut" } } };
+      return { y: 0, transition: { y: { duration: 0.25 * k, ease: "easeOut" } } };
   }
 }
 
@@ -226,7 +226,9 @@ function PixelCatImpl({
   className,
 }: PixelCatProps) {
   const pose = POSES[mood];
-  const animated = motionLevel === "normal";
+  const animated = motionLevel !== "reduced";
+  // Animation speed "slow" doubles every pose, beat and effect duration.
+  const k = motionLevel === "slow" ? 2 : 1;
   const svgRef = useRef<SVGSVGElement>(null);
   const moodRef = useRef(mood);
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -255,14 +257,14 @@ function PixelCatImpl({
       beat += 1;
       const current = POSES[moodRef.current];
       if (current.extras.includes("zzz")) {
-        running.push(animate(zLift, [0, -6, 0], { duration: 2.4, ease: "easeInOut" }));
+        running.push(animate(zLift, [0, -6, 0], { duration: 2.4 * k, ease: "easeInOut" }));
       } else {
-        if (BLINKABLE.has(current.eyes)) running.push(animate(blink, [1, 0.1, 1], { duration: 0.24, times: [0, 0.45, 1] }));
-        if (beat % 3 === 0) running.push(animate(tailFlick, [0, 9, -4, 0], { duration: 0.9, ease: "easeInOut" }));
-        if (beat % 4 === 2) running.push(animate(earTwitch, [0, -11, 0], { duration: 0.34, ease: "easeOut" }));
+        if (BLINKABLE.has(current.eyes)) running.push(animate(blink, [1, 0.1, 1], { duration: 0.24 * k, times: [0, 0.45, 1] }));
+        if (beat % 3 === 0) running.push(animate(tailFlick, [0, 9, -4, 0], { duration: 0.9 * k, ease: "easeInOut" }));
+        if (beat % 4 === 2) running.push(animate(earTwitch, [0, -11, 0], { duration: 0.34 * k, ease: "easeOut" }));
       }
       if (running.length > 8) running.splice(0, running.length - 8);
-      timer = window.setTimeout(play, 3200 + Math.random() * 4800);
+      timer = window.setTimeout(play, (3200 + Math.random() * 4800) * k);
     };
     timer = window.setTimeout(play, 1800 + Math.random() * 2500);
     return () => {
@@ -273,7 +275,7 @@ function PixelCatImpl({
       earTwitch.set(0);
       zLift.set(0);
     };
-  }, [ambient, animated, blink, tailFlick, earTwitch, zLift]);
+  }, [ambient, animated, k, blink, tailFlick, earTwitch, zLift]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -294,7 +296,7 @@ function PixelCatImpl({
         if (next === target) return;
         target = next;
         anim?.stop();
-        anim = animate(gazeX, next * 1.7, { duration: 0.25, ease: "easeOut" });
+        anim = animate(gazeX, next * 1.7, { duration: 0.25 * k, ease: "easeOut" });
       });
     };
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -304,13 +306,13 @@ function PixelCatImpl({
       anim?.stop();
       gazeX.set(0);
     };
-  }, [ambient, animated, gaze, gazeX]);
+  }, [ambient, animated, k, gaze, gazeX]);
 
-  const spring: Transition = animated ? { type: "spring", stiffness: 300, damping: 24, mass: 0.8 } : { duration: 0 };
-  const morph: Transition = animated ? { duration: 0.32, ease: "easeOut" } : { duration: 0 };
-  const fade: Transition = animated ? { duration: 0.2 } : { duration: 0 };
+  const spring: Transition = animated ? { type: "spring", stiffness: 300 / (k * k), damping: 24 / k, mass: 0.8 } : { duration: 0 };
+  const morph: Transition = animated ? { duration: 0.32 * k, ease: "easeOut" } : { duration: 0 };
+  const fade: Transition = animated ? { duration: 0.2 * k } : { duration: 0 };
   const has = (e: Extra) => pose.extras.includes(e);
-  const hop = hopFor(mood, animated);
+  const hop = hopFor(mood, animated, k);
   const walking = animated && mood === "walking";
 
   return (
@@ -530,7 +532,7 @@ function PixelCatImpl({
               animate={walking ? { ...paw, cy: [paw.cy, paw.cy - 2.2, paw.cy] } : paw}
               // Only cy loops while walking; everything else uses the spring, so nothing keeps the frame loop alive.
               transition={
-                walking ? { default: spring, cy: { duration: 0.36, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 } } : spring
+                walking ? { default: spring, cy: { duration: 0.36 * k, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 * k } } : spring
               }
             />
           ))}
@@ -560,7 +562,7 @@ function PixelCatImpl({
                   className="fill-bad"
                   initial={animated ? { opacity: 0, y: 4 } : false}
                   animate={animated ? { opacity: [0, 1, 1, 0], y: [4, 0, -4, -8] } : { opacity: 1 }}
-                  transition={animated ? { duration: 1.5, delay: h.delay, ease: "easeOut" } : { duration: 0 }}
+                  transition={animated ? { duration: 1.5 * k, delay: h.delay * k, ease: "easeOut" } : { duration: 0 }}
                 />
               </g>
             ))}
@@ -614,7 +616,7 @@ function PixelCatImpl({
                   className={s.tone}
                   initial={animated ? { scale: 0, rotate: -30 } : false}
                   animate={animated ? { scale: [0, s.scale * 1.15, s.scale], rotate: 0 } : { scale: s.scale }}
-                  transition={animated ? { duration: 0.55, delay: s.delay, ease: "easeOut" } : { duration: 0 }}
+                  transition={animated ? { duration: 0.55 * k, delay: s.delay * k, ease: "easeOut" } : { duration: 0 }}
                 />
               </g>
             ))}

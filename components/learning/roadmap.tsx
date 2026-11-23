@@ -41,7 +41,7 @@ export function Roadmap() {
               <span
                 className={cn(
                   "absolute left-0 top-0 grid size-10 place-items-center rounded-full border-2 bg-canvas font-mono text-sm font-bold",
-                  p.fraction === 1 ? "border-good bg-good text-accent-ink" : "border-accent text-accent",
+                  p.fraction === 1 ? "border-good bg-good text-accent-ink" : "border-accent text-link",
                 )}
               >
                 {p.fraction === 1 ? <Check aria-hidden="true" className="size-5" strokeWidth={3} /> : m.number}

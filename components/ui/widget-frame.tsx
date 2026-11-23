@@ -23,7 +23,7 @@ export function WidgetFrame({ title, hint, kicker = "Try it", children, note, cl
       )}
     >
       <header className="flex flex-col gap-0.5">
-        <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-accent">{kicker}</p>
+        <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-link">{kicker}</p>
         <h3 className="font-display text-lg font-bold leading-snug text-ink">{title}</h3>
         {hint ? <p className="text-[0.9rem] text-ink-2">{hint}</p> : null}
       </header>

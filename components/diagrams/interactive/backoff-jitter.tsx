@@ -279,7 +279,7 @@ function Scoreboard({ results, current }: { results: Record<Strategy, SimResult>
                 aria-current={active ? "true" : undefined}
                 className={cn("border-t border-line", active ? "bg-accent-soft font-bold text-ink" : "text-ink-2")}
               >
-                <th scope="row" className={cn("px-3 py-1.5 font-semibold", active && "text-accent")}>
+                <th scope="row" className={cn("px-3 py-1.5 font-semibold", active && "text-link")}>
                   {STRATEGY_NAME[value]}
                 </th>
                 <td className="px-2 py-1.5 text-right">

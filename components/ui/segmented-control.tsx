@@ -41,7 +41,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
               "rounded-[7px] font-bold transition-colors duration-150",
               size === "sm" ? "px-2.5 py-1 text-[0.76rem]" : "px-3 py-1.5 text-[0.84rem]",
-              active ? "bg-surface text-accent shadow-[var(--shadow-soft)]" : "text-ink-2 hover:text-ink",
+              active ? "bg-surface text-link shadow-[var(--shadow-soft)]" : "text-ink-2 hover:text-ink",
             )}
           >
             {o.label}

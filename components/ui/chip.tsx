@@ -5,7 +5,7 @@ import type { Level } from "@/types/curriculum";
 
 const tones: Record<Tone, string> = {
   neutral: "bg-surface-2 text-ink-2 border-line",
-  accent: "bg-accent-soft text-accent border-transparent",
+  accent: "bg-accent-soft text-link border-transparent",
   good: "bg-good-soft text-good border-transparent",
   bad: "bg-bad-soft text-bad border-transparent",
   warn: "bg-warn-soft text-warn border-transparent",

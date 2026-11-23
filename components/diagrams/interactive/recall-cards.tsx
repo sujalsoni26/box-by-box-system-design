@@ -84,7 +84,7 @@ function Face({ tag, text, back, known, children }: { tag: string; text: string;
         back ? "border-accent bg-accent-soft" : "border-line-strong bg-surface shadow-[var(--shadow-soft)]",
       )}
     >
-      <span className="flex items-center gap-2 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-accent">
+      <span className="flex items-center gap-2 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-link">
         {tag}
         {known ? <span className="rounded-full bg-good-soft px-2 py-px normal-case tracking-normal text-good">known</span> : null}
       </span>
@@ -142,7 +142,7 @@ function Card({ card, flipped, known, copy, direction, reduced, onFlip, ref }: C
               <Link
                 href={`/learn/${card.lessonSlug}`}
                 onClick={(e) => e.stopPropagation()}
-                className="mt-auto inline-flex w-fit items-center gap-1.5 text-[0.86rem] font-bold text-accent underline-offset-4 hover:underline"
+                className="mt-auto inline-flex w-fit items-center gap-1.5 text-[0.86rem] font-bold text-link underline-offset-4 hover:underline"
               >
                 <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0" />
                 Review lesson {lesson.number}: {lesson.title}

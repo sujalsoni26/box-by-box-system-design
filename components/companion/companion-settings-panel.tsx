@@ -1,6 +1,7 @@
 "use client";
 import { useId, useState, type ReactNode } from "react";
 import { Eye, LocateFixed } from "lucide-react";
+import { AnimationSpeedSetting } from "@/components/layout/animation-speed-setting";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { playBlip } from "@/lib/companion/sound";
@@ -8,17 +9,11 @@ import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useCompanionStore } from "@/stores/companion-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
-import type { AnimationLevel } from "@/types/companion";
 import { Wardrobe } from "./wardrobe";
 
 type OnOff = "on" | "off";
 const ON_OFF = [
   { value: "on", label: "On" },
-  { value: "off", label: "Off" },
-] as const;
-const ANIMATIONS = [
-  { value: "normal", label: "Normal" },
-  { value: "reduced", label: "Reduced" },
   { value: "off", label: "Off" },
 ] as const;
 
@@ -43,15 +38,14 @@ interface CompanionSettingsPanelProps {
 }
 
 /**
- * Companion settings: on/off, animations, physics, study tips, sound and reset position.
+ * Companion settings: on/off, animation speed (site-wide), physics, study tips, sound and reset position.
  * Everything persists through the preferences store. With the companion off, only a small
- * "Show companion" control (and the site-wide animations setting) remains.
+ * "Show companion" control (and the site-wide animation speed) remains.
  */
 export function CompanionSettingsPanel({ compact = false, className }: CompanionSettingsPanelProps) {
   const hydrated = useHydrated();
   const settings = usePreferencesStore((s) => s.companion);
   const setCompanion = usePreferencesStore((s) => s.setCompanion);
-  const setAnimations = usePreferencesStore((s) => s.setAnimations);
   const resetPosition = useCompanionStore((s) => s.resetPosition);
   const [note, setNote] = useState("");
   const headingId = useId();
@@ -70,19 +64,10 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
     );
   }
 
+  // The same site-wide setting as on the Progress page: it drives page and companion animations alike.
   const animationsRow = (
-    <Row
-      title={settings.enabled ? "Animations" : "Site animations"}
-      description="Reduced or Off also calms motion across the whole site."
-      compact={compact}
-    >
-      <SegmentedControl<AnimationLevel>
-        label="Animations"
-        options={ANIMATIONS}
-        value={settings.animations}
-        onChange={setAnimations}
-        size={size}
-      />
+    <Row title="Animation speed" description="Normal, slow, or reduced motion for the whole site, Cache included." compact={compact}>
+      <AnimationSpeedSetting compact />
     </Row>
   );
 

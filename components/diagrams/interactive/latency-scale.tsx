@@ -196,7 +196,7 @@ function Comparison({ a, b, units, reduced }: { a: Op; b: Op; units: Units; redu
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-3">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="font-display text-2xl font-bold tabular-nums text-accent">≈{ratioText(ratio)}×</span>
+        <span className="font-display text-2xl font-bold tabular-nums text-link">≈{ratioText(ratio)}×</span>
         <span className="text-[0.88rem] text-ink-2">slower, from one to the other</span>
       </div>
       <div className="relative h-7 rounded-md bg-surface" aria-hidden="true">

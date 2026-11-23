@@ -40,7 +40,7 @@ export function GlossaryBrowser() {
         {!query ? (
           <nav aria-label="Jump to letter" className="flex flex-wrap gap-1">
             {letters.map((l) => (
-              <a key={l} href={`#letter-${l}`} className="grid size-8 place-items-center rounded-md font-mono text-sm font-semibold text-ink-2 hover:bg-surface-2 hover:text-accent">
+              <a key={l} href={`#letter-${l}`} className="grid size-8 place-items-center rounded-md font-mono text-sm font-semibold text-ink-2 hover:bg-surface-2 hover:text-link">
                 {l}
               </a>
             ))}
@@ -62,13 +62,13 @@ export function GlossaryBrowser() {
               className="grid scroll-mt-40 gap-x-5 gap-y-1 px-5 py-4 target:bg-accent-soft sm:grid-cols-[7rem_minmax(0,1fr)_auto]"
             >
               {firstOfLetter ? <span id={`letter-${g.term[0].toUpperCase()}`} className="sr-only" /> : null}
-              <dt className={cn("font-mono text-base font-semibold [overflow-wrap:anywhere]", known ? "text-ink-3" : "text-accent")}>{g.term}</dt>
+              <dt className={cn("font-mono text-base font-semibold [overflow-wrap:anywhere]", known ? "text-ink-3" : "text-link")}>{g.term}</dt>
               <dd className="min-w-0">
                 <p className="font-bold text-ink">{g.full}</p>
                 <p className="text-sm text-ink-2">
                   {g.note}{" "}
                   {lesson ? (
-                    <Link href={`/learn/${lesson.slug}`} className="font-bold text-accent underline underline-offset-2">
+                    <Link href={`/learn/${lesson.slug}`} className="font-bold text-link underline underline-offset-2">
                       Lesson {lesson.number}
                     </Link>
                   ) : null}

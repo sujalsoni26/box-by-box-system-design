@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { AnimationSpeedSetting } from "@/components/layout/animation-speed-setting";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -45,7 +46,7 @@ export function ProgressOverview() {
             return (
               <li key={m.id} className="rounded-2xl border border-line bg-surface p-4">
                 <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                  <Link href={`/learn#${m.id}`} className="font-display font-bold text-ink hover:text-accent">
+                  <Link href={`/learn#${m.id}`} className="font-display font-bold text-ink hover:text-link">
                     {m.number}. {m.title}
                   </Link>
                   <span className="font-mono text-sm tabular-nums text-ink-2">
@@ -81,7 +82,7 @@ export function ProgressOverview() {
                 return (
                   <tr key={c.id} className="border-t border-line">
                     <td className="px-4 py-2.5 font-bold text-ink">
-                      <Link href={`/learn/${c.afterLesson}`} className="hover:text-accent">
+                      <Link href={`/learn/${c.afterLesson}`} className="hover:text-link">
                         {c.title}
                       </Link>
                     </td>
@@ -122,6 +123,10 @@ export function GeneralSettings() {
         <span className="w-28 text-sm font-bold text-ink-2">Theme</span>
         <SegmentedControl<ThemePreference> label="Theme" options={THEMES} value={hydrated ? theme : "system"} onChange={setTheme} />
       </div>
+      <div className="flex flex-wrap items-start gap-3">
+        <span className="w-28 pt-2 text-sm font-bold text-ink-2">Animation speed</span>
+        <AnimationSpeedSetting />
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="w-28 text-sm font-bold text-ink-2">Term hints</span>
         <span className="text-sm text-ink-2">
@@ -130,7 +135,7 @@ export function GeneralSettings() {
         {hydrated && knownTerms.length ? (
           <button
             type="button"
-            className="text-sm font-bold text-accent underline underline-offset-2"
+            className="text-sm font-bold text-link underline underline-offset-2"
             onClick={() => knownTerms.forEach((t) => usePreferencesStore.getState().setTermKnown(t, false))}
           >
             Hint all terms again

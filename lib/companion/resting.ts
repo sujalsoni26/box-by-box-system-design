@@ -45,8 +45,6 @@ export interface RestingSpot {
 
 /** Gap kept from the viewport edge when the cat is fully on screen. */
 export const EDGE_MARGIN = { desktop: 12, compact: 6 } as const;
-/** Fraction of the cat tucked past the edge when it docks on a phone. */
-export const PEEK_FRACTION = 0.42;
 /** Breathing room around avoided UI, in px. */
 export const AVOID_PADDING = 6;
 /** Overlap ratio the cat tolerates before it moves out of the way on its own. */
@@ -75,11 +73,9 @@ export function getBounds(view: Size, size: number, compact: boolean): Bounds {
   };
 }
 
-/** Drag and flight range: on phones the cat may hang part-way off the side edges. */
+/** Drag and flight range. The whole cat stays on screen at every width (it is never cut off). */
 export function getDragBounds(view: Size, size: number, compact: boolean): Bounds {
-  const b = getBounds(view, size, compact);
-  if (!compact) return b;
-  return { ...b, minX: -size * PEEK_FRACTION, maxX: Math.max(b.minX, view.w - size * (1 - PEEK_FRACTION)) };
+  return getBounds(view, size, compact);
 }
 
 export function clampToBounds(p: Point, b: Bounds): Point {
@@ -105,9 +101,9 @@ export function nearestSide(p: Point, view: Size, size: number): Side {
   return p.x + size / 2 < view.w / 2 ? "left" : "right";
 }
 
-/** Resting x for a side edge; phones dock with part of the cat tucked off-screen. */
+/** Resting x for a side edge, with the whole cat on screen. */
 export function dockX(side: Side, view: Size, size: number, compact: boolean): number {
-  const b = compact ? getDragBounds(view, size, true) : getBounds(view, size, false);
+  const b = getBounds(view, size, compact);
   return side === "left" ? b.minX : b.maxX;
 }
 
@@ -227,6 +223,27 @@ export function readAvoidRects(exclude?: Element | null): Rect[] {
   return rects;
 }
 
+/** Controls the cat must never sit on: buttons, links, form fields, quiz options. */
+const INTERACTIVE =
+  'button, a[href], input, select, textarea, summary, [role="button"], [role="option"], [role="slider"], [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Visible interactive elements (excluding the companion itself). On phones the lesson spans the whole
+ * width, so "marked UI" is everywhere; the cat instead avoids the things a learner taps.
+ */
+export function readInteractiveRects(exclude?: Element | null): Rect[] {
+  const view = readViewport();
+  const rects: Rect[] = [];
+  document.querySelectorAll(INTERACTIVE).forEach((el) => {
+    if (exclude && exclude.contains(el)) return;
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return;
+    if (r.bottom <= 0 || r.right <= 0 || r.top >= view.h || r.left >= view.w) return;
+    rects.push({ left: Math.max(0, r.left), top: Math.max(0, r.top), right: Math.min(view.w, r.right), bottom: Math.min(view.h, r.bottom) });
+  });
+  return rects;
+}
+
 /* ------------------------------------------------------------------ floor (gravity mode) */
 
 /** Gap between the cat's box and the floor line, px. */
@@ -268,7 +285,7 @@ export interface FloorSpot {
 
 /**
  * Where to stand on the floor after landing at `fromX`.
- * Phones: the nearest bottom corner, tucked part-way off-screen.
+ * Phones: a bottom corner, fully on screen: the one with fewer controls under it (nearest on a tie).
  * Desktop: stay unless covering marked UI; otherwise the nearest floor spot that is free, else the
  * one with clearly less overlap.
  */
@@ -279,6 +296,7 @@ export function findFloorSpot({
   view,
   avoid,
   compact,
+  targets = [],
 }: {
   fromX: number;
   world: World;
@@ -286,11 +304,22 @@ export function findFloorSpot({
   view: Size;
   avoid: readonly Rect[];
   compact: boolean;
+  /** Phones only: interactive elements to keep clear of (see readInteractiveRects). */
+  targets?: readonly Rect[];
 }): FloorSpot {
   const here = clamp(fromX, world.minX, world.maxX);
   if (compact) {
-    const x = dockX(nearestSide({ x: fromX, y: world.floorY }, view, size), view, size, true);
-    return { x, overlap: 0, moved: Math.abs(x - fromX) > 1 };
+    const near = nearestSide({ x: fromX, y: world.floorY }, view, size);
+    const far = near === "left" ? "right" : "left";
+    // Controls under the cat count ten times as much as marked reading content, so it never sits on a
+    // button when a corner is free of them, and otherwise prefers the corner over a margin (tablets).
+    const cost = (side: Side) => {
+      const p = { x: dockX(side, view, size, true), y: world.floorY };
+      return 10 * overlapRatio(p, size, view, targets) + overlapRatio(p, size, view, avoid);
+    };
+    const side = cost(far) + 0.02 < cost(near) ? far : near;
+    const x = dockX(side, view, size, true);
+    return { x, overlap: overlapRatio({ x, y: world.floorY }, size, view, avoid), moved: Math.abs(x - fromX) > 1 };
   }
   const y = world.floorY;
   const current = overlapRatio({ x: here, y }, size, view, avoid);

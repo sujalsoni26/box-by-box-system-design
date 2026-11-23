@@ -35,7 +35,7 @@ export default function DashboardPage() {
             <h1 id="hero-h" className="mt-2 font-display text-[clamp(2.2rem,5vw,3.6rem)] font-extrabold leading-[1.02] tracking-[-0.035em] text-ink">
               Every{" "}
               <span className="inline-block -rotate-1 rounded-[0.14em] border-[3px] border-ink bg-surface px-[0.12em] shadow-[4px_4px_0_var(--accent)]">box</span>{" "}
-              exists because a problem <span className="text-accent">forced it in.</span>
+              exists because a problem <span className="text-link">forced it in.</span>
             </h1>
             <p className="mt-4 max-w-2xl text-lg text-ink-2">
               Grow one Instagram-like app from a single server to millions of users. Each lesson starts with what breaks, adds the building
@@ -69,12 +69,12 @@ export default function DashboardPage() {
           <PracticeTeaser />
           <section aria-labelledby="glossary-h" className="rounded-3xl border border-line bg-surface p-6">
             <h2 id="glossary-h" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-              <Library aria-hidden="true" className="size-5 text-accent" /> Glossary
+              <Library aria-hidden="true" className="size-5 text-link" /> Glossary
             </h2>
             <p className="mt-2 text-sm text-ink-2">
               {glossary.length} short forms spelled out, from ACID to VM. In lessons, only the first mention of a term is underlined.
             </p>
-            <Link href="/glossary" className="mt-3 inline-block text-sm font-bold text-accent underline underline-offset-2">
+            <Link href="/glossary" className="mt-3 inline-block text-sm font-bold text-link underline underline-offset-2">
               Browse the glossary
             </Link>
           </section>

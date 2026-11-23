@@ -29,17 +29,17 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
 
         <article data-companion-avoid="" className="min-w-0 max-w-[46rem] py-8 sm:py-10">
           <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-x-2 font-mono text-[0.72rem] uppercase tracking-[0.08em] text-ink-3">
-            <Link href="/learn" className="hover:text-accent">
+            <Link href="/learn" className="hover:text-link">
               Learn
             </Link>
             <span aria-hidden="true">/</span>
-            <Link href={`/learn#${courseModule.id}`} className="hover:text-accent">
+            <Link href={`/learn#${courseModule.id}`} className="hover:text-link">
               {courseModule.number}. {courseModule.title}
             </Link>
           </nav>
 
           <header className="mb-7">
-            <p className="font-mono text-sm font-semibold text-accent">Lesson {lesson.number}</p>
+            <p className="font-mono text-sm font-semibold text-link">Lesson {lesson.number}</p>
             <h1 className="mt-1 font-display text-[clamp(2rem,4.6vw,2.9rem)] font-extrabold leading-[1.05] tracking-[-0.025em] text-ink">{lesson.title}</h1>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <LevelChip level={lesson.level} />
