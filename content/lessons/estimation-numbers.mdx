@@ -30,7 +30,7 @@ State them as assumptions; real numbers vary widely with the workload.
 | App server (8 cores; auth + DB call + JSON per request) | \~1,000 QPS |
 | SQL database (PostgreSQL with indexes) | \~1–5k writes/s; reads \~10× higher |
 | Redis node (single-threaded, all in RAM) | \~100k ops/s |
-| Google Search, for scale | \~100k QPS on average (approximate) |
+| Google Search, for scale | \~160k QPS on average (over 5 trillion searches a year, 2025) |
 
 ## Sizing records
 

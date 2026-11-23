@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, Bookmark, History, Sparkles } from "lucide-react";
+import { ArrowRight, Bookmark, Check, Flag, History, Sparkles } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
 import { LevelChip } from "@/components/ui/chip";
 import { ProgressBar, ProgressRing } from "@/components/ui/progress-bar";
@@ -113,7 +113,7 @@ export function OverallProgressCard() {
   );
 }
 
-/** Six modules as a journey; the system grows from one server to a full architecture. */
+/** Every module as a journey; the system grows from one server to a full architecture. */
 export function RoadmapModules() {
   const { completed } = useCompleted();
   return (
@@ -208,6 +208,74 @@ export function BookmarkList({ empty = "Bookmark a lesson to keep it here." }: {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+/**
+ * Topics the learner flagged with "Review later", newest first. Independent of completion.
+ * `practiceSlugs` (case-study exercises) is passed from the server so the exercise data
+ * stays out of this client bundle.
+ */
+export function ReviewList({ limit, practiceSlugs = [] }: { limit?: number; practiceSlugs?: string[] }) {
+  const hydrated = useHydrated();
+  const review = useProgressStore((s) => s.review);
+  const completed = useProgressStore((s) => s.completed);
+  const setReview = useProgressStore((s) => s.setReview);
+  const all = hydrated
+    ? Object.entries(review)
+        .sort((a, b) => b[1] - a[1])
+        .map(([slug]) => getLesson(slug))
+        .filter((l): l is NonNullable<typeof l> => Boolean(l))
+    : [];
+  const items = limit ? all.slice(0, limit) : all;
+  const practice = new Set(practiceSlugs);
+  return (
+    <section id="review" aria-labelledby="review-h" className="scroll-mt-24 rounded-3xl border border-line bg-surface p-6">
+      <h2 id="review-h" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+        <Flag aria-hidden="true" className="size-5 fill-current text-review" /> Marked for review
+        {all.length > 0 ? <span className="font-mono text-sm font-semibold tabular-nums text-ink-3">{all.length}</span> : null}
+      </h2>
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-3">
+          Use <span className="font-semibold text-ink-2">Review later</span> on a lesson or case study to collect the topics you want to revisit.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-line">
+          {items.map((l) => (
+            <li key={l.slug} className="flex items-center gap-3 py-2">
+              <div className="min-w-0 flex-1">
+                <Link href={`/learn/${l.slug}`} className="block text-[0.95rem] hover:text-link">
+                  <span className="mr-1.5 font-mono text-xs text-ink-3">{l.number}</span>
+                  {l.title}
+                </Link>
+                <p className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[0.7rem] text-ink-3">
+                  {completed[l.slug] ? <span className="text-good">learned</span> : <span>not learned yet</span>}
+                  {practice.has(l.slug) ? (
+                    <Link href={`/case-studies/${l.slug}`} className="font-semibold text-link hover:underline">
+                      practise the case
+                    </Link>
+                  ) : null}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReview(l.slug, false)}
+                aria-label={`Done reviewing ${l.title}`}
+                title="Done reviewing"
+                className="grid size-8 shrink-0 place-items-center rounded-lg border border-line text-ink-3 transition-colors hover:border-good hover:text-good"
+              >
+                <Check aria-hidden="true" className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {limit && all.length > limit ? (
+        <Link href="/progress#review" className="mt-3 inline-block text-sm font-bold text-link underline underline-offset-2">
+          See all {all.length}
+        </Link>
+      ) : null}
     </section>
   );
 }

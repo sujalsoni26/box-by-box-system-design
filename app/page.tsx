@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Library } from "lucide-react";
+import { Library, PencilRuler } from "lucide-react";
 import { CompanionSettingsPanel } from "@/components/companion/companion-settings-panel";
 import { InteractiveDiagram } from "@/components/diagrams/interactive";
 import {
@@ -8,10 +8,12 @@ import {
   OverallProgressCard,
   PracticeTeaser,
   RecentlyStudied,
+  ReviewList,
   RoadmapModules,
 } from "@/components/learning/dashboard-widgets";
 import { glossary } from "@/data/glossary";
-import { lessons, totalMinutes } from "@/lib/curriculum";
+import { caseStudies } from "@/lib/case-studies";
+import { lessons, modules, totalMinutes } from "@/lib/curriculum";
 
 function SectionHead({ eyebrow, title, children, id }: { eyebrow: string; title: string; children?: React.ReactNode; id: string }) {
   return (
@@ -42,7 +44,7 @@ export default function DashboardPage() {
               block that fixes it, and names what it costs.
             </p>
             <p className="mt-3 font-mono text-sm text-ink-3">
-              {lessons.length} lessons · 6 modules · about {Math.round(totalMinutes / 60)} hours · 25 interactive diagrams
+              {lessons.length} lessons · {modules.length} modules · about {Math.round(totalMinutes / 60)} hours · 25 interactive diagrams
             </p>
           </div>
           <ContinueLearning />
@@ -64,15 +66,29 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <RecentlyStudied />
-        <BookmarkList />
+        <div className="flex flex-col gap-6">
+          <ReviewList limit={5} practiceSlugs={caseStudies.map((c) => c.slug)} />
+          <BookmarkList />
+        </div>
         <div className="flex flex-col gap-6">
           <PracticeTeaser />
+          <section aria-labelledby="cases-h" className="rounded-3xl border border-line bg-surface p-6">
+            <h2 id="cases-h" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+              <PencilRuler aria-hidden="true" className="size-5 text-link" /> Case studies
+            </h2>
+            <p className="mt-2 text-sm text-ink-2">
+              {caseStudies.length} interview problems, high-level and low-level. Reason through each step before you reveal the answer.
+            </p>
+            <Link href="/case-studies" className="mt-3 inline-block text-sm font-bold text-link underline underline-offset-2">
+              Practise a case study
+            </Link>
+          </section>
           <section aria-labelledby="glossary-h" className="rounded-3xl border border-line bg-surface p-6">
             <h2 id="glossary-h" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
               <Library aria-hidden="true" className="size-5 text-link" /> Glossary
             </h2>
             <p className="mt-2 text-sm text-ink-2">
-              {glossary.length} short forms spelled out, from ACID to VM. In lessons, only the first mention of a term is underlined.
+              {glossary.length} short forms spelled out, from 2PC and ACID to WAL. In lessons, only the first mention of a term is underlined.
             </p>
             <Link href="/glossary" className="mt-3 inline-block text-sm font-bold text-link underline underline-offset-2">
               Browse the glossary

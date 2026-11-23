@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Bookmark, Check, CircleHelp } from "lucide-react";
+import { Bookmark, Check, CircleHelp, Flag } from "lucide-react";
 import { LevelChip } from "@/components/ui/chip";
 import { ProgressRing } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -24,6 +24,7 @@ export function Roadmap() {
   const hydrated = useHydrated();
   const completedRaw = useProgressStore((s) => s.completed);
   const bookmarks = useProgressStore((s) => s.bookmarks);
+  const review = useProgressStore((s) => s.review);
   const completed = hydrated ? completedRaw : {};
   const [filter, setFilter] = useState<LevelFilter>("all");
 
@@ -85,6 +86,7 @@ export function Roadmap() {
                           <span className="mt-0.5 block truncate text-sm text-ink-3">{l.problem}</span>
                         </span>
                         <span className="flex items-center gap-2">
+                          {hydrated && review[l.slug] ? <Flag aria-label="Marked for review" className="size-4 fill-current text-review" /> : null}
                           {hydrated && bookmarks.includes(l.slug) ? <Bookmark aria-label="Bookmarked" className="size-4 text-amber-ink" /> : null}
                           {check ? <CircleHelp aria-label="Has a knowledge check" className="size-4 text-violet" /> : null}
                           <span className="hidden font-mono text-xs text-ink-3 sm:inline">{l.minutes} min</span>

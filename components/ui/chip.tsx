@@ -11,6 +11,7 @@ const tones: Record<Tone, string> = {
   warn: "bg-warn-soft text-warn border-transparent",
   amber: "bg-amber-soft text-amber-ink border-transparent",
   violet: "bg-violet-soft text-violet border-transparent",
+  review: "bg-review-soft text-review border-transparent",
 };
 
 export function Chip({ children, tone = "neutral", className }: { children: ReactNode; tone?: Tone; className?: string }) {

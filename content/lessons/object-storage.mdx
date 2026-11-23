@@ -19,6 +19,12 @@ posts(id, user_id, caption, image_key = 'photos/123.jpg')
 - Latency is higher than a local disk.
 - You can't query inside files.
 
+<Callout type="interview" title="Say all three parts">
+
+Pre-signed URL upload, a metadata row that stores only the key, and a CDN in front for reads. Interviewers listen for all three, and for the reason the bytes never touch your API servers. A full design that builds on this: [Design Google Drive / Dropbox](/learn/design-file-storage).
+
+</Callout>
+
 ## Object vs block vs file storage
 
 | Type | What it is | Typical use |

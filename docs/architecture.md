@@ -2,23 +2,28 @@
 
 ## Content
 
-- **Curriculum** (`data/curriculum.ts`): six modules, 42 lessons, in learning order. Each lesson has metadata the layout renders:
+- **Curriculum** (`data/curriculum.ts`): 16 modules, 143 lessons, in learning order. Each lesson has metadata the layout renders:
   title, level, minutes, `problem`, `summary` (the building block), `catTip`, `recall`, and `archNodes` (the boxes of the final
   architecture it lights up).
 - **Teaching guidance** (`data/lesson-guides.ts`): `breaks`, `tradeoffs`, `explainSimply`, `hint` per lesson. Kept separate so it
   can be edited without touching lesson metadata. `lib/curriculum.ts` merges both into a `Lesson`.
 - **Lesson bodies** (`content/lessons/<slug>.mdx`): prose plus a small component vocabulary (see `mdx-components.tsx`):
   `Callout`, `Comparison`/`ComparisonItem`, `DeepDive`, `Steps`, `ConceptCard`, `Diagram`, `Mermaid`, `Interactive`.
-  The lesson page imports the MDX file by slug and prerenders all 42 routes at build time.
+  The lesson page imports the MDX file by slug and prerenders every lesson route at build time.
 - **Quizzes** (`data/quizzes.ts`) are optional knowledge checks shown after the lesson that completes their topics, and all
-  together on `/practice`. **Recall decks** (`data/recall.ts`) feed the flashcards.
+  together on `/practice`. A question may only test lessons up to its check's `afterLesson`; answer positions are balanced.
+  **Recall decks** (`data/recall.ts`) feed the flashcards.
+- **Case studies** (`data/case-studies.ts`, `types/case-study.ts`) are guided interview exercises, one per HLD/LLD case-study
+  lesson and keyed by that lesson's slug. `/case-studies/[slug]` reveals one step at a time (prompt, optional hint, insight);
+  the lesson stays the full worked answer, and links to the exercise. `scripts/validate-practice.mjs` checks quizzes and
+  case studies (ids, options, answer balance, lesson order, step counts).
 
 ### Adding a lesson
 
 1. Add metadata to `data/curriculum.ts` and list the slug in a module.
 2. Add guidance to `data/lesson-guides.ts`.
 3. Write `content/lessons/<slug>.mdx`.
-4. Run `npm run validate:content`.
+4. Run `npm run check` (types, lint, `validate:content` and `validate:practice`).
 
 ## Short forms (acronyms)
 
@@ -30,7 +35,7 @@ readers as the button's description. Learners can mark a term as known to stop i
 ## State and persistence
 
 - `stores/progress-store.ts`: completed lessons, visits (recently studied), current/last lesson, quiz attempts, bookmarks,
-  known flashcards.
+  topics marked for review (`review`, slug to timestamp; independent of `completed`), known flashcards.
 - `stores/preferences-store.ts`: theme, known glossary terms, companion settings and position.
 - `stores/companion-store.ts`: companion runtime state and the focus timer.
 

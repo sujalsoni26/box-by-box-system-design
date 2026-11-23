@@ -32,7 +32,7 @@ Tag each request with a criticality level (Google SRE's names below) and drop fr
 | `SHEDDABLE_PLUS` | Recommendations, reviews, wish lists, like counts, friend suggestions |
 | `SHEDDABLE` | Logging, metrics, background batch jobs |
 
-This is **graceful degradation**: during a Black Friday spike, recommendations and wish lists may switch off so checkout keeps working.
+This is **graceful degradation**: during a Black Friday spike, recommendations and wish lists may switch off so checkout keeps working. Kill switches, degraded modes and fallbacks that fail are covered in [Bulkheads and graceful degradation](/learn/bulkheads-degradation).
 
 <Callout type="analogy" title="A packed restaurant">
 

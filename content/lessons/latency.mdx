@@ -51,13 +51,13 @@ These come from Peter Norvig's list, popularised by Jeff Dean. Exact values drif
 
 | Compare | Gap | What it explains |
 | --- | --- | --- |
-| RAM vs SSD random read | \~1,000× | Why hot data is cached in RAM |
+| RAM vs SSD random read | \~1,000–1,500× (100 ns vs 150 µs) | Why hot data is cached in RAM |
 | Data-center round trip vs crossing a continent | \~300× | One cross-region call eats most of a 200 ms budget → CDNs, geo-replication |
 | Disk seek vs reading 1 MB sequentially | One seek ≈ half a sequential megabyte | Sequential I/O wins → append-only logs (Kafka), LSM trees |
 | Compress 1 KB vs send 2 KB over 1 Gbps | \~7× | Compress before sending over the network |
 
 <Callout type="warning" title="Common slips">
 
-Compressing 1 KB takes about **3 µs**, not 3 ns. And "the same data center" means one building or campus; two cities are two data centers.
+Compressing 1 KB takes about **3 µs**, not 3 ns. "The same data center" means one building or campus; two cities are two data centers. And the classic 150 µs SSD figure predates NVMe drives, which read in tens of microseconds; RAM is still hundreds of times faster, which is the point.
 
 </Callout>

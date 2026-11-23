@@ -3,10 +3,12 @@
 An interactive system design course that grows one Instagram-like app from a single server to millions of users.
 Every lesson follows one pattern: **problem → what breaks → building block → trade-offs**.
 
-- **42 lessons in 6 modules:** foundations, scaling and traffic, communication, data, performance and reliability, and design practice.
+- **143 lessons in 16 modules:** a six-module core path (foundations, scaling and traffic, communication, data, performance and reliability, design practice), seven advanced tracks (distributed systems, database internals, streaming, observability, security, infrastructure, architecture patterns), 15 high-level design case studies, and low-level design foundations with 14 LLD case studies.
 - **25 interactive simulations:** load balancers, caches, CAP partitions, circuit breakers, rate limiters, an estimation calculator and more. There are also Mermaid and SVG diagrams.
-- **Optional checks:** knowledge checks, flashcards, and a live architecture map that lights up as you learn.
-- **Short forms:** a glossary of 73 terms. Only the first mention per lesson is hinted.
+- **Practice:** 43 optional knowledge checks (scenario, trade-off and debugging questions), five flashcard decks, an estimation calculator, and a live architecture map that lights up as you learn.
+- **Case studies:** 29 interview problems (15 HLD, 14 LLD) worked step by step. Answer each step yourself, take a hint if stuck, then reveal the insight and compare with the full walkthrough.
+- **Mark for review:** flag any lesson or case study to come back to. It is independent of "learned" and listed on the dashboard and the Progress page.
+- **Short forms:** a glossary of 181 terms. Only the first mention per lesson is hinted.
 - **Cache, the study cat:** drag and throw her around, feed her and play with her, and unlock accessories through progress. She also offers hints, quick revision and a focus timer.
 - **Persistent progress:** saved in the browser, with light and dark themes, keyboard support and reduced-motion support.
 
@@ -21,7 +23,7 @@ npm install
 npm run dev        # development: http://localhost:3000
 npm run build      # production build
 npm run start      # serve the build: http://localhost:3000
-npm run check      # type check + lint + content validation
+npm run check      # type check + lint + lesson and practice-data validation
 ```
 
 On Windows, if PowerShell blocks `npm` scripts, use `npm.cmd` instead, e.g. `npm.cmd run dev`.
@@ -29,9 +31,9 @@ On Windows, if PowerShell blocks `npm` scripts, use `npm.cmd` instead, e.g. `npm
 ## Project layout
 
 ```
-app/              routes: dashboard, /learn, /learn/[slug], /practice, /progress, /glossary
+app/              routes: dashboard, /learn, /learn/[slug], /case-studies, /case-studies/[slug], /practice, /progress, /glossary
 content/lessons/  lesson bodies (MDX)
-data/             curriculum, quizzes, flashcards, glossary, lesson guides
+data/             curriculum, quizzes, case studies, flashcards, glossary, lesson guides
 components/       UI, lesson layout, diagrams, quiz, glossary, companion
 stores/           Zustand stores (progress, preferences, companion)
 lib/              helpers, hooks, storage adapter, MDX plugin

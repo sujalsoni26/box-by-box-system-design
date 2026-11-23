@@ -33,7 +33,13 @@ Services emit and react to **events**, past-tense facts like `PostCreated` or `O
 
 </Comparison>
 
-Examples: Kafka, Google Cloud Pub/Sub, Amazon SNS + SQS, Redis Pub/Sub.
+<Callout type="warning" title="A copy for everyone, not exactly one copy in order">
+
+A topic promises each subscriber its own copy of every event. It does not promise exactly one copy, or arrival in the order events happened. Subscribers must tolerate duplicates (see [Idempotency](/learn/idempotency)) and late events, for example by trusting the timestamp inside the event rather than its arrival time.
+
+</Callout>
+
+Examples: Kafka, Google Cloud Pub/Sub, Amazon SNS + SQS. Redis Pub/Sub is the exception to the promise above: it is fire-and-forget, so a subscriber that is offline or slow simply misses the event. It suits live signals such as typing indicators, not business events like `OrderPlaced`. Designing the events and evolving their schemas: [Event-driven architecture in practice](/learn/eda-patterns). Two patterns built on events: [CQRS](/learn/cqrs) and [Event sourcing](/learn/event-sourcing).
 
 <DeepDive title="Go deeper: the dual-write problem and the outbox">
 

@@ -47,4 +47,4 @@ If server A keeps your session in memory and your next request lands on server B
 
 Autoscaling adds machines automatically when load rises (IPL finals, Black Friday, Flipkart's Big Billion Days) and removes them when it falls, so you pay only for what you use. It needs stateless servers behind a load balancer.
 
-New machines take a while to boot, so trigger on **early signals** (CPU, queue depth) and keep some headroom. When a spike outruns autoscaling, you shed load instead (see [Backpressure and load shedding](/learn/backpressure)).
+New machines take a while to boot, so trigger on **early signals** (CPU, queue depth) and keep some headroom. When a spike outruns autoscaling, you shed load instead (see [Backpressure and load shedding](/learn/backpressure)). Scaling policies and their lag are covered in [Autoscaling](/learn/autoscaling); sizing the headroom they need is [Capacity planning and load testing](/learn/capacity-planning).

@@ -19,13 +19,13 @@ Keep copies of the same data on several machines. The common setup is **primaryâ
 
 ## Lag in practice
 
-You comment, refresh, and the read hits a lagging replica, so <mark>your comment seems to vanish</mark>. Fix it with **read-your-own-writes**: send a user's reads to the primary for a short time after they write.
+You comment, refresh, and the read hits a lagging replica, so <mark>your comment seems to vanish</mark>. Fix it with **read-your-writes**: send a user's reads to the primary for a short time after they write. [Consistency: strong vs eventual](/learn/consistency) shows this and a more precise alternative.
 
 <Interactive name="replication-lag" />
 
 <Callout type="warning" title="The limit">
 
-One primary means **writes don't scale**. Replication cures read-heavy load, not write-heavy load. Multi-leader and leaderless designs (Cassandra) exist, but they must resolve conflicting writes.
+One primary means **writes don't scale**. Replication cures read-heavy load, not write-heavy load. Multi-leader and leaderless designs (Cassandra) exist, but they must resolve conflicting writes. They are covered in [Replication strategies in depth](/learn/replication-internals) and [Quorums and leaderless replication](/learn/quorums).
 
 </Callout>
 

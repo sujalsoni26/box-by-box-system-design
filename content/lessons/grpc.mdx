@@ -18,6 +18,46 @@ service UserService {
 
 **Serialization** turns in-memory data into bytes. Protobuf is <mark>smaller and faster to parse than JSON</mark>.
 
+## Four kinds of call
+
+| Kind | Shape | Example |
+| --- | --- | --- |
+| Unary | One request, one response, like a normal function call | `GetUser(42)` |
+| Server streaming | One request, then a stream of responses | Subscribe to live price updates |
+| Client streaming | A stream of requests, then one response | Upload a file in chunks, get one receipt |
+| Bidirectional streaming | Both sides send streams independently | Chat, live collaboration |
+
+Streams ride on HTTP/2, so many calls share one connection and a long stream does not block the calls beside it.
+
+## Deadlines and cancellation
+
+Every call should carry a **deadline**: how long the caller is willing to wait before the call fails with `DEADLINE_EXCEEDED`. When the feed service calls the ranking service, it passes on the time it has *left*, so a chain of calls can never outlive the user's patience. If it wants to answer with a fallback when ranking is slow, it passes on a little less and keeps the rest for itself.
+
+<Mermaid caption="Deadlines propagate: each hop gets what is left of the budget, minus any reserve the caller keeps for a fallback, so no service keeps working on a request the user has already given up on." chart={`---
+config:
+  sequence:
+    mirrorActors: false
+    width: 110
+    actorMargin: 30
+---
+sequenceDiagram
+    participant C as Client
+    participant F as Feed service
+    participant R as Ranking service
+    C->>F: GetFeed (deadline 300 ms)
+    Note over F: 40 ms spent, 260 ms left
+    F->>R: Rank (deadline 200 ms, 60 ms kept in reserve)
+    Note over R: Too slow
+    R-->>F: DEADLINE_EXCEEDED at 240 ms
+    F-->>C: Chronological feed (fallback) inside 300 ms
+`} />
+
+Either side can **cancel** a call that is in flight, which stops further work; changes already made are not rolled back. Client and server also judge success independently: the server may have finished while the client saw a timeout. That is one more reason to make writes idempotent (see [Idempotency](/learn/idempotency)).
+
+## Status codes
+
+gRPC has its own small set, including `OK`, `INVALID_ARGUMENT`, `NOT_FOUND`, `ALREADY_EXISTS`, `PERMISSION_DENIED`, `UNAVAILABLE`, `DEADLINE_EXCEEDED` and `INTERNAL`. Clients retry `UNAVAILABLE` with backoff and never retry `INVALID_ARGUMENT`: the same split as 5xx versus 4xx in REST.
+
 <Comparison>
 
 <ComparisonItem title="Pros">

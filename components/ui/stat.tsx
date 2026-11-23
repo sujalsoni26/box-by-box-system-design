@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export type Tone = "neutral" | "accent" | "good" | "bad" | "warn" | "amber" | "violet";
+export type Tone = "neutral" | "accent" | "good" | "bad" | "warn" | "amber" | "violet" | "review";
 
 const valueTone: Record<Tone, string> = {
   neutral: "text-ink",
@@ -11,6 +11,7 @@ const valueTone: Record<Tone, string> = {
   warn: "text-warn",
   amber: "text-amber-ink",
   violet: "text-violet",
+  review: "text-review",
 };
 
 export function Stat({ label, value, tone = "neutral" }: { label: string; value: ReactNode; tone?: Tone }) {

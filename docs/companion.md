@@ -169,7 +169,7 @@ and stay hard-edged. Eyes, nose, mouth and whiskers stay crisp. The filter only 
 These would need a model behind an API; none of them should ship as canned text pretending to be AI.
 
 - Free-form questions about the current lesson, answered from the lesson's own MDX (retrieval over the
-  42 lessons) with citations back to sections.
+  143 lessons) with citations back to sections.
 - Explain-it-differently: regenerate `explainSimply` at a chosen level (beginner, interview prep) or
   with a learner-chosen analogy.
 - Adaptive revision: pick recall questions with spaced repetition from quiz history, and generate new

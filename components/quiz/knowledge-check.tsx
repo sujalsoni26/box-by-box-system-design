@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CheckCircle2, CircleHelp, RotateCcw, XCircle } from "lucide-react";
+import { CheckCircle2, CircleHelp, Flag, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { getLesson } from "@/lib/curriculum";
@@ -97,6 +97,8 @@ export function KnowledgeCheck({ check, defaultOpen = false }: { check: Knowledg
   const hydrated = useHydrated();
   const attempts = useProgressStore((s) => s.quizAttempts[check.id]);
   const record = useProgressStore((s) => s.recordQuizAttempt);
+  const review = useProgressStore((s) => s.review);
+  const setReview = useProgressStore((s) => s.setReview);
   const [open, setOpen] = useState(defaultOpen);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const last = hydrated && attempts?.length ? attempts[attempts.length - 1] : undefined;
@@ -105,6 +107,9 @@ export function KnowledgeCheck({ check, defaultOpen = false }: { check: Knowledg
   const total = check.questions.length;
   const score = check.questions.filter((q) => answers[q.id] === q.answer).length;
   const finished = answeredCount === total;
+  // Lessons behind the wrong answers, once each, in question order.
+  const missed = finished ? [...new Set(check.questions.filter((q) => answers[q.id] !== q.answer).map((q) => q.lessonSlug))] : [];
+  const missedFlagged = missed.length > 0 && missed.every((slug) => Boolean(review[slug]));
 
   const pick = (q: QuizQuestion, option: number) => {
     const next = { ...answers, [q.id]: option };
@@ -154,9 +159,23 @@ export function KnowledgeCheck({ check, defaultOpen = false }: { check: Knowledg
               <p className="font-bold text-ink">
                 You scored {score} of {total}. {score === total ? "Flawless." : "The explanations above cover the gaps."}
               </p>
-              <Button size="sm" onClick={restart}>
-                <RotateCcw aria-hidden="true" className="size-4" /> Retry
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {missed.length > 0 ? (
+                  missedFlagged ? (
+                    <Link href="/progress#review" className="inline-flex items-center gap-1.5 text-sm font-bold text-review underline underline-offset-2">
+                      <Flag aria-hidden="true" className="size-4 fill-current" /> Marked for review
+                    </Link>
+                  ) : (
+                    <Button size="sm" onClick={() => missed.forEach((slug) => setReview(slug, true))}>
+                      <Flag aria-hidden="true" className="size-4 text-review" />
+                      {missed.length === 1 ? "Mark the lesson for review" : `Mark ${missed.length} lessons for review`}
+                    </Button>
+                  )
+                ) : null}
+                <Button size="sm" onClick={restart}>
+                  <RotateCcw aria-hidden="true" className="size-4" /> Retry
+                </Button>
+              </div>
             </div>
           ) : (
             <p className="mt-2 text-sm text-ink-3">

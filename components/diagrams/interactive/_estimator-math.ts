@@ -183,13 +183,13 @@ export interface Estimate {
 }
 
 const SECONDS_PER_DAY = 1e5; // 86,400 rounded up: the interview shortcut
-const GOOGLE_QPS = 1e5;
+const GOOGLE_QPS = 1.6e5; // over 5 trillion searches a year (2025)
 
 function googleComparison(qps: number): string {
   const g = qps / GOOGLE_QPS;
-  if (g >= 1.5) return `≈ ${num(g, 2)}× Google Search (~100k QPS)`;
-  if (g >= 0.67) return "about Google Search (~100k QPS)";
-  return `${num(g * 100, 2)}% of Google Search (~100k QPS)`;
+  if (g >= 1.5) return `≈ ${num(g, 2)}× Google Search (~160k QPS)`;
+  if (g >= 0.67) return "about Google Search (~160k QPS)";
+  return `${num(g * 100, 2)}% of Google Search (~160k QPS)`;
 }
 
 export function shapeOf(v: Values, writeQps: number): Verdict {

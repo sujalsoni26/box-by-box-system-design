@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { motion } from "motion/react";
-import { Bookmark, BookmarkCheck, Check } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, Flag } from "lucide-react";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { getModule, moduleProgress, overallProgress } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
@@ -41,6 +41,40 @@ export function BookmarkButton({ slug, title }: { slug: string; title: string })
     >
       {on ? <BookmarkCheck aria-hidden="true" className="size-3.5" /> : <Bookmark aria-hidden="true" className="size-3.5" />}
       {on ? "Bookmarked" : "Bookmark"}
+    </button>
+  );
+}
+
+/**
+ * Marks a topic to come back to. Independent of "learned": a learner can finish a lesson
+ * and still flag it, or flag one they have not finished.
+ */
+export function ReviewButton({ slug, title, size = "chip" }: { slug: string; title: string; size?: "chip" | "button" }) {
+  const hydrated = useHydrated();
+  const marked = useProgressStore((s) => Boolean(s.review[slug]));
+  const toggle = useProgressStore((s) => s.toggleReview);
+  const on = hydrated && marked;
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={`Mark ${title} for review`}
+      onClick={() => toggle(slug)}
+      disabled={!hydrated}
+      className={cn(
+        "inline-flex items-center transition-colors disabled:opacity-60",
+        size === "chip"
+          ? "gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[0.72rem] font-semibold"
+          : "gap-2 rounded-xl border-2 px-4 py-2.5 font-display text-[0.95rem] font-bold",
+        on
+          ? "border-transparent bg-review-soft text-review"
+          : size === "chip"
+            ? "border-line text-ink-3 hover:text-ink"
+            : "border-line-strong bg-surface text-ink-2 hover:border-review hover:text-review",
+      )}
+    >
+      <Flag aria-hidden="true" className={size === "chip" ? "size-3.5" : "size-4"} fill={on ? "currentColor" : "none"} />
+      {on ? "Marked for review" : size === "chip" ? "Review later" : "Mark for review"}
     </button>
   );
 }
@@ -111,7 +145,8 @@ export function MarkCompleteButton({ lesson }: { lesson: Lesson }) {
         </span>
         {isDone ? "Learned" : "Mark as learned"}
       </motion.button>
-      <p className="text-sm text-ink-3" aria-live="polite">
+      <ReviewButton slug={lesson.slug} title={lesson.title} size="button" />
+      <p className="basis-full text-sm text-ink-3" aria-live="polite">
         {isDone
           ? `Saved. ${courseModule.title}: ${moduleDone} of ${courseModule.lessons.length} done.`
           : "Lights up this part of your architecture on the dashboard."}

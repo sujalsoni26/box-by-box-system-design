@@ -38,6 +38,9 @@
   --warn-soft: #faeed6;
   --violet: #6741c9;
   --violet-soft: #ece5fb;
+  /* "Marked for review": its own hue so it never reads as bookmark (amber), done (green) or accent. */
+  --review: #b0266f; /* 6.3 / 5.5 on surface / surface-2, 5.3 on review-soft */
+  --review-soft: #fbe6f1;
   --header: rgb(242 244 248 / 0.85);
   --shadow-color: 222 47% 11%;
   color-scheme: light;
@@ -75,6 +78,8 @@
   --warn-soft: #2a1f0b;
   --violet: #a78bfa;
   --violet-soft: #241b3d;
+  --review: #f472b6; /* 6.7 / 6.2 on surface / surface-2, 6.4 on review-soft */
+  --review-soft: #2e1423;
   --header: rgb(13 15 18 / 0.85);
   --shadow-color: 220 15% 2%;
   color-scheme: dark;
@@ -107,6 +112,8 @@
   --color-warn-soft: var(--warn-soft);
   --color-violet: var(--violet);
   --color-violet-soft: var(--violet-soft);
+  --color-review: var(--review);
+  --color-review-soft: var(--review-soft);
   --color-header: var(--header);
 
   --font-display: var(--font-bricolage), ui-sans-serif, "Segoe UI", system-ui, sans-serif;
