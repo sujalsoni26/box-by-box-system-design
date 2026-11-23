@@ -16,7 +16,7 @@ A **message queue**, run by a **broker**, buffers messages between *producers* a
 - A **dead-letter queue (DLQ)** parks messages that keep failing, so one poison message can't block the line forever.
 - A **growing queue** means consumers are too slow: scale them or apply backpressure (see [Backpressure and load shedding](/learn/backpressure)).
 - **Ordering** isn't always guaranteed.
-- Examples: RabbitMQ, Amazon SQS, Apache Kafka (a distributed log that also does pub/sub).
+- Examples: RabbitMQ, Amazon SQS, Apache Kafka (a distributed log that also does pub/sub; see [Kafka: a distributed log](/learn/kafka-architecture)). Choosing between them: [Choosing a broker](/learn/brokers-compared).
 
 <Callout type="analogy" title="The restaurant ticket rail">
 
@@ -32,6 +32,6 @@ Waiters (producers) clip orders onto the rail and go back to the tables; cooks (
 | At-least-once | Never lost, sometimes duplicated | The common default; pair it with idempotent consumers |
 | Exactly-once | Really "effectively once": at-least-once plus deduplication or transactions | Kafka transactions, idempotent sinks |
 
-In Amazon SQS, a received message becomes invisible for a *visibility timeout*. If the consumer doesn't delete it in time, it reappears for someone else: that is the "redelivery" in practice.
+In Amazon SQS, a received message becomes invisible for a *visibility timeout*. If the consumer doesn't delete it in time, it reappears for someone else: that is the "redelivery" in practice. What "effectively once" costs, and where it stops: [Delivery semantics and exactly-once](/learn/delivery-semantics).
 
 </DeepDive>

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Clock } from "lucide-react";
+import { Clock, PencilRuler } from "lucide-react";
 import { KnowledgeCheck } from "@/components/quiz/knowledge-check";
+import { buttonClasses } from "@/components/ui/button";
 import { LevelChip } from "@/components/ui/chip";
+import { getCaseStudy } from "@/lib/case-studies";
 import { getAdjacentLessons, getModule, knowledgeCheckAfter } from "@/lib/curriculum";
 import type { LessonHeading } from "@/lib/lesson-headings";
 import type { Lesson } from "@/types/curriculum";
-import { BookmarkButton, CompletedChip, LessonVisitTracker, MarkCompleteButton } from "./lesson-actions";
+import { BookmarkButton, CompletedChip, LessonVisitTracker, MarkCompleteButton, ReviewButton } from "./lesson-actions";
 import { LessonNavigation } from "./lesson-navigation";
 import { LessonSidebar } from "./lesson-sidebar";
 import { OnThisPage, ReadingProgress } from "./on-this-page";
@@ -17,6 +19,7 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
   const courseModule = getModule(lesson.moduleId);
   const { prev, next } = getAdjacentLessons(lesson.slug);
   const check = knowledgeCheckAfter(lesson.slug);
+  const study = getCaseStudy(lesson.slug);
 
   return (
     <>
@@ -47,6 +50,7 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
                 <Clock aria-hidden="true" className="size-3.5" /> {lesson.minutes} min
               </span>
               <BookmarkButton slug={lesson.slug} title={lesson.title} />
+              <ReviewButton slug={lesson.slug} title={lesson.title} />
               <CompletedChip slug={lesson.slug} />
             </div>
           </header>
@@ -55,6 +59,19 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
             <summary className="cursor-pointer py-1 font-bold text-ink-2 group-open:mb-2">Course outline</summary>
             <LessonSidebar moduleId={lesson.moduleId} currentSlug={lesson.slug} />
           </details>
+
+          {study ? (
+            <aside aria-label="Interview practice" className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3">
+              <PencilRuler aria-hidden="true" className="size-5 shrink-0 text-link" />
+              <p className="min-w-[14rem] flex-1 text-[0.95rem] text-ink">
+                <span className="font-bold">Try it before you read it.</span> Work this case step by step as an interview exercise, then come back
+                and compare.
+              </p>
+              <Link href={`/case-studies/${study.slug}`} className={buttonClasses("primary", "sm")}>
+                Attempt the case
+              </Link>
+            </aside>
+          ) : null}
 
           <TeachingStrip lesson={lesson} />
 

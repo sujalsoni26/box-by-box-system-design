@@ -12,6 +12,8 @@ export interface ProgressState {
   lastVisited: string | null;
   quizAttempts: Record<string, QuizAttempt[]>;
   bookmarks: string[];
+  /** slug -> when the learner marked the topic for review. Independent of `completed`. */
+  review: Record<string, number>;
   /** Recall cards the learner marked as known, per deck. */
   knownCards: Record<string, number[]>;
 }
@@ -23,6 +25,9 @@ interface ProgressActions {
   /** Stores a finished attempt; the store stamps `completedAt`. */
   recordQuizAttempt: (attempt: Omit<QuizAttempt, "completedAt">) => void;
   toggleBookmark: (slug: string) => void;
+  /** Marks or unmarks a topic for review; does not touch completion. */
+  setReview: (slug: string, marked: boolean) => void;
+  toggleReview: (slug: string) => void;
   setCardKnown: (deck: string, index: number, known: boolean) => void;
   reset: () => void;
 }
@@ -34,6 +39,7 @@ const initialProgress: ProgressState = {
   lastVisited: null,
   quizAttempts: {},
   bookmarks: [],
+  review: {},
   knownCards: {},
 };
 
@@ -62,6 +68,20 @@ export const useProgressStore = create<ProgressState & ProgressActions>()(
         set((s) => ({
           bookmarks: s.bookmarks.includes(slug) ? s.bookmarks.filter((b) => b !== slug) : [...s.bookmarks, slug],
         })),
+      setReview: (slug, marked) =>
+        set((s) => {
+          const review = { ...s.review };
+          if (marked) review[slug] = review[slug] ?? Date.now();
+          else delete review[slug];
+          return { review };
+        }),
+      toggleReview: (slug) =>
+        set((s) => {
+          const review = { ...s.review };
+          if (review[slug]) delete review[slug];
+          else review[slug] = Date.now();
+          return { review };
+        }),
       setCardKnown: (deck, index, known) =>
         set((s) => {
           const current = new Set(s.knownCards[deck] ?? []);
@@ -83,6 +103,7 @@ export const useProgressStore = create<ProgressState & ProgressActions>()(
         lastVisited: s.lastVisited,
         quizAttempts: s.quizAttempts,
         bookmarks: s.bookmarks,
+        review: s.review,
         knownCards: s.knownCards,
       }),
     },

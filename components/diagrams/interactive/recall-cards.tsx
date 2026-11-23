@@ -34,10 +34,14 @@ interface DeckCopy {
 const COPY: Record<RecallDeckId, DeckCopy> = {
   test: { hint: "Answer from memory, then flip the card and grade yourself honestly.", front: "Question", back: "Answer" },
   revision: { hint: "Read the problem, name the building block that solves it, then flip to check.", front: "Problem", back: "Building block" },
+  advanced: { hint: "Answer from memory, then flip the card and grade yourself honestly.", front: "Question", back: "Answer" },
+  hld: { hint: "Read the design problem, decide what you would do, then flip to compare.", front: "Design problem", back: "Decision and why" },
+  lld: { hint: "Name the principle, pattern or responsibility, then flip to check.", front: "Problem", back: "Pattern or principle" },
 };
 
+/** Any registered deck id is a valid variant; anything else (including no variant) falls back to "test". */
 function deckId(variant: string | undefined): RecallDeckId {
-  return variant === "revision" ? "revision" : "test";
+  return variant && variant in recallDecks ? (variant as RecallDeckId) : "test";
 }
 
 function range(n: number): number[] {

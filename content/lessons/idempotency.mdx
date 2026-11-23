@@ -46,6 +46,8 @@ sequenceDiagram
 
 <Interactive name="idempotency" />
 
+Making a chain of queues and consumers behave as if each message were handled once is [Delivery semantics and exactly-once](/learn/delivery-semantics); undoing earlier steps when a later one fails is [Sagas and compensating actions](/learn/sagas).
+
 <Callout type="warning" title="Not the same as double booking">
 
 Two *different* users grabbing one seat is a **concurrency** problem, solved with row locks (`SELECT … FOR UPDATE`), a unique constraint on `(show_id, seat_id)`, optimistic locking (version numbers) or temporary holds. Idempotency handles the *same* request repeated; concurrency control handles *different* requests competing.

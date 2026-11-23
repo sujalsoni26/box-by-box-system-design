@@ -14,6 +14,36 @@ COMMIT;
 | **I**solation | Concurrent transactions don't interfere | Two withdrawals can't both read the old balance |
 | **D**urability | Committed data survives crashes (it is on disk or in a log) | After COMMIT, a power cut doesn't undo the transfer |
 
+**Durability** is built on a **write-ahead log (WAL)**. Before the database says "committed", it appends the change to a sequential log and forces that log to disk. The data pages are updated later, at leisure, and after a crash the database replays the log to repair them. Every commit waits for that flush (a busy database lets many commits share one flush, called **group commit**), so commit latency, not CPU, often caps a single database's write rate. The log's mechanics are in [Write-ahead logging and crash recovery](/learn/wal); how databases isolate transactions without blocking readers is in [MVCC and isolation levels](/learn/mvcc-isolation).
+
+## Isolation: the lost update
+
+The table describes full isolation, which is expensive, so most databases default to a weaker level (PostgreSQL uses read committed). At that level, two withdrawals that each read the balance and then write back a new one can still interleave:
+
+<Mermaid caption="A lost update: both transactions read 1,000, both write 500, and one withdrawal vanishes from the books." chart={`---
+config:
+  sequence:
+    mirrorActors: false
+    width: 110
+    actorMargin: 30
+---
+sequenceDiagram
+    participant A as Transaction A
+    participant DB as Account row
+    participant B as Transaction B
+    A->>DB: read balance (1,000)
+    B->>DB: read balance (1,000)
+    A->>DB: write balance = 500
+    B->>DB: write balance = 500
+    Note over DB: Two withdrawals of 500, yet the balance shows 500
+`} />
+
+Three fixes, cheapest first:
+
+- **Atomic update:** `UPDATE accounts SET balance = balance - 500 WHERE id = 'A' AND balance >= 500`, then check that one row changed. The database does the read and the write as one step.
+- **Explicit lock:** `SELECT … FOR UPDATE` before reading, so the second transaction waits for the first.
+- **Serializable isolation**, which detects the conflict and aborts one transaction; the application retries it.
+
 **Isolation levels**, from *read committed* through *repeatable read* to *serializable*, trade speed for safety.
 
 <Callout type="warning" title="Two different Cs">

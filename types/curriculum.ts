@@ -6,7 +6,18 @@ export type ModuleId =
   | "communication"
   | "data"
   | "reliability"
-  | "practice";
+  | "practice"
+  // Advanced tracks and design practice.
+  | "distributed"
+  | "internals"
+  | "streaming"
+  | "operations"
+  | "security"
+  | "infrastructure"
+  | "architecture"
+  | "hld"
+  | "lld"
+  | "lld-practice";
 
 /** Boxes of the final architecture that a lesson "lights up". */
 export type ArchNodeId =

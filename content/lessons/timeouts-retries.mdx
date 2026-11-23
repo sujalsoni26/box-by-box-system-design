@@ -1,4 +1,5 @@
 - **Timeout:** the longest you'll wait before giving up. Without one, a stuck ranking service ties up the feed service's threads until the feed service fails too. After a timeout, return an error or a **fallback** (a chronological feed instead of a ranked one). Set it a bit above the dependency's p99 (see [Latency, throughput and the numbers to know](/learn/latency)).
+- **Deadline:** in a chain of calls, pass each hop the time that is *left*, not a fresh timeout, so an inner call never outlives the request it serves. gRPC builds this in (see [gRPC](/learn/grpc)).
 - **Retry** transient failures (a network blip), but beware <mark>retry storms</mark>: 3 retries mean up to 4× the traffic on a service that is already struggling, multiplied at every layer that retries.
 
 <Callout type="idea" title="Safe retries">

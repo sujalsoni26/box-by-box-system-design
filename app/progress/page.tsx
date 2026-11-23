@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { CompanionSettingsPanel } from "@/components/companion/companion-settings-panel";
-import { BookmarkList, RecentlyStudied } from "@/components/learning/dashboard-widgets";
+import { BookmarkList, RecentlyStudied, ReviewList } from "@/components/learning/dashboard-widgets";
 import { GeneralSettings, ProgressOverview } from "@/components/learning/progress-overview";
+import { caseStudies } from "@/lib/case-studies";
 
-export const metadata: Metadata = { title: "Progress", description: "Lessons learned, quiz results, bookmarks and settings." };
+export const metadata: Metadata = { title: "Progress", description: "Lessons learned, topics marked for review, quiz results, bookmarks and settings." };
 
 export default function ProgressPage() {
   return (
@@ -15,7 +16,7 @@ export default function ProgressPage() {
         </h1>
         <p className="mt-3 max-w-2xl text-lg text-ink-2">Everything is saved in this browser and survives restarts. Nothing is sent anywhere.</p>
       </header>
-      <ProgressOverview />
+      <ProgressOverview afterSummary={<ReviewList practiceSlugs={caseStudies.map((c) => c.slug)} />} />
       <div className="grid gap-6 md:grid-cols-2">
         <RecentlyStudied />
         <BookmarkList />

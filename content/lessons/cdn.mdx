@@ -28,7 +28,13 @@ Static content (images, video, JS, CSS) is identical for everyone. So a CDN (Con
 
 </Comparison>
 
-Examples: **Cloudflare, Akamai, Amazon CloudFront**. CDNs steer users to the nearest edge with DNS geo-routing (see [DNS](/learn/dns)) or anycast.
+<Callout type="idea" title="The edge caches by URL">
+
+An edge server keys its cache by the URL (and a few headers it is told to respect). Anything that differs per user, such as a personalised feed, cannot be cached at the edge unless the URL or a header distinguishes it. That is why public media and static files are the CDN's sweet spot, and why versioned file names work so well.
+
+</Callout>
+
+Examples: **Cloudflare, Akamai, Amazon CloudFront**. CDNs steer users to the nearest edge with DNS geo-routing (see [DNS](/learn/dns)) or anycast. How edges, cache keys, purges and origin shields work: [CDN architecture in depth](/learn/cdn-internals).
 
 <DeepDive title="Go deeper: versioned file names beat invalidation">
 

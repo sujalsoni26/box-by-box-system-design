@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Roadmap } from "@/components/learning/roadmap";
-import { lessons, totalMinutes } from "@/lib/curriculum";
+import { lessons, modules, totalMinutes } from "@/lib/curriculum";
 
 export const metadata: Metadata = { title: "Learning roadmap", description: "Every module and lesson, in order." };
 
@@ -13,8 +13,9 @@ export default function LearnPage() {
           One app, grown box by box
         </h1>
         <p className="mt-3 max-w-2xl text-lg text-ink-2">
-          {lessons.length} lessons in six modules, about {Math.round(totalMinutes / 60)} hours. Follow the order: each module solves the problems the
-          previous scale created. Knowledge checks are optional.
+          {lessons.length} lessons in {modules.length} modules, about {Math.round(totalMinutes / 60)} hours. Modules 1 to 6 are the core path: follow them
+          in order, because each solves the problems the previous scale created. The advanced tracks, case studies and low-level design build on
+          that core. Knowledge checks are optional.
         </p>
       </header>
       <Roadmap />

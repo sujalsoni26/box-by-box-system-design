@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Flag } from "lucide-react";
 import { getModule, getModuleLessons, modules, moduleProgress } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
@@ -10,10 +10,12 @@ import type { ModuleId } from "@/types/curriculum";
 function LessonList({ moduleId, currentSlug }: { moduleId: ModuleId; currentSlug: string }) {
   const hydrated = useHydrated();
   const completed = useProgressStore((s) => s.completed);
+  const review = useProgressStore((s) => s.review);
   return (
     <ol className="relative mt-2 space-y-0.5 before:absolute before:bottom-3 before:left-[11px] before:top-3 before:w-0.5 before:bg-line">
       {getModuleLessons(moduleId).map((l) => {
         const done = hydrated && Boolean(completed[l.slug]);
+        const flagged = hydrated && Boolean(review[l.slug]);
         const current = l.slug === currentSlug;
         return (
           <li key={l.slug}>
@@ -37,6 +39,12 @@ function LessonList({ moduleId, currentSlug }: { moduleId: ModuleId; currentSlug
                 <span className="mr-1 font-mono text-[0.7rem] text-ink-3">{l.number}</span>
                 {l.title}
                 {done ? <span className="sr-only"> (learned)</span> : null}
+                {flagged ? (
+                  <>
+                    <Flag aria-hidden="true" className="ml-1.5 inline size-3 -translate-y-px fill-current text-review" />
+                    <span className="sr-only"> (marked for review)</span>
+                  </>
+                ) : null}
               </span>
             </Link>
           </li>

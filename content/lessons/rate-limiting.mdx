@@ -3,6 +3,12 @@ A **rate limiter** caps requests per client per time window (for example, 100 pe
 - Over the limit → **HTTP 429 Too Many Requests** (with `Retry-After`), or delay the request (throttling).
 - Key it by user ID, API key or IP; enforce it per instance or across the cluster (below).
 
+<Callout type="idea" title="Limit by the right key">
+
+A per-IP limit punishes everyone behind one office or mobile-carrier address and barely slows a bot with many addresses. A per-user or per-API-key limit is precise but only works after authentication. Most APIs combine the two: a generous per-IP limit in front of login, a precise per-key limit behind it.
+
+</Callout>
+
 ## Algorithms
 
 | Algorithm | How | Trade-off |
@@ -49,5 +55,7 @@ Interviewers listen for the difference.
 A fixed window is two Redis commands: `INCR rate:user42:1201` then `EXPIRE` on first use; reject when the count passes the limit. A token bucket needs a read-modify-write (refill by elapsed time, then spend), so it usually runs as a small Lua script that Redis executes atomically.
 
 A cheap middle ground is the **sliding window counter**: estimate the rolling count as `current window + previous window × (fraction of it still inside the last 60 s)`. Cloudflare has described using this approximation at scale: two counters per client instead of a log of every timestamp.
+
+A full design, including Redis failure and per-tenant quotas: [Design a distributed rate limiter](/learn/design-rate-limiter). Limits as one layer of API defence: [API security](/learn/api-security).
 
 </DeepDive>

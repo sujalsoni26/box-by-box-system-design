@@ -9,7 +9,8 @@
 //   - only the agreed MDX components are used, with their required props;
 //   - <Interactive name> is in components/diagrams/interactive-registry.tsx (variants checked
 //     where a widget has presets), <Diagram name> is in components/diagrams/static/index.ts;
-//   - <Mermaid chart> is a plain template literal for a supported diagram type;
+//   - <Mermaid chart> is a plain template literal for a supported diagram type
+//     (sequenceDiagram, flowchart <dir>, stateDiagram-v2, classDiagram);
 //   - internal links point at a real lesson (/learn/<slug>) or module (/learn#<module>);
 //   - no h1, no import/export, and no markdown that failed to parse (stray ** or backticks).
 // Exits 1 if anything is wrong.
@@ -66,9 +67,9 @@ for (const f of staticFiles) if (!staticNames.has(f)) fail(staticIndex, `static 
 for (const n of staticNames) if (!staticFiles.includes(n)) fail(staticIndex, `"${n}" has no ${n}.tsx file`);
 
 /** Widgets whose `variant` selects a preset; anything else must not get a variant. */
-const VARIANTS = { estimator: ["url", "drive", "chat"], "recall-cards": ["test", "revision"] };
+const VARIANTS = { estimator: ["url", "drive", "chat"], "recall-cards": ["test", "revision", "advanced", "hld", "lld"] };
 const CALLOUT_TYPES = ["idea", "analogy", "warning", "interview"];
-const MERMAID_TYPES = /^(sequenceDiagram|flowchart (?:LR|RL|TB|TD|BT)|stateDiagram-v2)\b/;
+const MERMAID_TYPES = /^(sequenceDiagram|flowchart (?:LR|RL|TB|TD|BT)|stateDiagram-v2|classDiagram)\b/;
 /** The MDX vocabulary agreed in the contract: component -> required props. */
 const COMPONENTS = {
   Callout: ["type"],
@@ -204,7 +205,7 @@ function checkTree(tree, file) {
             fail(at, "<Mermaid chart> must be a plain template literal: chart={`...`}");
           } else {
             const body = expr.slice(1, -1).trim().replace(/^---\n[\s\S]*?\n---\n/, "").trim();
-            if (!MERMAID_TYPES.test(body)) fail(at, `<Mermaid> chart must start with sequenceDiagram, flowchart <dir> or stateDiagram-v2`);
+            if (!MERMAID_TYPES.test(body)) fail(at, `<Mermaid> chart must start with sequenceDiagram, flowchart <dir>, stateDiagram-v2 or classDiagram`);
           }
         }
         break;

@@ -18,6 +18,8 @@ P is unavoidable, so <mark>during a partition you choose C or A</mark>.
 
 <Interactive name="cap-partition" />
 
+The simulation uses two copies, so in CP mode neither side can be sure it is current and both stop paying out. With three or more copies, a CP system keeps serving on the side that still holds a **majority**, which is how coordination services stay available through most partitions. How a majority is formed and kept: [Quorums and leaderless replication](/learn/quorums) and [Consensus: Raft in one picture](/learn/consensus).
+
 | Choose | During a partition | Use for | Examples |
 | --- | --- | --- | --- |
 | **CP** | Refuse or delay any request that might be wrong | Money, bookings, inventory | Two ATMs must not both pay out a ₹5,000 balance; the last iPhone in stock can't be sold twice; seat booking (BookMyShow). Systems: ZooKeeper, etcd, Spanner |

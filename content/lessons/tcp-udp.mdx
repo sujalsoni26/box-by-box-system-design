@@ -20,6 +20,8 @@ Data moves as small **packets** under a stack of protocols. Each layer solves on
 
 <Interactive name="tcp-udp" />
 
+The race simplifies one thing: it resends packet 3 only when the **retransmission timer** fires. Real TCP also watches the acknowledgements. Three duplicate ACKs for the same packet are a strong hint that the next one was lost, so the sender resends it at once (**fast retransmit**) instead of waiting for the timer.
+
 <Callout type="analogy" title="Registered post vs shouting across a room">
 
 TCP is tracked registered post: signed for, numbered, resent if lost. UDP is shouting across a room: instant, but if someone misses a word, it's gone. In a video call a late frame is useless, so UDP wins.

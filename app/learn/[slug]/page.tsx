@@ -9,7 +9,7 @@ interface LessonPageProps {
   params: Promise<{ slug: string }>;
 }
 
-/** All 42 lessons are prerendered at build time; any other slug renders the 404 page. */
+/** Every lesson is prerendered at build time; any other slug renders the 404 page. */
 export function generateStaticParams() {
   return lessons.map((l) => ({ slug: l.slug }));
 }

@@ -40,7 +40,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-3 px-4 sm:px-6">
         <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-lg text-ink" aria-label="Box by Box, dashboard">
           <BrandMark />
-          <span className="hidden font-display text-lg font-bold tracking-[-0.01em] sm:inline">Box by Box</span>
+          <span className="hidden font-display text-lg font-bold tracking-[-0.01em] sm:inline md:hidden lg:inline">Box by Box</span>
         </Link>
         <nav aria-label="Main" className="ml-2 hidden md:block">
           <ul className="flex items-center gap-1">
@@ -52,7 +52,7 @@ export function SiteHeader() {
                     href={item.href}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "rounded-lg px-3 py-2 text-sm font-bold transition-colors",
+                      "whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-bold transition-colors lg:px-3",
                       active ? "bg-accent-soft text-link" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
                     )}
                   >
@@ -84,7 +84,7 @@ export function MobileNav() {
       data-companion-avoid=""
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-header pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5">
+      <ul className="mx-auto grid max-w-lg grid-cols-6">
         {navItems.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
@@ -99,7 +99,7 @@ export function MobileNav() {
                 )}
               >
                 <Icon aria-hidden="true" className="size-5" />
-                {item.label}
+                {item.shortLabel ?? item.label}
               </Link>
             </li>
           );

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AnimationSpeedSetting } from "@/components/layout/animation-speed-setting";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -11,7 +11,8 @@ import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { usePreferencesStore, type ThemePreference } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 
-export function ProgressOverview() {
+/** `afterSummary` renders between the headline numbers and the module list (used for the review list). */
+export function ProgressOverview({ afterSummary }: { afterSummary?: ReactNode }) {
   const hydrated = useHydrated();
   const state = useProgressStore();
   const completed = hydrated ? state.completed : {};
@@ -32,9 +33,12 @@ export function ProgressOverview() {
           <Stat label="Reading done" value={`${Math.round(minutesDone / 6) / 10} h`} />
           <Stat label="Checks taken" value={`${checksTaken}/${knowledgeChecks.length}`} tone="violet" />
           <Stat label="Quiz attempts" value={attempts.length} />
+          <Stat label="For review" value={hydrated ? Object.keys(state.review).length : 0} tone="review" />
           <Stat label="Bookmarks" value={hydrated ? state.bookmarks.length : 0} tone="amber" />
         </StatGrid>
       </section>
+
+      {afterSummary}
 
       <section aria-labelledby="modules-h">
         <h2 id="modules-h" className="font-display text-2xl font-bold text-ink">
@@ -146,7 +150,7 @@ export function GeneralSettings() {
         <ConfirmDialog
           trigger="Reset progress"
           title="Reset all progress?"
-          description="This clears completed lessons, quiz results, bookmarks and flashcard progress in this browser. Settings and the companion stay as they are."
+          description="This clears completed lessons, topics marked for review, quiz results, bookmarks and flashcard progress in this browser. Settings and the companion stay as they are."
           confirmLabel="Reset progress"
           onConfirm={() => {
             resetProgress();

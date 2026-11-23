@@ -60,9 +60,17 @@ RAM is limited. When it fills, the cache drops entries by a policy: **LRU** (lea
 ## Pitfalls
 
 - **Stale data.** Invalidation is famously hard: the cache can keep serving a value the database has already changed.
-- **Cache stampede.** A hot key expires and thousands of requests hit the database at once. Let one request rebuild the value while the others wait, and randomize TTLs so keys don't all expire together.
+- **Cache stampede.** A hot key expires and thousands of requests hit the database at once, each trying to rebuild the same value (fixes below).
 - **Hot keys.** One key (a celebrity post) gets so much traffic it overloads a single cache node. Replicate the key or add a local cache in front.
 - **Cold start.** After a restart the cache is empty, and every request falls through to the database until it warms up.
+
+## Taming a stampede
+
+Three techniques, usually combined:
+
+- **Request coalescing (single-flight).** The first miss takes a short lock on the key and recomputes; the others wait for its result, or are served the stale value in the meantime. One rebuild instead of thousands. HTTP caches call the second variant *stale-while-revalidate*.
+- **TTL jitter.** Give each key a slightly random expiry (a TTL ± 10%), so keys that were loaded together do not expire together.
+- **Early refresh.** Rebuild *before* expiry: a background refresher for the hottest keys, or **probabilistic early expiration**, where each read recomputes with a small probability that grows as expiry approaches. The well-known rule from Vattani, Chierichetti and Lowenstein (2015) recomputes when `now − Δ × β × ln(rand) ≥ expiry`, where Δ is how long a recompute takes, `rand` is uniform in (0, 1] and β is about 1. With many readers, roughly one of them refreshes just in time and nobody else notices.
 
 <Callout type="idea" title="When to cache">
 
