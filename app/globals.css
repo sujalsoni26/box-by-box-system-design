@@ -17,7 +17,9 @@
   --surface-3: #dfe4ed;
   --ink: #131a2c;
   --ink-2: #485267;
-  --ink-3: #6f7a90;
+  /* Muted text. #6f7a90 was 4.3:1 on surface and 3.9:1 on the canvas (below AA 4.5:1); #5f697e passes on
+     surface / canvas / surface-2 / accent-soft: 5.5 / 5.0 / 4.9 / 4.55. */
+  --ink-3: #5f697e;
   --line: #d8dee8;
   --line-strong: #a5b0c2;
   --accent: #2b50d8;
@@ -32,7 +34,7 @@
   --amber-soft: #fcefd6;
   --good: #187a4f;
   --good-soft: #dcf2e6;
-  --bad: #c4352d;
+  --bad: #be322b; /* 5.7 on surface, 4.7 on bad-soft and accent-soft (was #c4352d: 4.4 on bad-soft) */
   --bad-soft: #fbe3e0;
   --warn: #9b620c;
   --warn-soft: #faeed6;
@@ -72,7 +74,7 @@
   --amber-soft: #2a1f0b;
   --good: #22c55e; /* success */
   --good-soft: #0f2618;
-  --bad: #ef4444; /* error */
+  --bad: #f05252; /* error: 5.5 / 5.1 / 4.7 (#ef4444 was 4.35 on surface-2) */
   --bad-soft: #2c1215;
   --warn: #f59e0b; /* warning */
   --warn-soft: #2a1f0b;
@@ -226,6 +228,14 @@
   .shiki {
     background-color: transparent !important;
   }
+  /* github-light / github-dark tokens below 4.5:1 on the canvas the blocks sit on: the same hue a shade darker
+     (light: keyword red, orange, green, comments) or lighter (dark: comments). Both spellings of the inline
+     style: server HTML has no space after the colon, styles set on the client do. */
+  .shiki span:is([style*="--shiki-light:#d73a49" i], [style*="--shiki-light: #d73a49" i]) { --shiki-light: #c93342 !important; }
+  .shiki span:is([style*="--shiki-light:#e36209" i], [style*="--shiki-light: #e36209" i]) { --shiki-light: #b54d00 !important; }
+  .shiki span:is([style*="--shiki-light:#22863a" i], [style*="--shiki-light: #22863a" i]) { --shiki-light: #1e7a34 !important; }
+  .shiki span:is([style*="--shiki-light:#6a737d" i], [style*="--shiki-light: #6a737d" i]) { --shiki-light: #5f6872 !important; }
+  .shiki span:is([style*="--shiki-dark:#6a737d" i], [style*="--shiki-dark: #6a737d" i]) { --shiki-dark: #8b949e !important; }
 
   /* Mermaid output inherits the theme through themeVariables; keep it responsive. */
   .mermaid-render svg {

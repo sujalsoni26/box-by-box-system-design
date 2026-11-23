@@ -339,7 +339,7 @@ function Slot({ entry, rank, s, reduced }: { entry: Entry; rank: number; s: Cach
       exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, x: 40, transition: { duration: 0.3 } }}
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
       className={cn(
-        "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg border px-2.5 py-1.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem_2.6rem]",
+        "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg border px-2.5 py-1.5 @sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem_2.6rem]",
         stale ? "border-warn bg-warn-soft" : hot ? "border-amber bg-amber-soft" : "border-line bg-surface",
       )}
     >
@@ -347,7 +347,7 @@ function Slot({ entry, rank, s, reduced }: { entry: Entry; rank: number; s: Cach
         {hot ? <Flame size={13} aria-label="hot key" /> : null}
         <span className="truncate">{entry.key}</span>
       </span>
-      <span className="flex min-w-0 items-center justify-end gap-1.5 text-[0.8rem] text-ink-2 sm:justify-start">
+      <span className="flex min-w-0 items-center justify-end gap-1.5 text-[0.8rem] text-ink-2 @sm:justify-start">
         <span className="truncate tabular-nums">{likes(entry.value)}</span>
         {stale ? <Chip tone="warn">stale</Chip> : null}
       </span>
@@ -379,7 +379,7 @@ function RedisSlots({ s, reduced }: { s: CacheState; reduced: boolean }) {
         </span>
         <span>most recently used on top</span>
       </div>
-      <ol aria-label="Redis contents, most recently used first" className="flex flex-col gap-1.5">
+      <ol aria-label="Redis contents, most recently used first" className="@container flex flex-col gap-1.5">
         <AnimatePresence initial={false}>
           {s.cache.map((e, i) => (
             <Slot key={e.key} entry={e} rank={i} s={s} reduced={reduced} />

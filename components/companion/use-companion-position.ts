@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { animate, useDragControls, useMotionValue, type PanInfo } from "motion/react";
 import type { BodyPhase } from "@/lib/companion/behaviour";
 import { rampEase, walkPlan, type Gait } from "@/lib/companion/gait";
+import { LAMP, PERCH_LIFT } from "@/lib/companion/lamp-geometry";
 import { clampVelocity, GRAVITY, isSettled, stepFall, type Arena, type Body } from "@/lib/companion/physics";
 import { floorXFrom, getWorld, normalizeFloorX, readFloorLine, readViewport, type Point, type Size, type World } from "@/lib/companion/resting";
 import { clamp } from "@/lib/utils";
@@ -20,6 +21,10 @@ interface PositionOptions {
   motionLevel: AnimationLevel;
   /** Called when the learner picks the cat up. */
   onPickUp?: () => void;
+  /** Is she asleep on her lamp right now? Then a drag carries her with the lamp (she sleeps on). */
+  lampCarry?: () => boolean;
+  /** The lamp, with her on it, touched down after being carried. */
+  onLampDrop?: () => void;
 }
 
 export interface Layout {
@@ -63,6 +68,9 @@ export function useCompanionPosition(options: PositionOptions) {
   const [facing, setFacing] = useState<Facing>("left");
   const [rising, setRising] = useState(false);
   const [gait, setGait] = useState<Gait>("walk");
+  /** Carrying her asleep on the lamp (from pick-up until the lamp lands). */
+  const [carrying, setCarrying] = useState(false);
+  const carryRef = useRef(false);
 
   const optsRef = useRef(options);
   const layoutRef = useRef<Layout>(initialLayout);
@@ -310,6 +318,38 @@ export function useCompanionPosition(options: PositionOptions) {
     [face, go, land, stopMotion, world, x, y],
   );
 
+  /**
+   * Carried asleep on the lamp and let go: lamp and cat drop straight down together until the lamp stands on the
+   * floor (kept fully on screen), and she stays perched on it, asleep.
+   */
+  const dropWithLamp = useCallback(() => {
+    stopMotion();
+    const o = optsRef.current;
+    const w = world();
+    const viewW = layoutRef.current.view.w;
+    const lampW = o.size * LAMP.w;
+    const minX = Math.max(w.minX, lampW / 2 + 10 - o.size / 2);
+    const maxX = Math.max(minX, Math.min(w.maxX, viewW - lampW / 2 - 10 - o.size / 2));
+    const tx = clamp(x.get(), minX, maxX);
+    const ty = w.floorY + o.size * 0.93 - o.size * LAMP.h - o.size * PERCH_LIFT;
+    const dy = Math.abs(ty - y.get());
+    const duration = o.motionLevel === "reduced" ? 0.12 : clamp(Math.sqrt((2 * Math.max(dy, 1)) / DROP_GRAVITY), 0.14, 0.6);
+    const token = tokenRef.current;
+    go("dropping");
+    const ax = animate(x, tx, { duration, ease: "easeOut" });
+    const ay = animate(y, ty, { duration, ease: "easeIn" });
+    animsRef.current = [ax, ay];
+    void Promise.all([ax.finished, ay.finished])
+      .then(() => {
+        if (tokenRef.current !== token) return;
+        carryRef.current = false;
+        setCarrying(false);
+        go("perched");
+        optsRef.current.onLampDrop?.();
+      })
+      .catch(() => {});
+  }, [go, stopMotion, world, x, y]);
+
   /** From wherever she is (mid-air after an interrupted move, or perched), get down to the floor and stay. */
   const settle = useCallback(() => {
     const w = world();
@@ -411,9 +451,17 @@ export function useCompanionPosition(options: PositionOptions) {
 
   const dragConstraints = useMemo(() => {
     const w = getWorld(layout.view, options.size, options.compact, layout.floorLine);
+    if (carrying) {
+      // Carrying the lamp under her: keep the lamp on screen and above the floor too.
+      const lampW = options.size * LAMP.w;
+      const left = Math.max(w.minX, lampW / 2 + 10 - options.size / 2);
+      const right = Math.max(left, Math.min(w.maxX, layout.view.w - lampW / 2 - 10 - options.size / 2));
+      const bottom = w.floorY + options.size * 0.93 - options.size * LAMP.h - options.size * PERCH_LIFT;
+      return { left, right, top: 4, bottom: Math.max(4, bottom) };
+    }
     // Fully on screen at every width: the cat is never cut off at an edge.
     return { left: w.minX, right: w.maxX, top: 4, bottom: w.floorY };
-  }, [layout, options.size, options.compact]);
+  }, [layout, options.size, options.compact, carrying]);
 
   /** Pointer down on the cat: stop any move where she is and let Motion take over if the pointer moves. */
   const onPointerDown = useCallback(
@@ -422,7 +470,8 @@ export function useCompanionPosition(options: PositionOptions) {
       draggedRef.current = false;
       const p = phaseRef.current;
       // Resting and perched are still; a press on a moving cat stops her (she settles if it was not a drag).
-      interruptedRef.current = p !== "resting" && p !== "perched";
+      // The lamp's drop after a carry always finishes (she must not come down without it).
+      interruptedRef.current = p !== "resting" && p !== "perched" && !carryRef.current;
       if (interruptedRef.current) {
         stopMotion();
         go("resting");
@@ -435,6 +484,9 @@ export function useCompanionPosition(options: PositionOptions) {
   const onDragStart = useCallback(() => {
     draggedRef.current = true;
     interruptedRef.current = false;
+    // Asleep on her lamp: carry both (decided before anything else changes).
+    carryRef.current = Boolean(optsRef.current.lampCarry?.());
+    setCarrying(carryRef.current);
     stopMotion();
     go("dragging");
     // No text selection while the cat is carried across the page.
@@ -451,7 +503,7 @@ export function useCompanionPosition(options: PositionOptions) {
 
   const onDrag = useCallback(
     (_: unknown, info: PanInfo) => {
-      if (optsRef.current.motionLevel === "reduced") return;
+      if (optsRef.current.motionLevel === "reduced" || carryRef.current) return;
       // Held by the scruff: the body swings against the direction of travel.
       tilt.set(clamp(info.velocity.x / 110, -12, 12));
     },
@@ -464,10 +516,11 @@ export function useCompanionPosition(options: PositionOptions) {
       tilt.set(0);
       refreshLayout();
       const o = optsRef.current;
-      if (o.physics && o.motionLevel !== "reduced") fly(info.velocity);
+      if (carryRef.current) dropWithLamp();
+      else if (o.physics && o.motionLevel !== "reduced") fly(info.velocity);
       else dropToFloor();
     },
-    [dropToFloor, fly, refreshLayout, tilt],
+    [dropToFloor, dropWithLamp, fly, refreshLayout, tilt],
   );
 
   /** True once after a drag, so the click that ends a drag does not open the menu. */
@@ -499,6 +552,7 @@ export function useCompanionPosition(options: PositionOptions) {
     facing,
     rising,
     gait,
+    carrying,
     getPhase,
     faceTo,
     dragControls,

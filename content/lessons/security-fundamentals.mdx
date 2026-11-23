@@ -37,9 +37,9 @@ A **trust boundary** is a line in your architecture where the level of trust cha
         db[("Database")]
         store[("Object storage")]
     end
+    attacker -->|"same ports"| gw
     user -->|"HTTPS"| cdn
     user -->|"HTTPS + token"| gw
-    attacker -->|"same ports"| gw
     gw -->|"authenticated request"| feed
     gw -->|"authenticated request"| post
     feed -->|"least-privilege DB user"| db

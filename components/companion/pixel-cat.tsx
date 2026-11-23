@@ -3,7 +3,7 @@ import { memo, useEffect, useId, useRef } from "react";
 import type { CSSProperties } from "react";
 import { animate, AnimatePresence, motion, useMotionValue, type Transition } from "motion/react";
 import { SIDE_MOODS } from "@/lib/companion/behaviour";
-import { bobKeyframes, GAITS, legKeyframes, type Gait } from "@/lib/companion/gait";
+import { bobKeyframes, GAITS, HEAD_STEADY, legKeyframes, type Gait } from "@/lib/companion/gait";
 import { cn } from "@/lib/utils";
 import type { AccessoryId, AccessorySlot, AnimationLevel, CompanionMood } from "@/types/companion";
 
@@ -245,9 +245,10 @@ const PAWS: Record<Paws, readonly [PawShape, PawShape]> = {
 };
 
 /*
- * Side view (walking, crouching, leaping): a long body on four legs, drawn facing right and mirrored for
- * left. The round head stays turned towards the viewer, as cats in illustrations often do. Legs follow
- * lib/companion/gait.ts: diagonal pairs, planted feet during stance, a lifted swing.
+ * Side view (walking, crouching, leaping): a long body on four two-segment legs (thigh and shin, a haunch on
+ * the hind legs), drawn facing right and mirrored for left. The round head stays turned towards the viewer, as
+ * cats in illustrations often do. Legs follow lib/companion/gait.ts: diagonal pairs, straight planted legs in
+ * stance, a knee bend and a reach in swing.
  */
 const SIDE_BODY_D = "M 30 85 C 30 74 41 69.5 58 69.5 C 76 69.5 92 73 92 83.5 C 92 93.5 84 98 71 98 L 45 98 C 35 98 30 93.5 30 85 Z";
 const SIDE_TAIL_D = "M 32 82 C 21 80 16 70 18 60 C 19 55 23 53 25.5 56";
@@ -257,8 +258,12 @@ const LEGS = [
   { x: 47, far: false, phase: 1, front: false },
   { x: 81, far: false, phase: 0, front: true },
 ] as const;
-const legD = (x: number) =>
-  `M ${x - 3.4} 88 L ${x - 3.4} 104.6 Q ${x - 3.4} 108.2 ${x} 108.2 Q ${x + 3.4} 108.2 ${x + 3.4} 104.6 L ${x + 3.4} 88 Z`;
+/** Hind thigh (a rounded haunch), fore upper leg and the shin with its paw; the knee pivot is at y 98. */
+const thighD = (x: number) =>
+  `M ${x - 4.8} 86.5 C ${x - 5.4} 92 ${x - 4.2} 96.5 ${x - 3.3} 99.6 L ${x + 3.3} 99.6 C ${x + 4.6} 95 ${x + 4.8} 90 ${x + 3.9} 86.5 Z`;
+const foreD = (x: number) => `M ${x - 3.4} 87.5 L ${x - 3.3} 99.6 L ${x + 3.3} 99.6 L ${x + 3.4} 87.5 Z`;
+const shinD = (x: number) =>
+  `M ${x - 3.3} 97 L ${x - 3.4} 104.6 Q ${x - 3.4} 108.2 ${x} 108.2 Q ${x + 3.4} 108.2 ${x + 3.4} 104.6 L ${x + 3.3} 97 Z`;
 
 const BODY_D = "M 41 104 C 35 104 33 96 34.5 87 C 36.5 75 45 63 60 63 C 75 63 83.5 75 85.5 87 C 87 96 85 104 79 104 Z";
 const HEAD_D =
@@ -369,9 +374,9 @@ function hopFor(mood: CompanionMood, animated: boolean, gait: Gait): { y: number
   if (!animated) return { y: 0, transition: { duration: 0 } };
   switch (mood) {
     case "walking": {
-      // Two lifts per cycle, at each mid-stance, in step with the legs (same cycle, same start).
+      // The body rides the stance legs (two arcs per cycle), in step with them: same cycle, same start.
       const bob = bobKeyframes(gait);
-      return { y: bob.y, transition: { y: { duration: GAITS[gait].cycleS, times: bob.times, repeat: Infinity, ease: "easeInOut" } } };
+      return { y: bob.y, transition: { y: { duration: GAITS[gait].cycleS, times: bob.times, repeat: Infinity, ease: "linear" } } };
     }
     case "celebrating":
       return { y: [0, -12, 0, -4, 0], transition: { y: { duration: 0.9, ease: "easeOut" } } };
@@ -515,6 +520,13 @@ function PixelCatImpl({
         ? { rx: 35, opacity: 0.15 }
         : { rx: 33, opacity: 0.13 }
     : pose.shadow;
+  const walkBob = side && sideMode === "walk" && animated ? bobKeyframes(gait) : null;
+  const headSteady = walkBob
+    ? {
+        animate: { y: walkBob.y.map((v) => -HEAD_STEADY * v) },
+        transition: { y: { duration: GAITS[gait].cycleS, times: walkBob.times, repeat: Infinity, ease: "linear" as const } },
+      }
+    : { animate: { y: 0 }, transition: { y: { duration: animated ? 0.2 : 0 } } };
   const bodyVars = suit ? SUIT_BODY[suit] : undefined;
   const earVars = suit ? SUIT_EARS[suit] : undefined;
   const headVars = suit ? SUIT_HEAD[suit] : undefined;
@@ -675,7 +687,8 @@ function PixelCatImpl({
           ) : null}
         </AnimatePresence>
 
-        {/* head */}
+        {/* head: steadier than the body while walking (it cancels part of the bob) */}
+        <motion.g initial={false} {...headSteady}>
         <motion.g style={pivot(60, 66)} initial={false} animate={head} transition={spring}>
           <g filter={fur} style={headVars}>
             {/* ears sit behind the head shape */}
@@ -765,6 +778,7 @@ function PixelCatImpl({
               </motion.g>
             ) : null}
           </AnimatePresence>
+        </motion.g>
         </motion.g>
 
         {/* the fish (Feed): held in both paws, drawn between the head and the paws */}
@@ -875,35 +889,14 @@ interface SideBodyProps {
 
 const SIDE_BODY_POSE: Record<SideMode, { y: number; scaleX: number; scaleY: number }> = {
   walk: { y: 0, scaleX: 1, scaleY: 1 },
-  // Gathered low over bent legs before a jump.
-  crouch: { y: 5, scaleX: 1.05, scaleY: 0.9 },
+  // Gathered low over folded legs before a jump (paws stay on the floor line).
+  crouch: { y: 2.6, scaleX: 1.05, scaleY: 0.9 },
   // Stretched out in the air.
   leap: { y: -1, scaleX: 1.07, scaleY: 0.97 },
 };
 
 function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising }: SideBodyProps) {
   const spec = GAITS[gait];
-  // Legs loop only while this layer exists in walk mode (that is, while walking): nothing loops at rest.
-  const leg = (phase: 0 | 1, x: number, front: boolean) => {
-    const base = { style: pivot(x, 89), initial: false as const };
-    if (!animated) return { ...base, animate: { rotate: 0, scaleY: 1 }, transition: { duration: 0 } };
-    if (mode === "walk") {
-      const k = legKeyframes(gait, phase);
-      return {
-        ...base,
-        animate: { rotate: k.rotate, scaleY: k.scaleY },
-        transition: { duration: spec.cycleS, times: k.times, ease: k.ease, repeat: Infinity },
-      };
-    }
-    if (mode === "crouch") {
-      // Front legs braced forward, hind legs folded under, ready to push.
-      return { ...base, animate: { rotate: front ? -12 : 16, scaleY: 0.8 }, transition: { duration: 0.2, ease: "easeOut" as const } };
-    }
-    // Leap: front legs reach ahead, hind legs trail after the push; they swap emphasis for the landing.
-    const angle = front ? (rising ? -58 : -26) : rising ? 52 : 22;
-    return { ...base, animate: { rotate: angle, scaleY: 1 }, transition: { duration: 0.18, ease: "easeOut" as const } };
-  };
-
   const bodyMotion = !animated
     ? { animate: { ...SIDE_BODY_POSE[mode], rotate: 0 }, transition: { duration: 0 } }
     : mode === "crouch"
@@ -939,11 +932,16 @@ function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising 
         </clipPath>
       </defs>
       <motion.g style={pivot(66, 106)} initial={false} {...bodyMotion}>
-        <g filter={fur}>
-          {/* far legs and tail, behind the body */}
+        {/* Legs are drawn crisp (outside the mosaic): thin parts that rotate every frame would otherwise be
+            re-pixelated each frame and flicker between blocks, which makes the walk look jerky. */}
+        {/* far legs, behind the body */}
+        <g>
           {LEGS.filter((l) => l.far).map((l) => (
-            <motion.path key={l.x} d={legD(l.x)} className="fill-(--cat-fur-dark) stroke-(--cat-line)" strokeWidth={1.8} {...leg(l.phase, l.x, l.front)} />
+            <SideLeg key={l.x} {...l} mode={mode} gait={gait} rising={rising} animated={animated} />
           ))}
+        </g>
+        <g filter={fur}>
+          {/* tail, behind the body */}
           <motion.g style={pivot(32, 82)} initial={false} {...tailMotion}>
             <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-line)" strokeWidth={10.5} strokeLinecap="round" />
             <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-fur)" strokeWidth={7} strokeLinecap="round" />
@@ -990,16 +988,68 @@ function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising 
           />
         ) : null}
         {/* near legs, in front of the body */}
-        <g filter={fur}>
+        <g>
           {LEGS.filter((l) => !l.far).map((l) => (
-            <motion.g key={l.x} {...leg(l.phase, l.x, l.front)}>
-              <path d={legD(l.x)} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={1.8} />
-              <ellipse cx={l.x} cy={106.4} rx={3.6} ry={1.8} className="fill-(--cat-cream)" />
-            </motion.g>
+            <SideLeg key={l.x} {...l} mode={mode} gait={gait} rising={rising} animated={animated} />
           ))}
         </g>
       </motion.g>
     </g>
+  );
+}
+
+interface SideLegProps {
+  x: number;
+  far: boolean;
+  front: boolean;
+  phase: 0 | 1;
+  mode: SideMode;
+  gait: Gait;
+  rising: boolean;
+  animated: boolean;
+}
+
+/**
+ * One leg: the thigh turns about the hip (y 89), the shin about the knee (y 98). Walk: gait keyframes (looping
+ * only while this side view exists, i.e. while walking). Crouch: folded under, paws on the floor. Leap: front
+ * legs reach ahead, hind legs push back, then swap emphasis for the landing.
+ */
+function SideLeg({ x, far, front, phase, mode, gait, rising, animated }: SideLegProps) {
+  let upper: number | number[] = 0;
+  let knee: number | number[] = 0;
+  let transition: Transition = { duration: 0 };
+  if (animated) {
+    if (mode === "walk") {
+      const k = legKeyframes(gait, phase);
+      upper = k.upper;
+      knee = k.knee;
+      transition = { duration: GAITS[gait].cycleS, times: k.times, ease: "linear", repeat: Infinity };
+    } else if (mode === "crouch") {
+      upper = front ? -8 : -28;
+      knee = front ? 36 : 58;
+      transition = { duration: 0.2, ease: "easeOut" };
+    } else {
+      upper = front ? (rising ? -58 : -30) : rising ? 50 : 24;
+      knee = front ? (rising ? -6 : 12) : rising ? 16 : 30;
+      transition = { duration: 0.18, ease: "easeOut" };
+    }
+  }
+  const tone = far ? "fill-(--cat-fur-dark)" : "fill-(--cat-fur)";
+  return (
+    <motion.g
+      data-leg={`${far ? "far" : "near"}-${front ? "front" : "hind"}`}
+      style={pivot(x, 89)}
+      initial={false}
+      animate={{ rotate: upper }}
+      transition={transition}
+    >
+      <path d={front ? foreD(x) : thighD(x)} className={cn(tone, "stroke-(--cat-line)")} strokeWidth={1.8} strokeLinejoin="round" />
+      <motion.g style={pivot(x, 98)} initial={false} animate={{ rotate: knee }} transition={transition}>
+        <path d={shinD(x)} className={cn(tone, "stroke-(--cat-line)")} strokeWidth={1.8} strokeLinejoin="round" />
+        <circle cx={x} cy={98.4} r={3.1} className={tone} />
+        {far ? null : <ellipse cx={x} cy={106.4} rx={3.6} ry={1.8} className="fill-(--cat-cream)" />}
+      </motion.g>
+    </motion.g>
   );
 }
 

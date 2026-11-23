@@ -31,6 +31,9 @@
 of each term in a lesson with `<Acronym>`. Later mentions stay plain, and headings, links, code and diagrams are skipped.
 Authors write plain text. The `Acronym` popover opens on hover or focus and pins on tap or click. It is announced to screen
 readers as the button's description. Learners can mark a term as known to stop its hints; the glossary page lists every term.
+The popover is shown in the browser's top layer (so table and diagram scrollers cannot clip it) and resets every inherited
+text style (wrapping, case, letter-spacing, weight, style), so it reads the same in a table header, a bold cell, a quote, a
+callout or a list.
 
 ## State and persistence
 

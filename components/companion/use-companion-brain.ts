@@ -136,12 +136,15 @@ export function useCompanionBrain({ pathname, lessonSlug, lampAllowed, animated 
       }
       if (decision.nextMs !== null) arm(decision.nextMs);
     };
-    const onActivity = () => {
+    const onActivity = (e?: Event) => {
       const now = Date.now();
       last = now;
       lampTried = false;
       const s = useCompanionStore.getState();
       if (s.napping) return;
+      // Asleep on her lamp, the mouse merely moving does not wake her (so the learner can reach her and carry her
+      // away asleep); keys, scrolling, touch, a press anywhere and coming back to the tab still do.
+      if (e?.type === "pointermove" && s.idleLevel === 2 && s.activity?.kind === "lamp") return;
       if (s.idleLevel === 2) {
         s.setIdleLevel(0);
         // On the lamp the routine plays its own wake-up (stretch, hop down); elsewhere a short stretch.

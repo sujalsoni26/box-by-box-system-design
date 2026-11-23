@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useMotionValue, useSpring, type MotionValue } from "motion/react";
 import { equippedAttr } from "@/lib/companion/accessories";
 import { petCache } from "@/lib/companion/actions";
-import { deriveMood, isStill } from "@/lib/companion/behaviour";
+import { deriveMood, isStill, type RoutineStep } from "@/lib/companion/behaviour";
 import { lessonFromPath } from "@/lib/companion/lesson-context";
 import { line } from "@/lib/companion/lines";
 import { pageIsBusy } from "@/lib/companion/quiet";
@@ -61,6 +61,10 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const lastPet = useRef(0);
   /** The press that stopped break play: its click must not also open the menu. */
   const swallowClick = useRef(false);
+  /** The lamp routine's current step and landing hook (the position hook needs them before the routine exists). */
+  const lampStepRef = useRef<RoutineStep>(null);
+  const lampLandedRef = useRef<() => void>(() => {});
+  const asleepOnLamp = () => useCompanionStore.getState().activity?.kind === "lamp" && lampStepRef.current === "lamp-nap";
   const menuId = useId();
   const hintId = useId();
 
@@ -84,14 +88,18 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const activity = useCompanionStore((s) => s.activity);
   const equipped = usePreferencesStore((s) => s.companion.equipped);
 
-  // Picking the cat up closes the menu and ends any routine (the drag owns the cat from then on).
+  // Picking the cat up closes the menu and ends any routine (the drag owns the cat from then on), except when she
+  // is asleep on her lamp: then she is carried with it and sleeps on.
   const onPickUp = useCallback(() => {
     const s = useCompanionStore.getState();
     s.closeMenu();
+    if (s.activity?.kind === "lamp" && lampStepRef.current === "lamp-nap") return;
     if (s.activity?.kind === "break-play") s.stopBreakPlay(useFocusStore.getState().session?.startedAt ?? 0);
     else if (s.activity) s.endActivity(s.activity.id);
   }, []);
-  const pos = useCompanionPosition({ size, compact, physics, motionLevel, onPickUp });
+  const lampCarry = useCallback(() => asleepOnLamp(), []);
+  const onLampDrop = useCallback(() => lampLandedRef.current(), []);
+  const pos = useCompanionPosition({ size, compact, physics, motionLevel, onPickUp, lampCarry, onLampDrop });
   const animated = motionLevel !== "reduced";
   const { getPhase } = pos;
 
@@ -127,6 +135,10 @@ function CompanionShell({ pathname }: { pathname: string }) {
     settle: pos.settle,
     faceTo: pos.faceTo,
     getPhase,
+  });
+  useEffect(() => {
+    lampStepRef.current = lampRoutine.step;
+    lampLandedRef.current = lampRoutine.landed;
   });
   // Yarn chase (menu) and break-time play (focus breaks).
   const play = usePlay({
@@ -164,6 +176,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
     napping,
     idleLevel,
     focusPhase: focusHydrated ? focusPhase : null,
+    carriedAsleep: pos.carrying,
   });
   const ambient = animated && pageVisible && still;
 
@@ -189,6 +202,9 @@ function CompanionShell({ pathname }: { pathname: string }) {
 
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     if (stopBreakPlay()) swallowClick.current = true;
+    // Asleep on the lamp: holding her keeps her asleep (so she can be carried); a tap without a drag still wakes her.
+    const s = useCompanionStore.getState();
+    if (asleepOnLamp() && !s.napping) s.setNapping(true);
     pos.onPointerDown(e);
   };
 
@@ -256,7 +272,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
       data-accessories={equippedAttr(equipped)}
       className="fixed left-0 top-0 z-40 h-0 w-0"
     >
-      <Lamp lamp={lampRoutine.lamp} size={size} groundY={pos.groundY} animated={animated} />
+      <Lamp lamp={lampRoutine.lamp} size={size} groundY={pos.groundY} animated={animated} catX={pos.x} catY={pos.y} />
 
       <motion.div
         className="absolute left-0 top-0"

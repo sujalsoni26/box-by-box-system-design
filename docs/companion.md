@@ -91,16 +91,25 @@ Poses blend with springs; the front and side views cross-fade (0.16 s), so nothi
 
 ### Walking
 
-`lib/companion/gait.ts` drives both the legs and the speed, so the feet stay planted: diagonal leg pairs swing
-half a cycle apart; each stance sweeps the foot back by exactly one step (linear, matching the body's constant speed),
-then the foot lifts and swings forward. The body bobs at each mid-stance (two lifts per cycle). Walks are a whole number
-of steps (she stops with both pairs planted) with a gentle first and last step. The gait follows the distance:
+`lib/companion/gait.ts` drives both the legs and the speed, so the paws stay planted:
 
-| Gait | Cycle | Step (of cat size) | Leg swing | Speed at 84 px |
+- Diagonal leg pairs swing half a cycle apart. Legs have two segments (thigh and shin; the hind legs have a haunch).
+- Stance: the leg is straight and sweeps back by exactly one step, linearly, matching the body's constant speed.
+- Swing: the knee bends (the paw folds back and lifts), the thigh swings forward, and the leg straightens to reach
+  for the next contact.
+- The body rides the stance leg like an inverted pendulum: lowest at touch-down, highest at mid-stance, by exactly
+  leg × (1 − cos angle), so the planted paw never leaves the floor line. The head cancels 60% of that bob, so it
+  stays steadier than the body, as a cat's does.
+- The legs are drawn crisp (outside the mosaic filter): thin parts that rotate every frame would otherwise be
+  re-pixelated each frame and flicker between blocks.
+- Walks are a whole number of steps (she stops with both pairs planted) with a gentle first and last step. The gait
+  follows the distance:
+
+| Gait | Cycle | Step (of cat size) | Leg swing / knee | Speed at 84 px |
 |---|---|---|---|---|
-| walk (up to 8 steps) | 0.52 s | 0.16 | ±28.5° (exact) | about 52 px/s |
-| trot (up to 6 body lengths) | 0.34 s | 0.21 | ±36° | about 104 px/s |
-| run (longer) | 0.26 s | 0.30 | ±40° | about 194 px/s |
+| walk (up to 8 steps) | 0.54 s | 0.16 | ±28.5° (exact) / 46° | about 50 px/s |
+| trot (up to 6 body lengths) | 0.38 s | 0.20 | ±34° / 56° | about 88 px/s |
+| run (longer) | 0.28 s | 0.25 | ±38° / 64° | about 150 px/s |
 
 The side view is drawn facing right and mirrored for left; the head stays turned to the viewer (a stylised cartoon
 walk), leads the body and tips into the direction of travel. Speeds never depend on any page or Try it speed setting.
@@ -168,7 +177,8 @@ Nothing is ever marked without an explicit answer.
 
 Desktop only (at least 700 px wide, the 84 px cat, motion allowed). Two ways in:
 
-- **Idle:** after 70 s without input, with a 60% chance per idle stretch. Any activity wakes her.
+- **Idle:** after 70 s without input, with a 60% chance per idle stretch. Keys, scrolling, touch, a press anywhere or
+  coming back to the tab wake her; the mouse merely moving does not (so she can be reached and carried).
 - **Menu:** "Lamp nap" in the Play group (shown only where the lamp can run). A nap on request: ordinary activity and
   opening the menu do not wake her; a tap, "Wake up" or a pet does.
 
@@ -176,8 +186,15 @@ The sequence: a lamp pops up 3–5 walk steps (plus a jump) away, on the side wi
 (`lib/companion/lamp-geometry.ts`); she turns to it, walks those steps, crouches with a wiggle, leaps along an arc, lands
 with a squash (the lamp wobbles and its face wakes up as the light comes on), settles, yawns and sleeps in the warm light.
 On waking: a stretch, the lamp dims, a little crouch, a hop down beside it on the side towards the middle, a landing
-squash, the lamp fades, and she stays where she landed. A drag, resize, press or another activity ends the routine
-cleanly at any step (never leaving her in the air); every timer and subscription is cleaned up.
+squash, the lamp fades, and she stays where she landed.
+
+**Carrying her asleep:** once she is asleep on the lamp, she can be dragged somewhere else without waking up. Pressing
+her turns an idle nap into a nap on request (the drag is not "activity"); while carried the lamp hangs under her and she
+keeps her sleeping pose; on release both drop straight down until the lamp stands on the floor (kept fully on screen),
+the lamp wobbles, and she sleeps on. A tap without a drag still wakes her, and she hops down from the new spot.
+
+Before she is asleep (walking over, leaping, settling, yawning), a drag, resize, press or another activity ends the
+routine cleanly at any step (never leaving her in the air); every timer and subscription is cleaned up.
 
 ### Play and break play
 
@@ -280,7 +297,8 @@ something animates. Costume and lamp colours are fixed art colours (the same in 
 
 - Root: `[data-testid="companion"]` with `data-mood`, `data-phase` (body state), `data-activity`
   (`play`, `lamp`, `break-play` or empty) and `data-resting="true|false"`.
-- Cat button: `[data-testid="companion-cat"]`; its SVG has `data-view` (`front`, `side-walk`, `side-crouch`, `side-leap`);
+- Cat button: `[data-testid="companion-cat"]`; its SVG has `data-view` (`front`, `side-walk`, `side-crouch`, `side-leap`)
+  and, in side view, legs `[data-leg="near-front|near-hind|far-front|far-hind"]`;
   new-unlock dot `[data-testid="companion-new-dot"]`; the fish `[data-part="fish"]`.
 - Menu items `[data-testid="companion-menu-<id>"]` (`explain`, `revise`, `focus`, `next`, `meow`, `topic-meows`,
   `wardrobe`, `feed`, `pet`, `nap`, `lamp`, `play`, `hide`, `settings`); sub-views

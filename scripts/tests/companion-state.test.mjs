@@ -39,20 +39,39 @@ test("walk plans use whole steps (she always stops with both pairs planted)", ()
   assert.equal(gait.walkPlan(1200, 84, "walk").gait, "walk", "an explicit gait wins");
 });
 
-test("legs: diagonal pairs half a cycle apart, linear stance, lifted swing; two body lifts per cycle", () => {
+test("legs: diagonal pairs half a cycle apart, straight linear stance, knee bend in swing", () => {
   for (const g of ["walk", "trot", "run"]) {
     const a = gait.GAITS[g].swingDeg;
     const p0 = gait.legKeyframes(g, 0);
     const p1 = gait.legKeyframes(g, 1);
-    assert.deepEqual([p0.rotate[0], p0.rotate[1]], [-a, a], "stance from forward to back");
-    assert.equal(p0.ease[0], "linear");
-    assert.equal(p1.rotate[0], p0.rotate[1], "phase 1 starts where phase 0 is at half time");
-    assert.equal(p1.ease[p1.ease.length - 1], "linear", "phase 1 ends in stance");
-    assert.ok(Math.min(...p0.scaleY) < 1 && Math.min(...p1.scaleY) < 1, "the foot lifts in swing");
-    const bob = gait.bobKeyframes(g);
-    assert.deepEqual(bob.times, [0, 0.25, 0.5, 0.75, 1]);
-    assert.ok(bob.y[1] < 0 && bob.y[3] < 0 && bob.y[0] === 0 && bob.y[2] === 0);
+    assert.deepEqual(p0.upper.slice(0, 5), [-a, -a / 2, 0, a / 2, a], "stance: forward to back, linear");
+    assert.ok(p0.knee.slice(0, 5).every((k) => k === 0), "straight leg in stance");
+    assert.ok(Math.max(...p0.knee) >= 40, "the knee bends in swing (the paw lifts and folds back)");
+    assert.equal(p0.knee[8], 0, "straight again before touching down");
+    for (let i = 0; i < 8; i += 1) {
+      assert.equal(p1.upper[i], p0.upper[(i + 4) % 8], "phase 1 is phase 0 half a cycle later");
+      assert.equal(p1.knee[i], p0.knee[(i + 4) % 8]);
+    }
+    assert.equal(p1.upper[8], p1.upper[0], "loops seamlessly");
   }
+});
+
+test("the body bob keeps the planted paw on the floor (inverted pendulum), the head stays steadier", () => {
+  for (const g of ["walk", "trot", "run"]) {
+    const a = (gait.GAITS[g].swingDeg * Math.PI) / 180;
+    const bob = gait.bobKeyframes(g);
+    assert.equal(bob.times[0], 0);
+    assert.equal(bob.times[bob.times.length - 1], 1);
+    for (let i = 0; i < bob.times.length; i += 1) {
+      const t = bob.times[i];
+      const theta = -a + 2 * a * ((t % 0.5) / 0.5);
+      // hip drop + straight leg height = full leg length: the stance paw sits exactly on the floor line
+      assert.ok(Math.abs(bob.y[i] + gait.LEG_UNITS * Math.cos(theta) - gait.LEG_UNITS) < 0.01, `${g} t=${t}`);
+    }
+    const max = Math.max(...bob.y);
+    assert.ok(bob.y[0] === max && Math.min(...bob.y) === 0, "lowest at touch-down, highest at mid-stance");
+  }
+  assert.ok(gait.HEAD_STEADY > 0 && gait.HEAD_STEADY < 1);
 });
 
 test("the walk ease starts and stops gently and is steady in the middle", () => {
@@ -145,6 +164,10 @@ test("deliberate jumps are side-view leaps; routine steps map to poses", () => {
   assert.equal(behaviour.deriveMood(mind({ routine: "play-crouch" })), "crouching");
   assert.equal(behaviour.deriveMood(mind({ routine: "play-bat" })), "playing");
   assert.equal(behaviour.deriveMood(mind({ reaction: "yawning", idleLevel: 2 })), "yawning", "the yawn plays before sleep");
+  // Carried (and dropped) asleep on her lamp: she sleeps through it; an ordinary drag still shows the carried pose.
+  assert.equal(behaviour.deriveMood(mind({ phase: "dragging", carriedAsleep: true })), "sleeping");
+  assert.equal(behaviour.deriveMood(mind({ phase: "dropping", carriedAsleep: true })), "sleeping");
+  assert.equal(behaviour.deriveMood(mind({ phase: "dragging" })), "dragged");
   for (const m of ["walking", "crouching", "leaping"]) assert.ok(behaviour.SIDE_MOODS.has(m));
   assert.ok(!behaviour.SIDE_MOODS.has("sitting"));
 });

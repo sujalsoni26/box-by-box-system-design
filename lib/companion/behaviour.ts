@@ -53,6 +53,8 @@ export interface MindState {
   /** 0 awake, 1 settled, 2 asleep. */
   idleLevel: 0 | 1 | 2;
   focusPhase: "focus" | "break" | null;
+  /** Being carried (or dropped) asleep on her lamp: she sleeps through it. */
+  carriedAsleep?: boolean;
 }
 
 const ROUTINE_MOOD: Record<Exclude<RoutineStep, null>, CompanionMood> = {
@@ -75,6 +77,7 @@ export const SIDE_MOODS: ReadonlySet<CompanionMood> = new Set<CompanionMood>(["w
 
 /** The single pose to show for the current state. */
 export function deriveMood(s: MindState): CompanionMood {
+  if (s.carriedAsleep && (s.phase === "dragging" || s.phase === "dropping")) return "sleeping";
   switch (s.phase) {
     case "dragging":
       return "dragged";

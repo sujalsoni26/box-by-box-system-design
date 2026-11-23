@@ -59,9 +59,10 @@ export function GlossaryBrowser() {
             <div
               key={g.term}
               id={`term-${g.term}`}
-              className="grid scroll-mt-40 gap-x-5 gap-y-1 px-5 py-4 target:bg-accent-soft sm:grid-cols-[7rem_minmax(0,1fr)_auto]"
+              // Clears the sticky header plus the filter bar (three rows of letters on a phone) on #term-/#letter- jumps.
+              className="grid scroll-mt-48 gap-x-5 gap-y-1 px-5 py-4 target:bg-accent-soft sm:grid-cols-[7rem_minmax(0,1fr)_auto]"
             >
-              {firstOfLetter ? <span id={`letter-${g.term[0].toUpperCase()}`} className="sr-only" /> : null}
+              {firstOfLetter ? <span id={`letter-${g.term[0].toUpperCase()}`} className="sr-only scroll-mt-48" /> : null}
               <dt className={cn("font-mono text-base font-semibold [overflow-wrap:anywhere]", known ? "text-ink-3" : "text-link")}>{g.term}</dt>
               <dd className="min-w-0">
                 <p className="font-bold text-ink">{g.full}</p>

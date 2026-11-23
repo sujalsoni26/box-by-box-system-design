@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useId, useState, type CSSProperties } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useId, useState, type CSSProperties } from "react";
+import { animate, AnimatePresence, motion, useMotionValue, useTransform, type MotionValue } from "motion/react";
 import type { BodyPhase, RoutineStep } from "@/lib/companion/behaviour";
 import { stepLength, type Gait } from "@/lib/companion/gait";
-import { hopDownX, LAMP, perchPoint, planLamp } from "@/lib/companion/lamp-geometry";
+import { hopDownX, LAMP, PERCH_LIFT, perchPoint, planLamp } from "@/lib/companion/lamp-geometry";
 import { line } from "@/lib/companion/lines";
 import { canNudge } from "@/lib/companion/reactions";
 import type { Point } from "@/lib/companion/resting";
@@ -20,16 +20,22 @@ export { lampFits } from "@/lib/companion/lamp-geometry";
  *
  * Waking: an idle nap wakes on any activity; a menu nap sleeps until woken on purpose (a tap, "Wake up", a pet).
  * Either way she stretches, hops down beside the lamp, the lamp fades, and she stays where she landed.
+ *
+ * Carrying: once she is asleep on the lamp, the learner can drag her somewhere else without waking her. Pressing
+ * her turns an idle nap into a nap on request (so the drag is not "activity"), the lamp hangs under her while she
+ * is carried, and on release both drop to the floor; she sleeps on. A tap without a drag still wakes her.
  * A drag, resize, press or another activity ends the routine cleanly at any step; every timer and
  * subscription is cleaned up.
  */
 
 export interface LampState {
-  /** Centre x of the lamp, viewport px. */
+  /** Centre x of the lamp, viewport px (while detached). */
   cx: number;
   lit: boolean;
-  /** Bumped when she lands on it: the lamp wobbles. */
+  /** Bumped when she lands on it (or it lands after being carried): the lamp wobbles. */
   bump: number;
+  /** She is on it: the lamp follows her (so it moves with her when she is carried). */
+  attached: boolean;
 }
 
 interface RoutineDeps {
@@ -53,7 +59,7 @@ const BEAT = { notice: 520, crouch: 560, land: 320, settle: 950, yawn: 1150, str
  * Runs the lamp routine while the companion store's activity is "lamp". Returns what to draw (the lamp)
  * and the current step (for the cat's pose).
  */
-export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; step: RoutineStep } {
+export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; step: RoutineStep; landed: () => void } {
   const activity = useCompanionStore((s) => s.activity);
   const lampId = activity?.kind === "lamp" ? activity.id : 0;
   const [lamp, setLamp] = useState<LampState | null>(null);
@@ -83,6 +89,8 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
     };
     const off = useCompanionStore.subscribe((s, prev) => {
       if (s.lampWake !== prev.lampWake) return wake();
+      // Held by the learner while asleep (to carry her): from now on only a deliberate wake ends the nap.
+      if (!napSet && !prev.napping && s.napping) napSet = true;
       if (napSet) {
         if (prev.napping && !s.napping) wake();
         return;
@@ -101,7 +109,7 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
       const { cx, dir } = plan;
 
       // The lamp pops up; she turns to look at it.
-      setLamp({ cx, lit: false, bump: 0 });
+      setLamp({ cx, lit: false, bump: 0, attached: false });
       faceTo(dir);
       await wait(BEAT.notice);
       if (cancelled) return;
@@ -128,7 +136,7 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
 
       // Land: a squash, the lamp wobbles and lights up.
       setStep("lamp-land");
-      setLamp({ cx, lit: true, bump: 1 });
+      setLamp({ cx, lit: true, bump: 1, attached: true });
       companionBlip("soft");
       await wait(BEAT.land);
       if (cancelled) return;
@@ -160,21 +168,25 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
       if (cancelled) return;
       napSet = false;
       if (getPhase() !== "perched") return finishAwake();
+      // She may have been carried somewhere else while asleep: the lamp is wherever she is now.
+      const here = catX() + size / 2;
 
       // Wake: stretch, lamp off, a little crouch, hop down on the side towards the middle, and stay there.
       setStep("lamp-stretch");
-      setLamp({ cx, lit: false, bump: 1 });
+      setLamp((l) => ({ cx: here, lit: false, bump: l?.bump ?? 1, attached: true }));
       await wait(BEAT.stretch);
       if (cancelled) return;
       // Picked up during the stretch: the drag owns the cat now.
       if (getPhase() !== "perched") return finishAwake();
-      faceTo(cx > viewW / 2 ? -1 : 1);
+      faceTo(here > viewW / 2 ? -1 : 1);
       setStep("lamp-crouch");
       await wait(BEAT.hopCrouch);
       if (cancelled) return;
       if (getPhase() !== "perched") return finishAwake();
       setStep(null);
-      const landed = await jumpTo({ x: hopDownX(cx, size, viewW), y: Number.POSITIVE_INFINITY });
+      // The lamp stays put while she jumps off it.
+      setLamp((l) => ({ cx: here, lit: false, bump: l?.bump ?? 1, attached: false }));
+      const landed = await jumpTo({ x: hopDownX(here, size, viewW), y: Number.POSITIVE_INFINITY });
       if (cancelled) return;
       if (landed && (trigger === "menu" || canNudge(Date.now()))) {
         store().say({ text: line("lampWake"), mood: "happy", ms: 3000, solicited: trigger === "menu" });
@@ -209,7 +221,9 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lampId]);
 
-  return { lamp, step };
+  /** The lamp (with her on it) touched down after being carried: a wobble. */
+  const landed = useCallback(() => setLamp((l) => (l ? { ...l, bump: l.bump + 1 } : l)), []);
+  return { lamp, step, landed };
 }
 
 /** Fixed art colours (the same cosy lamp in both themes), with a brown outline like Cache's. */
@@ -229,11 +243,32 @@ const LAMP_STYLE = {
  * light comes on, a thin pole with a pull chain, and a dome base. The flat shade top is the perch. A soft
  * glow and a pool of light on the floor when lit; a small wobble when she lands.
  */
-export function Lamp({ lamp, size, groundY, animated }: { lamp: LampState | null; size: number; groundY: number; animated: boolean }) {
+interface LampProps {
+  lamp: LampState | null;
+  size: number;
+  groundY: number;
+  animated: boolean;
+  /** The cat's position (top-left), which the lamp follows while she is on it. */
+  catX: MotionValue<number>;
+  catY: MotionValue<number>;
+}
+
+export function Lamp({ lamp, size, groundY, animated, catX, catY }: LampProps) {
   const w = size * LAMP.w;
   const h = size * LAMP.h;
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const glowId = `lamp-glow-${uid}`;
+  // Attached: under her (the shade top meets her paws); detached: standing on the floor at cx.
+  const followX = useTransform(catX, (v) => v + size / 2 - w / 2);
+  const followY = useTransform(catY, (v) => v + size * PERCH_LIFT);
+  // A wobble from the base each time something lands on it.
+  const wobble = useMotionValue(0);
+  const bump = lamp?.bump ?? 0;
+  useEffect(() => {
+    if (!bump || !animated) return;
+    const a = animate(wobble, [0, -4, 3, -1.5, 0], { duration: 0.6, ease: "easeOut" });
+    return () => a.stop();
+  }, [bump, animated, wobble]);
   return (
     <AnimatePresence>
       {lamp ? (
@@ -243,7 +278,13 @@ export function Lamp({ lamp, size, groundY, animated }: { lamp: LampState | null
           data-testid="companion-lamp"
           data-lit={lamp.lit ? "true" : "false"}
           className="pointer-events-none absolute left-0 top-0"
-          style={{ x: lamp.cx - w / 2, y: groundY - h, width: w, height: h, originY: 1 }}
+          style={{
+            x: lamp.attached ? followX : lamp.cx - w / 2,
+            y: lamp.attached ? followY : groundY - h,
+            width: w,
+            height: h,
+            originY: 1,
+          }}
           initial={animated ? { opacity: 0, scaleY: 0.6, scaleX: 0.85 } : { opacity: 0 }}
           animate={{ opacity: 1, scaleY: 1, scaleX: 1 }}
           exit={{ opacity: 0, scaleY: animated ? 0.7 : 1, scaleX: animated ? 0.9 : 1 }}
@@ -280,12 +321,7 @@ export function Lamp({ lamp, size, groundY, animated }: { lamp: LampState | null
             <ellipse cx={35} cy={82} rx={15} ry={2.6} className="fill-ink-3" opacity={0.4} />
 
             {/* everything above the floor wobbles from the base when she lands */}
-            <motion.g
-              style={{ originX: "35px", originY: "81px", transformBox: "view-box" }}
-              initial={false}
-              animate={animated && lamp.bump ? { rotate: [0, -4, 3, -1.5, 0] } : { rotate: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            >
+            <motion.g style={{ rotate: wobble, originX: "35px", originY: "81px", transformBox: "view-box" }}>
               {/* base and pole */}
               <path d="M 21.5 81.5 Q 21.5 72.5 35 71.6 Q 48.5 72.5 48.5 81.5 Z" fill="var(--lamp-base)" stroke="var(--lamp-line)" strokeWidth={1.5} strokeLinejoin="round" />
               <path d="M 27 76.5 Q 35 74 43 76.5" fill="none" stroke="var(--lamp-shade)" strokeWidth={1.2} strokeLinecap="round" opacity={0.7} />
