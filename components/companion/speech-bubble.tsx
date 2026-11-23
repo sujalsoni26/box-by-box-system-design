@@ -23,7 +23,6 @@ function announceText(b: Bubble): string {
   if (b.title) parts.push(/[.!?]$/.test(b.title) ? b.title : `${b.title}.`);
   parts.push(b.text);
   if (b.detail) parts.push(`${b.detailLabel ? `${b.detailLabel}: ` : ""}${b.detail}`);
-  if (b.items) for (const item of b.items) parts.push(`${item.label}: ${item.text}`);
   return parts.join(" ");
 }
 
@@ -115,16 +114,6 @@ export function SpeechBubble({ bubble, above, tailX, returnFocusRef, animated }:
               ) : null}
               <p className="mt-0.5">{bubble.detail}</p>
             </div>
-          ) : null}
-          {bubble.items?.length ? (
-            <dl className="mt-2 space-y-1.5">
-              {bubble.items.map((item) => (
-                <div key={item.label} className="rounded-lg bg-surface-2 px-2.5 py-1.5">
-                  <dt className="font-mono text-[0.64rem] font-bold uppercase tracking-[0.12em] text-link">{item.label}</dt>
-                  <dd className="text-[0.86rem]">{item.text}</dd>
-                </div>
-              ))}
-            </dl>
           ) : null}
         </div>
 

@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useInView } from "@/lib/hooks/use-in-view";
 import { useResolvedTheme } from "@/lib/hooks/use-resolved-theme";
+import { DiagramFrame } from "./diagram-frame";
 
 interface MermaidProps {
   chart: string;
@@ -79,24 +80,22 @@ export function Mermaid({ chart, caption }: MermaidProps) {
   }, [chart, theme, inView, reactId]);
 
   return (
-    <figure ref={ref} className="not-prose my-8" data-companion-avoid="">
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface p-4">
-        {error ? (
-          <pre className="whitespace-pre-wrap font-mono text-xs text-bad">{error}</pre>
-        ) : svg ? (
-          <div
-            role="img"
-            aria-label={caption ?? "Diagram"}
-            className="mermaid-render mx-auto flex min-w-[320px] justify-center"
-            dangerouslySetInnerHTML={{ __html: svg.markup }}
-          />
-        ) : (
-          <div role="status" className="grid h-48 place-items-center text-sm text-ink-3">
-            Drawing the diagram…
-          </div>
-        )}
-      </div>
-      {caption ? <figcaption className="mt-2 text-center text-sm italic text-ink-3">{caption}</figcaption> : null}
-    </figure>
+    // A wide chart that Mermaid scales down to the column (or that overflows it) can open in a lightbox.
+    <DiagramFrame ref={ref} caption={caption} expandedMarkup={!error && svg ? svg.markup : undefined}>
+      {error ? (
+        <pre className="whitespace-pre-wrap font-mono text-xs text-bad">{error}</pre>
+      ) : svg ? (
+        <div
+          role="img"
+          aria-label={caption ?? "Diagram"}
+          className="mermaid-render mx-auto flex min-w-[320px] justify-center"
+          dangerouslySetInnerHTML={{ __html: svg.markup }}
+        />
+      ) : (
+        <div role="status" className="grid h-48 place-items-center text-sm text-ink-3">
+          Drawing the diagram…
+        </div>
+      )}
+    </DiagramFrame>
   );
 }

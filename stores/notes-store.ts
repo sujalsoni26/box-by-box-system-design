@@ -15,18 +15,20 @@ export interface LessonNote {
 export interface NotesState {
   /** Lesson slug -> note. A lesson without notes has no entry. */
   notes: Record<string, LessonNote>;
-  /** Whether the desktop Notes panel is expanded. Collapsed by default. */
-  panelOpen: boolean;
 }
 
 interface NotesActions {
   /** Saves the note; empty (or whitespace-only) text deletes the entry. */
   setNote: (slug: string, text: string) => void;
   clearNote: (slug: string) => void;
-  setPanelOpen: (open: boolean) => void;
 }
 
-type PersistedNotes = Pick<NotesState, "notes" | "panelOpen">;
+/*
+ * Whether the desktop Notes panel is open is not kept here: it is shared with "On this page" (only one is
+ * open at a time) and lives in components/learning/lesson-side-panels.tsx for the browser session. Data
+ * saved by older builds may still have a `panelOpen` field; it is ignored and dropped on the next save.
+ */
+type PersistedNotes = Pick<NotesState, "notes">;
 
 /** Keeps only well-formed entries; anything else in storage is ignored rather than trusted. */
 function sanitizeNotes(value: unknown): Record<string, LessonNote> {
@@ -70,7 +72,6 @@ export const useNotesStore = create<NotesState & NotesActions>()(
   persist(
     (set, get) => ({
       notes: {},
-      panelOpen: false,
       setNote: (slug, text) => {
         const current = get().notes[slug];
         if (!text.trim()) {
@@ -94,23 +95,16 @@ export const useNotesStore = create<NotesState & NotesActions>()(
           return { notes };
         });
       },
-      setPanelOpen: (panelOpen) => {
-        if (get().panelOpen !== panelOpen) set({ panelOpen });
-      },
     }),
     {
       name: STORAGE_KEYS.notes,
       version: 1,
       storage: notesStorage,
       skipHydration: true,
-      partialize: (s) => ({ notes: s.notes, panelOpen: s.panelOpen }),
+      partialize: (s) => ({ notes: s.notes }),
       merge: (persisted, current) => {
         const p = persisted && typeof persisted === "object" ? (persisted as Partial<Record<keyof PersistedNotes, unknown>>) : {};
-        return {
-          ...current,
-          notes: sanitizeNotes(p.notes),
-          panelOpen: typeof p.panelOpen === "boolean" ? p.panelOpen : false,
-        };
+        return { ...current, notes: sanitizeNotes(p.notes) };
       },
     },
   ),

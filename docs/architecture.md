@@ -44,10 +44,15 @@ fallback. To move to authenticated server storage, implement the same `getItem/s
 against an API and export it as `persistenceAdapter`. UI code only talks to the stores.
 
 **Study notes** (`stores/notes-store.ts`, key `sdn-notes-v1`) keep one plain-text note per lesson. `notes` maps a lesson slug to
-`{ text, updatedAt }`, and `panelOpen` remembers whether the desktop Notes panel is expanded (collapsed by default). The editor in
+`{ text, updatedAt }`. (Older saves also carry a `panelOpen` flag; it is ignored and dropped on the next save.) The editor in
 `components/learning/lesson-notes.tsx` saves about 400 ms after typing stops, and straight away on blur, close, or when the page is
 hidden. Saving empty text deletes the entry. Stored data is checked on load, so malformed JSON or entries are dropped instead of
 breaking hydration. Notes are kept in this browser only and are not synced.
+
+On wide screens (xl) the right column holds two collapsible panels, "On this page" and Notes, owned by one component
+(`components/learning/lesson-side-panels.tsx`): opening one closes the other, and both may be closed (`toggleSidePanel` in
+`lib/learning/side-panels.ts`). "On this page" starts open. The choice is kept for the browser session (sessionStorage
+`sdn-side-panel`), so moving between lessons does not flip it. Below xl, the Notes chip in the lesson header opens the sheet.
 
 Stores use `skipHydration` and are rehydrated in `AppProviders` on the client. Components that show persisted data check
 `useHydrated()` first, so server HTML and the first client render always match (no hydration errors). The theme is applied
@@ -64,6 +69,14 @@ before first paint by `ThemeScript`, which reads the same localStorage key.
   Blocks listed in `ANIMATED_INTERACTIVES` get a local 0.5x / 1x / 1.5x speed control (`components/diagrams/sim-speed.tsx`):
   each block owns its speed (`SimSpeedProvider` in `InteractiveDiagram`), frame loops scale `dt`, timers and tweens use
   `simDuration` / `useSimNow`, and CSS keyframes read `--sim-speed` set on the block. It never affects other blocks or the companion.
+- **Lightbox** (`components/diagrams/diagram-frame.tsx`, `diagram-lightbox.tsx`): Mermaid and static diagrams sit in a
+  `DiagramFrame` that measures them (ResizeObserver). Only a *constrained* diagram (scaled below 88% of its natural size, or
+  overflowing its column; `lib/diagrams/constrained.ts`) gets an Expand button and a zoom-in cursor; one that fits stays plain.
+  Expanding opens an in-page modal (never a new tab): `role="dialog"`, `aria-modal`, labelled by the caption, focus on Close,
+  focus trapped, Escape / X / backdrop close, focus returned to the opener, page scroll locked and restored. The SVG is shown as
+  vector at a readable zoom (fit when that is at least 80%, else 1:1), with zoom buttons and keys (+, -, 0, 1), drag or arrow-key
+  pan and pinch / Ctrl+wheel zoom (`lib/diagrams/zoom.ts`). Mermaid copies get their element ids suffixed so markers and
+  scoped styles still resolve (`lib/diagrams/svg-ids.ts`).
 
 ## Companion events
 

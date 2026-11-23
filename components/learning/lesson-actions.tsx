@@ -109,8 +109,8 @@ export function MarkCompleteButton({ lesson }: { lesson: Lesson }) {
 
   const isDone = hydrated && done;
   return (
-    // data-lesson-end: the companion watches this to ask (once) whether to mark the lesson learned.
-    <div className="mt-10 flex flex-wrap items-center gap-4" data-companion-avoid="" data-lesson-end="">
+    // data-lesson-end: the companion watches this lesson's end (by slug) to ask, once, whether to mark it learned.
+    <div className="mt-10 flex flex-wrap items-center gap-4" data-companion-avoid="" data-lesson-end={lesson.slug}>
       <motion.button
         type="button"
         onClick={toggle}

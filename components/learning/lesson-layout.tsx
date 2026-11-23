@@ -10,9 +10,10 @@ import type { LessonHeading } from "@/lib/lesson-headings";
 import type { Lesson } from "@/types/curriculum";
 import { BookmarkButton, CompletedChip, LessonVisitTracker, MarkCompleteButton, ReviewButton } from "./lesson-actions";
 import { LessonNavigation } from "./lesson-navigation";
-import { LessonNotesChip, LessonNotesPanel } from "./lesson-notes";
+import { LessonNotesChip } from "./lesson-notes";
+import { LessonSidePanels } from "./lesson-side-panels";
 import { LessonSidebar } from "./lesson-sidebar";
-import { OnThisPage, ReadingProgress } from "./on-this-page";
+import { ReadingProgress } from "./on-this-page";
 import { RecallCard } from "./recall-card";
 import { TeachingStrip } from "./teaching-strip";
 
@@ -87,8 +88,8 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
         </article>
 
         <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] overflow-y-auto py-10 xl:block" data-companion-avoid="">
-          <OnThisPage headings={headings} />
-          <LessonNotesPanel slug={lesson.slug} title={lesson.title} />
+          {/* "On this page" and Notes: both collapsible, at most one open. */}
+          <LessonSidePanels headings={headings} slug={lesson.slug} title={lesson.title} />
         </aside>
       </div>
     </>

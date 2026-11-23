@@ -30,13 +30,36 @@ function visibleInViewport(el: Element): boolean {
   return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight;
 }
 
+const TYPING = 'input, textarea, select, [contenteditable="true"], [contenteditable=""]';
+const MODAL = '[role="dialog"][aria-modal="true"], [role="alertdialog"], dialog[open]';
+
+/**
+ * The learner is engaged with something even without input: a modal dialog (e.g. a diagram lightbox) is open,
+ * focus is in a text field, or focus is inside a knowledge check. Cache does not fall asleep meanwhile.
+ */
+export function learnerEngaged(): boolean {
+  if (typeof document === "undefined") return false;
+  const active = document.activeElement;
+  if (active?.matches?.(TYPING)) return true;
+  if (document.querySelector(MODAL)) return true;
+  return Boolean(active?.closest?.('section[aria-labelledby^="check-"]'));
+}
+
+interface BusyOptions {
+  /**
+   * Ignore a knowledge check merely being on screen (still busy if focus is inside it or it was just used).
+   * The completion prompt needs this: the check sits right above the end of the lesson.
+   */
+  allowVisibleChecks?: boolean;
+}
+
 /** The learner is typing, selecting, in a dialog or popover, working a quiz, or just used a Try it block. */
-export function pageIsBusy(now = Date.now()): boolean {
+export function pageIsBusy(now = Date.now(), options: BusyOptions = {}): boolean {
   if (typeof document === "undefined") return true;
   if (document.visibilityState !== "visible") return true;
   const active = document.activeElement;
-  if (active?.matches?.('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return true;
-  if (document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"], dialog[open]')) return true;
+  if (active?.matches?.(TYPING)) return true;
+  if (document.querySelector(MODAL)) return true;
   try {
     if (document.querySelector(":popover-open")) return true;
   } catch {
@@ -46,6 +69,8 @@ export function pageIsBusy(now = Date.now()): boolean {
   if (selection && !selection.isCollapsed && selection.toString().trim()) return true;
   // An open knowledge check on screen, or focus inside one.
   if (active?.closest?.('section[aria-labelledby^="check-"]')) return true;
-  for (const f of document.querySelectorAll('section[aria-labelledby^="check-"] fieldset')) if (visibleInViewport(f)) return true;
+  if (!options.allowVisibleChecks) {
+    for (const f of document.querySelectorAll('section[aria-labelledby^="check-"] fieldset')) if (visibleInViewport(f)) return true;
+  }
   return now - lastWidgetInteraction < RECENT_INTERACTION_MS;
 }

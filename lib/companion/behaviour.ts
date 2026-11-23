@@ -22,8 +22,25 @@ import type { CompanionMood } from "@/types/companion";
 
 export type BodyPhase = "resting" | "dragging" | "flying" | "dropping" | "landing" | "walking" | "jumping" | "perched";
 
-/** A scripted routine the companion plays out: chase the yarn, or the idle lamp nap. */
-export type RoutineStep = "lamp-approach" | "lamp-crouch" | "lamp-sit" | "lamp-nap" | "lamp-stretch" | null;
+/**
+ * A step of a scripted routine (the lamp nap, break-time play). Routines set the step; the pose follows.
+ * lamp: approach (walk) → crouch → leap → land → settle → yawn → nap … stretch → hop down.
+ * play: crouch (before a pounce) → bat → rest, between chases.
+ */
+export type RoutineStep =
+  | "lamp-approach"
+  | "lamp-crouch"
+  | "lamp-land"
+  | "lamp-settle"
+  | "lamp-sit"
+  | "lamp-yawn"
+  | "lamp-nap"
+  | "lamp-stretch"
+  | "play-crouch"
+  | "play-bat"
+  | "play-rest"
+  | "play-cheer"
+  | null;
 
 export interface MindState {
   phase: BodyPhase;
@@ -41,10 +58,20 @@ export interface MindState {
 const ROUTINE_MOOD: Record<Exclude<RoutineStep, null>, CompanionMood> = {
   "lamp-approach": "walking",
   "lamp-crouch": "crouching",
+  "lamp-land": "landing",
+  "lamp-settle": "sitting",
   "lamp-sit": "sitting",
+  "lamp-yawn": "yawning",
   "lamp-nap": "sleeping",
   "lamp-stretch": "stretching",
+  "play-crouch": "crouching",
+  "play-bat": "playing",
+  "play-rest": "sitting",
+  "play-cheer": "happy",
 };
+
+/** Poses drawn in side view (the cat moving or about to move in a direction); the rest face the viewer. */
+export const SIDE_MOODS: ReadonlySet<CompanionMood> = new Set<CompanionMood>(["walking", "crouching", "leaping"]);
 
 /** The single pose to show for the current state. */
 export function deriveMood(s: MindState): CompanionMood {
@@ -60,7 +87,8 @@ export function deriveMood(s: MindState): CompanionMood {
     case "walking":
       return "walking";
     case "jumping":
-      return "jumping";
+      // A jump she chose (lamp, pounce) is a side-view leap; being thrown upwards is "jumping" above.
+      return "leaping";
     default:
       break;
   }

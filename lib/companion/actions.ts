@@ -2,7 +2,7 @@ import { catMeows } from "@/data/cat-meows";
 import { lessons, nextIncompleteLesson } from "@/lib/curriculum";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
-import { useCompanionStore, useFocusStore, type BubbleAction, type BubbleInput, type BubbleItem } from "@/stores/companion-store";
+import { useCompanionStore, useFocusStore, type BubbleAction, type BubbleInput } from "@/stores/companion-store";
 import type { Lesson } from "@/types/curriculum";
 import { fill, line, LINES } from "./lines";
 import { pickRevision, type RevisionSource } from "./lesson-context";
@@ -22,11 +22,9 @@ function nextAfter(from?: string | null): Lesson | undefined {
   return nextIncompleteLesson(completed, from ?? lastVisited);
 }
 
-type LessonFeature = "explain" | "hint" | "summary";
+type LessonFeature = "explain";
 const FEATURE_TEXT: Record<LessonFeature, string> = {
   explain: "explain it simply",
-  hint: "give you a hint",
-  summary: "sum up the topic",
 };
 
 /** Off lesson pages: say what the item needs and offer the next lesson instead. */
@@ -50,32 +48,6 @@ export function explainSimply(lesson?: Lesson): void {
     text: lesson.explainSimply,
     actions: [{ label: "Got it", primary: true }],
     mood: "studying",
-  });
-}
-
-export function giveHint(lesson?: Lesson): void {
-  if (!lesson) return needLesson("hint");
-  ask({
-    title: "Hint",
-    text: lesson.hint,
-    detailLabel: "Now try to answer",
-    detail: lesson.recall.q,
-    actions: [
-      {
-        label: "Show answer",
-        onSelect: () =>
-          ask({
-            title: `Answer: ${lesson.title}`,
-            text: lesson.recall.q,
-            detailLabel: "Answer",
-            detail: lesson.recall.a,
-            actions: [{ label: "Got it", primary: true }],
-            mood: "happy",
-          }),
-      },
-      { label: "Got it", primary: true },
-    ],
-    mood: "thinking",
   });
 }
 
@@ -127,21 +99,6 @@ function revealRevision(lesson: Lesson): void {
       { label: "Review lesson", href: lessonHref(lesson) },
       { label: "Another", onSelect: quickRevision },
     ],
-  });
-}
-
-export function topicSummary(lesson?: Lesson): void {
-  if (!lesson) return needLesson("summary");
-  const items: BubbleItem[] = [{ label: "Problem", text: lesson.problem }];
-  if (lesson.breaks && lesson.breaks !== lesson.problem) items.push({ label: "What breaks", text: lesson.breaks });
-  items.push({ label: "The fix", text: lesson.summary });
-  if (lesson.tradeoffs) items.push({ label: "Trade-off", text: lesson.tradeoffs });
-  ask({
-    title: `Summary: ${label(lesson)}`,
-    text: "The whole lesson in a few lines.",
-    items,
-    actions: [{ label: "Got it", primary: true }],
-    mood: "studying",
   });
 }
 
@@ -235,14 +192,20 @@ function wakeIfNapping(): void {
 }
 
 let feedTimer = 0;
+/** How long the fish lasts: it drops into her paws, two bites, then the bones (see FishSnack in pixel-cat). */
+export const EATING_MS = 2400;
 
-/** A fish appears, about two seconds of eating, then a happy "nom". */
+/**
+ * A fish drops into her paws, she nibbles it down to the bones, then a happy "nom". Play stops first (she sits
+ * to eat); on the lamp she wakes and eats there.
+ */
 export function feedCache(): void {
   wakeIfNapping();
   const s = useCompanionStore.getState();
+  if (s.activity && s.activity.kind !== "lamp") s.endActivity(s.activity.id);
   usePreferencesStore.getState().bumpCompanionStat("feeds");
   s.dismiss();
-  s.react("eating", 2000);
+  s.react("eating", EATING_MS);
   companionBlip("pop");
   window.clearTimeout(feedTimer);
   feedTimer = window.setTimeout(() => {
@@ -250,7 +213,7 @@ export function feedCache(): void {
     c.react("happy", 1600);
     companionBlip("happy");
     c.say({ text: line("nom"), mood: "happy", ms: 3000, solicited: true });
-  }, 2000);
+  }, EATING_MS);
 }
 
 let petCount = 0;
@@ -272,6 +235,11 @@ export function petCache(lesson?: Lesson, speak = true): void {
 /** Nap until woken from the menu, by a tap or by a pet; ordinary scrolling does not wake her. */
 export function toggleNap(): void {
   const s = useCompanionStore.getState();
+  if (s.activity?.kind === "lamp") {
+    // On the lamp, "Wake up" lets the lamp routine play its own wake-up: stretch and hop down.
+    s.wakeLamp();
+    return;
+  }
   if (s.napping) {
     s.setNapping(false);
     s.react("happy", 900);
@@ -281,6 +249,20 @@ export function toggleNap(): void {
   s.dismiss();
   s.setNapping(true);
   s.say({ text: line("napStart"), mood: "sleeping", ms: 3000, solicited: true });
+}
+
+/**
+ * "Lamp nap" (desktop, motion allowed): a lamp pops up a few steps away; she walks over, leaps on, settles and
+ * sleeps until woken on purpose. The companion component plays it out (lamp.tsx).
+ */
+export function lampNap(): void {
+  const s = useCompanionStore.getState();
+  if (s.activity?.kind === "lamp") return;
+  if (s.napping) s.setNapping(false);
+  s.dismiss();
+  s.startActivity("lamp", "menu");
+  companionBlip("pop");
+  s.say({ text: line("lampNap"), mood: "happy", ms: 2600, solicited: true });
 }
 
 /** A yarn ball rolls along the floor; the companion component plays the chase (needs her position). */

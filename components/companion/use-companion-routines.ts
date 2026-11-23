@@ -7,6 +7,7 @@ import { canNudge, canRespond } from "@/lib/companion/reactions";
 import { markFactShown, nextFact } from "@/lib/companion/topic-facts";
 import { TIMING } from "@/lib/companion/timing";
 import { completeLesson } from "@/lib/learning/complete-lesson";
+import { endInView, minReadFor, msUntilPrompt, promptEligible } from "@/lib/learning/lesson-end";
 import { useCompanionStore, useFocusStore } from "@/stores/companion-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
@@ -19,21 +20,26 @@ interface RoutineOptions {
   getPhase: () => BodyPhase;
 }
 
-/** The companion is free and the page is quiet: safe to speak without being asked. */
-function quietMoment(getPhase: () => BodyPhase): boolean {
+/**
+ * The companion is free and the page is quiet: safe to speak without being asked.
+ * `forPrompt` (the completion prompt) tolerates a knowledge check merely being on screen (it sits right above
+ * the end of the lesson) and break-time play (a focus break is a natural moment to finish a lesson).
+ */
+function quietMoment(getPhase: () => BodyPhase, forPrompt = false): boolean {
   const s = useCompanionStore.getState();
+  const routine = Boolean(s.activity) && !(forPrompt && s.activity?.kind === "break-play");
   return (
     canActOnItsOwn({
-      phase: getPhase(),
+      phase: forPrompt && s.activity?.kind === "break-play" ? "resting" : getPhase(),
       menuOpen: s.menuOpen,
       bubble: Boolean(s.bubble),
-      routine: Boolean(s.activity),
+      routine,
       focusRunning: useFocusStore.getState().session?.phase === "focus",
       pageVisible: document.visibilityState === "visible",
     }) &&
     !s.napping &&
     s.idleLevel !== 2 &&
-    !pageIsBusy()
+    !pageIsBusy(Date.now(), { allowVisibleChecks: forPrompt })
   );
 }
 
@@ -97,109 +103,149 @@ export function useTopicMeows({ lesson, compact, getPhase }: RoutineOptions) {
 }
 
 /**
- * At the end of a lesson, ask once whether to mark it learned. Explicit confirmation only; never for a
- * learned lesson; never twice for the same lesson (persisted); only after the end has stayed in view for a
- * moment and the learner has spent a plausible time on the page.
+ * At the end of a lesson, ask once whether to mark it learned, with three explicit answers: "Mark as learned",
+ * "Review later" (flags it for review, does not complete it) and "Not yet". Rules in lib/learning/lesson-end.ts.
+ *
+ * Detection is robust to client navigation, re-renders and responsive layouts:
+ * - it watches only this lesson's marker (`[data-lesson-end="<slug>"]`), so a marker left over from the
+ *   previous page can never be matched;
+ * - a MutationObserver (throttled to one check per frame) re-finds the marker when it mounts late or is
+ *   replaced, and the IntersectionObserver follows layout changes (tall pages, wrapping rows, content that grows);
+ * - the end must stay in view for the dwell, after a plausible reading time; if Cache is busy at that moment
+ *   (another bubble, a drag, the menu, a focus block) it tries again a few seconds later while the end is in view.
+ * It never asks about a learned lesson, never twice (`completionAsked`, persisted), and withdraws the question if
+ * the lesson gets marked by hand or the learner leaves the lesson.
  */
 export function useCompletionPrompt({ lesson, getPhase }: RoutineOptions) {
   const slug = lesson?.slug;
   const minutes = lesson?.minutes ?? 5;
+  const title = lesson?.title;
   const tipsOn = usePreferencesStore((s) => s.companion.studyTips);
 
   useEffect(() => {
-    if (!slug || !tipsOn) return;
+    if (!slug) return;
     const eligible = () =>
-      !useProgressStore.getState().completed[slug] && !usePreferencesStore.getState().companion.completionAsked[slug];
+      promptEligible({
+        tipsOn: usePreferencesStore.getState().companion.studyTips,
+        completed: Boolean(useProgressStore.getState().completed[slug]),
+        asked: Boolean(usePreferencesStore.getState().companion.completionAsked[slug]),
+      });
     if (!eligible()) return;
 
     const openedAt = Date.now();
-    const minRead = Math.min(TIMING.completionMaxReadMs, Math.max(TIMING.completionMinReadMs, minutes * 60_000 * 0.25));
-    let visible = false;
+    const minRead = minReadFor(minutes, { dwellMs: TIMING.completionDwellMs, minReadMs: TIMING.completionMinReadMs, maxReadMs: TIMING.completionMaxReadMs });
+    let visibleSince = 0;
     let timer = 0;
-    let observer: IntersectionObserver | null = null;
-    let findTimer = 0;
+    let raf = 0;
     let done = false;
+    let promptId = 0;
+    let target: Element | null = null;
+    let io: IntersectionObserver | null = null;
+
+    const stop = () => {
+      done = true;
+      window.clearTimeout(timer);
+      io?.disconnect();
+      mo.disconnect();
+    };
 
     const ask = () => {
-      done = true;
-      const title = lesson?.title ?? "this lesson";
+      stop();
       usePreferencesStore.getState().markCompletionAsked(slug);
-      useCompanionStore.getState().say({
+      const later = (text: string) => useCompanionStore.getState().say({ text, ms: 3800, solicited: true });
+      promptId = useCompanionStore.getState().say({
         title: "Finished?",
-        text: fill(line("completionAsk"), { title }),
+        text: fill(line("completionAsk"), { title: title ?? "this lesson" }),
         mood: "happy",
         actions: [
+          { label: "Mark as learned", primary: true, onSelect: () => void completeLesson(slug) },
           {
-            label: "Mark as learned",
-            primary: true,
+            label: "Review later",
             onSelect: () => {
-              completeLesson(slug);
+              useProgressStore.getState().setReview(slug, true);
+              later(line("completionReview"));
             },
           },
-          {
-            label: "Not yet",
-            onSelect: () => useCompanionStore.getState().say({ text: line("completionLater"), ms: 3800, solicited: true }),
-          },
+          { label: "Not yet", onSelect: () => later(line("completionLater")) },
         ],
       });
-      observer?.disconnect();
     };
 
-    const check = () => {
+    const attempt = () => {
       window.clearTimeout(timer);
-      if (done || !visible) return;
-      if (!eligible()) {
-        done = true;
-        observer?.disconnect();
+      if (done || !visibleSince) return;
+      if (!eligible()) return stop();
+      const wait = msUntilPrompt(Date.now(), openedAt, visibleSince, minRead, TIMING.completionDwellMs);
+      if (wait > 0) {
+        timer = window.setTimeout(attempt, wait);
         return;
       }
-      const wait = Math.max(TIMING.completionDwellMs, openedAt + minRead - Date.now());
-      timer = window.setTimeout(() => {
-        if (done || !visible || !eligible()) return;
-        // Answering something else, in focus mode, or mid-drag: try again in a little while.
-        if (!quietMoment(getPhase) || !canRespond()) {
-          timer = window.setTimeout(check, 4_000);
-          return;
-        }
-        ask();
-      }, wait);
+      // Busy right now (another bubble, the menu, a drag, focus mode): try again shortly while the end is in view.
+      if (!quietMoment(getPhase, true) || !canRespond()) {
+        timer = window.setTimeout(attempt, 3_000);
+        return;
+      }
+      ask();
     };
 
-    // The end marker is part of the lesson layout; it can mount a moment after the companion.
-    let tries = 0;
-    const attach = () => {
-      const end = document.querySelector("[data-lesson-end]");
-      if (!end) {
-        if (tries++ < 10) findTimer = window.setTimeout(attach, 500);
-        return;
-      }
-      observer = new IntersectionObserver(
+    const observe = (el: Element) => {
+      io?.disconnect();
+      target = el;
+      visibleSince = 0;
+      io = new IntersectionObserver(
         (entries) => {
-          visible = entries.some((e) => e.isIntersecting);
-          if (visible) check();
-          else window.clearTimeout(timer);
+          const e = entries[entries.length - 1];
+          const inView = endInView({
+            isIntersecting: e.isIntersecting,
+            ratio: e.intersectionRatio,
+            visibleHeight: e.intersectionRect.height,
+            targetHeight: e.boundingClientRect.height,
+            viewportHeight: window.innerHeight,
+          });
+          if (inView && !visibleSince) visibleSince = Date.now();
+          if (!inView) {
+            visibleSince = 0;
+            window.clearTimeout(timer);
+          }
+          attempt();
         },
-        { threshold: 0.6 },
+        { threshold: [0, 0.1, 0.25, 0.4, 0.5, 0.75, 1] },
       );
-      observer.observe(end);
+      io.observe(el);
     };
-    attach();
 
-    // Learned by hand in the meantime: stop watching.
-    const off = useProgressStore.subscribe((s) => {
-      if (s.completed[slug]) {
-        done = true;
+    const selector = `[data-lesson-end="${slug.replace(/["\\]/g, "")}"]`;
+    const sync = () => {
+      raf = 0;
+      if (done) return;
+      const el = document.querySelector(selector);
+      if (el && el !== target) observe(el);
+      else if (!el && target) {
+        io?.disconnect();
+        target = null;
+        visibleSince = 0;
         window.clearTimeout(timer);
-        observer?.disconnect();
       }
+    };
+    const mo = new MutationObserver(() => {
+      if (!raf) raf = requestAnimationFrame(sync);
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    sync();
+
+    // Learned by hand in the meantime: stop watching, and withdraw the question if it is still showing.
+    const off = useProgressStore.subscribe((p) => {
+      if (!p.completed[slug]) return;
+      stop();
+      if (promptId) useCompanionStore.getState().dismiss(promptId);
     });
 
     return () => {
-      done = true;
-      window.clearTimeout(timer);
-      window.clearTimeout(findTimer);
-      observer?.disconnect();
+      stop();
+      if (raf) cancelAnimationFrame(raf);
       off();
+      // Leaving the lesson: an unanswered question about it would be out of place on the next page.
+      if (promptId) useCompanionStore.getState().dismiss(promptId);
     };
-  }, [slug, minutes, tipsOn, getPhase, lesson?.title]);
+  }, [slug, minutes, title, tipsOn, getPhase]);
 }

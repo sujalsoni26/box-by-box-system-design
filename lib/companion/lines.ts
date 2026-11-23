@@ -23,7 +23,7 @@ export const LINES = {
   quizGood: "{score}/{total}. Solid. Retake it tomorrow and watch it climb.",
   quizLow: "{score}/{total}. That is what checks are for: reread the explanations, then try again later.",
   greetNew:
-    "Hi, I'm Cache! Click me for a simple explanation, a hint, quick revision or a focus timer. You can drag me anywhere.",
+    "Hi, I'm Cache! Click me for a simple explanation, quick revision or a focus timer. You can drag me anywhere.",
   greetBack: [
     "Welcome back! Pick up where you left off?",
     "Mrrp, you're back! Shall we carry on?",
@@ -53,7 +53,7 @@ export const LINES = {
   encourage: [
     "Small steps, box by box.",
     "You're doing great. One building block at a time.",
-    "Stuck? Ask me for a hint. No shame in it.",
+    "Stuck? Ask me to explain it simply. No shame in it.",
     "Every expert once asked what a load balancer is.",
     "Steady reading beats speed reading.",
   ],
@@ -97,6 +97,14 @@ export const LINES = {
   napStart: ["Nap time. Wake me from the menu, or give me a pat.", "Curling up. A pat or the menu wakes me.", "Zzz soon. Tap me when you need me."],
   wake: ["Mrrp! I'm up. What are we learning?", "Yawn. Okay, I'm awake!", "Stretch... and back. What's next?"],
   lampWake: ["Mrrp! Warm lamp, good nap.", "Yawn. That lamp is the best spot in the house.", "Oh, you're back. I was guarding the lamp."],
+  lampNap: [
+    "My lamp! Tap me when you need me.",
+    "Lamp nap time. A tap or the menu wakes me.",
+    "Off to my warm lamp. Wake me with a tap.",
+  ],
+  lampNoRoom: ["No room for my lamp here. Drag me somewhere roomier and ask again.", "Hmm, my lamp won't fit here. Move me a little and try again."],
+  breakPlayStart: ["Break time! Watch me play.", "Five minutes off. Yarn time!", "Break! I'm going to chase things."],
+  breakPlayStop: ["Okay, okay. Sitting nicely now.", "Fine, I'll rest. Enjoy your break.", "Paws down. Enjoy the rest of your break."],
   playDone: [
     "Got it! Best yarn ever.",
     "Pounce! Yarn: defeated.",
@@ -110,6 +118,7 @@ export const LINES = {
     "All the way through {title}! Want to mark it as learned?",
   ],
   completionLater: ["Okay, I won't ask about this one again. The button is at the end of the lesson.", "Sure. You can mark it any time with the button at the end."],
+  completionReview: ["Flagged for review. It's waiting in your review list.", "Marked for review. Come back to it whenever you like."],
   topicPaused: "Topic meows paused. Resume them from my menu whenever you like.",
   topicResumed: "Topic meows back on. I will share a fact from the lesson now and then.",
   homeTips: [

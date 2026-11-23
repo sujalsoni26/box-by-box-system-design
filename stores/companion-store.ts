@@ -16,11 +16,6 @@ export interface BubbleAction {
   onSelect?: () => void;
 }
 
-export interface BubbleItem {
-  label: string;
-  text: string;
-}
-
 export interface Bubble {
   id: number;
   /** Short heading under the "Cache" nameplate. */
@@ -29,8 +24,6 @@ export interface Bubble {
   /** Secondary block, e.g. a question to try or a revealed answer. */
   detail?: string;
   detailLabel?: string;
-  /** Labelled lines, e.g. the topic summary. */
-  items?: BubbleItem[];
   actions?: BubbleAction[];
   /** Pose the cat holds while this bubble is visible. */
   mood?: CompanionMood;
@@ -51,11 +44,18 @@ export type BubbleInput = Omit<Bubble, "id" | "ms" | "focus" | "solicited"> & {
 /** 0 = awake, 1 = settled (sits quietly), 2 = asleep. */
 export type IdleLevel = 0 | 1 | 2;
 export type MenuView = "main" | "settings" | "wardrobe";
-/** A short scripted activity the companion component plays out (needs the cat's position). */
+/**
+ * A scripted activity the companion component plays out (needs the cat's position):
+ * - play: one yarn chase (menu);
+ * - lamp: walk to a lamp, leap up, settle, nap, hop down (idle on desktop, or "Lamp nap" in the menu);
+ * - break-play: during a focus break, alternate chases and pounces until the break ends or she is pressed.
+ */
+export type ActivityKind = "play" | "lamp" | "break-play";
 export interface CompanionActivity {
   id: number;
-  /** play: chase the yarn. lamp: the idle routine (walk to a lamp, hop up, nap, hop down). */
-  kind: "play" | "lamp";
+  kind: ActivityKind;
+  /** Who started it. A lamp nap from the menu sleeps until woken on purpose; an idle one wakes on any activity. */
+  trigger: "idle" | "menu" | "focus";
 }
 
 interface CompanionRuntimeState {
@@ -73,6 +73,10 @@ interface CompanionRuntimeState {
   /** Asleep on request ("Nap"): ordinary activity does not wake her; the menu, a tap or a pet does. */
   napping: boolean;
   activity: CompanionActivity | null;
+  /** Break play was stopped by the learner for the focus break that started at this time (it stays off for that break). */
+  breakPlayOff: number;
+  /** Bumped to wake Cache on the lamp on purpose (a tap, "Wake up"); the lamp routine listens. */
+  lampWake: number;
 }
 
 interface CompanionRuntimeActions {
@@ -88,8 +92,12 @@ interface CompanionRuntimeActions {
   setIdleLevel: (level: IdleLevel) => void;
   resetPosition: () => void;
   setNapping: (napping: boolean) => void;
-  startActivity: (kind: CompanionActivity["kind"]) => void;
+  startActivity: (kind: ActivityKind, trigger?: CompanionActivity["trigger"]) => number;
   endActivity: (id: number) => void;
+  /** Stop break play for the rest of this break (the learner pressed Cache). */
+  stopBreakPlay: (breakStartedAt: number) => void;
+  /** Wake her on the lamp: she stretches and hops down. */
+  wakeLamp: () => void;
 }
 
 let nextId = 1;
@@ -112,6 +120,8 @@ export const useCompanionStore = create<CompanionRuntimeState & CompanionRuntime
   lastNudgeAt: 0,
   napping: false,
   activity: null,
+  breakPlayOff: 0,
+  lampWake: 0,
 
   say: (input) => {
     const id = nextId++;
@@ -147,11 +157,24 @@ export const useCompanionStore = create<CompanionRuntimeState & CompanionRuntime
     if (get().idleLevel !== idleLevel) set({ idleLevel });
   },
   setNapping: (napping) => set({ napping, idleLevel: napping ? 2 : 0, menuOpen: false }),
-  // Play wakes the cat; the lamp routine starts from idleness and keeps the idle level (it wakes on activity).
-  startActivity: (kind) =>
-    set((s) => ({ activity: { id: nextId++, kind }, napping: false, idleLevel: kind === "lamp" ? s.idleLevel : 0 })),
+  // Play wakes the cat; an idle lamp keeps the idle level (it wakes on activity). One activity at a time:
+  // starting one replaces the last (its routine cleans up when its id changes).
+  startActivity: (kind, trigger = "menu") => {
+    const id = nextId++;
+    set((s) => ({
+      activity: { id, kind, trigger },
+      napping: false,
+      idleLevel: kind === "lamp" && trigger === "idle" ? s.idleLevel : 0,
+    }));
+    return id;
+  },
   endActivity: (id) => {
     if (get().activity?.id === id) set({ activity: null });
+  },
+  wakeLamp: () => set((s) => ({ lampWake: s.lampWake + 1, napping: false, idleLevel: 0 })),
+  stopBreakPlay: (breakStartedAt) => {
+    const a = get().activity;
+    set({ breakPlayOff: breakStartedAt, activity: a?.kind === "break-play" ? null : a });
   },
   resetPosition: () => {
     usePreferencesStore.getState().setCompanionPosition(null);

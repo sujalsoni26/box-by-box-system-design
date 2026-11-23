@@ -2,22 +2,31 @@
 import { memo, useEffect, useId, useRef } from "react";
 import type { CSSProperties } from "react";
 import { animate, AnimatePresence, motion, useMotionValue, type Transition } from "motion/react";
+import { SIDE_MOODS } from "@/lib/companion/behaviour";
+import { bobKeyframes, GAITS, legKeyframes, type Gait } from "@/lib/companion/gait";
 import { cn } from "@/lib/utils";
 import type { AccessoryId, AccessorySlot, AnimationLevel, CompanionMood } from "@/types/companion";
 
 /*
  * Cache, drawn as vector parts (body, head, ears, eyes, muzzle, tail, paws) and posed with Motion.
  * "A little pixelated": the fur layers pass through a mosaic filter (5-unit blocks, about 3.5 px at
- * the 84 px desktop size) while the eyes, nose and mouth stay crisp, so expressions read clearly.
- * The filter only re-runs while something animates. Colours come from theme tokens; a faint --ink
- * drop-shadow rim keeps the silhouette readable on dark backgrounds.
+ * the 84 px desktop size) while the eyes, nose, mouth and the fine parts of accessories stay crisp, so
+ * expressions and small details read clearly. The filter only re-runs while something animates. Fur colours
+ * come from theme tokens; a faint --ink drop-shadow rim keeps the silhouette readable on dark backgrounds.
+ *
+ * Two views: front (sitting, reacting) and side (walking, crouching, leaping), cross-faded. Accessories
+ * follow every pose: hats and eyewear ride on the head; neckwear sits under the chin, in front of the head
+ * (so the head never hides it); capes hang behind the body; costumes recolour the fur layers through CSS
+ * variables and add a mask on the head.
  */
 
 type Eyes = "open" | "wide" | "relaxed" | "down" | "up" | "happy" | "closed" | "confused";
-type Mouth = "w" | "smile" | "o" | "wavy" | "flat";
-type Paws = "sit" | "walk" | "tuck" | "dangle" | "chin" | "book" | "cheer" | "bat" | "spread" | "splay";
+type Mouth = "w" | "smile" | "o" | "wavy" | "flat" | "yawn";
+type Paws = "sit" | "walk" | "tuck" | "dangle" | "chin" | "book" | "cheer" | "bat" | "spread" | "splay" | "hold";
 type Tail = "up" | "high" | "curl" | "wrap" | "hang";
 type Extra = "book" | "glasses" | "thought" | "question" | "sparkles" | "zzz" | "blush" | "fish" | "hearts";
+type SideMode = "walk" | "crouch" | "leap";
+type Suit = "night-vigilante" | "web-hero";
 
 interface Pose {
   head: { x: number; y: number; rotate: number };
@@ -45,6 +54,19 @@ const BASE: Pose = {
   paws: "sit",
   extras: [],
   shadow: { rx: 25, opacity: 0.13 },
+};
+
+const JUMP: Pose = {
+  ...BASE,
+  head: { x: 0, y: -3, rotate: 0 },
+  earL: -18,
+  earR: 18,
+  earScale: 0.9,
+  body: { scaleX: 0.92, scaleY: 1.1 },
+  tail: "high",
+  eyes: "wide",
+  paws: "dangle",
+  shadow: { rx: 14, opacity: 0.05 },
 };
 
 const POSES: Record<CompanionMood, Pose> = {
@@ -103,7 +125,8 @@ const POSES: Record<CompanionMood, Pose> = {
     paws: "dangle",
     shadow: { rx: 15, opacity: 0.05 },
   },
-  eating: { ...BASE, head: { x: 0, y: 5, rotate: 0 }, earL: 4, earR: -4, tail: "curl", eyes: "happy", mouth: "o", extras: ["fish"] },
+  // Holding the fish in both paws and nibbling it (the fish is drawn between the head and the paws).
+  eating: { ...BASE, head: { x: 0, y: 3, rotate: 0 }, earL: 5, earR: -5, earScale: 1.02, tail: "curl", eyes: "happy", mouth: "o", paws: "hold", extras: ["fish"] },
   purring: { ...BASE, head: { x: 0, y: 0, rotate: 7 }, earL: 6, earR: -6, earScale: 1.02, tail: "high", eyes: "happy", mouth: "w", extras: ["blush", "hearts"] },
   playing: { ...BASE, head: { x: 2, y: 1, rotate: 10 }, earL: 8, earR: -4, earScale: 1.04, tail: "high", eyes: "wide", mouth: "o", paws: "bat" },
   // Transition poses: short in-between states, so the cat never snaps from "carried" to "sitting".
@@ -132,6 +155,7 @@ const POSES: Record<CompanionMood, Pose> = {
     paws: "splay",
     shadow: { rx: 31, opacity: 0.17 },
   },
+  // Side-view poses (crouching, leaping) draw the side body; these front values only matter for the head and face.
   crouching: {
     ...BASE,
     head: { x: 0, y: 6, rotate: 0 },
@@ -144,18 +168,8 @@ const POSES: Record<CompanionMood, Pose> = {
     paws: "splay",
     shadow: { rx: 29, opacity: 0.15 },
   },
-  jumping: {
-    ...BASE,
-    head: { x: 0, y: -3, rotate: 0 },
-    earL: -18,
-    earR: 18,
-    earScale: 0.9,
-    body: { scaleX: 0.92, scaleY: 1.1 },
-    tail: "high",
-    eyes: "wide",
-    paws: "dangle",
-    shadow: { rx: 14, opacity: 0.05 },
-  },
+  jumping: JUMP,
+  leaping: { ...JUMP, earL: -24, earR: 24, mouth: "w" },
   stretching: {
     ...BASE,
     head: { x: 0, y: 8, rotate: -6 },
@@ -168,6 +182,17 @@ const POSES: Record<CompanionMood, Pose> = {
     mouth: "o",
     paws: "spread",
     shadow: { rx: 33, opacity: 0.14 },
+  },
+  yawning: {
+    ...BASE,
+    head: { x: 0, y: 1, rotate: -5 },
+    earL: -12,
+    earR: 12,
+    earScale: 0.92,
+    body: { scaleX: 1.03, scaleY: 0.97 },
+    tail: "wrap",
+    eyes: "closed",
+    mouth: "yawn",
   },
 };
 
@@ -212,41 +237,48 @@ const PAWS: Record<Paws, readonly [PawShape, PawShape]> = {
     { cx: 47, cy: 104.5, rx: 7, ry: 4.2, opacity: 1 },
     { cx: 73, cy: 104.5, rx: 7, ry: 4.2, opacity: 1 },
   ],
+  // Both paws under the fish, holding it up to the mouth.
+  hold: [
+    { cx: 48, cy: 86.5, rx: 5.2, ry: 4.4, opacity: 1 },
+    { cx: 68.5, cy: 87, rx: 5.2, ry: 4.4, opacity: 1 },
+  ],
 };
 
 /*
- * Side view for walking: a long body on four legs that swing in a diagonal gait (near back leg with
- * far front leg, then the other pair) and the tail up behind. Drawn facing right and mirrored for left;
- * the round head stays turned towards the viewer, as cats in illustrations often do.
+ * Side view (walking, crouching, leaping): a long body on four legs, drawn facing right and mirrored for
+ * left. The round head stays turned towards the viewer, as cats in illustrations often do. Legs follow
+ * lib/companion/gait.ts: diagonal pairs, planted feet during stance, a lifted swing.
  */
 const SIDE_BODY_D = "M 30 85 C 30 74 41 69.5 58 69.5 C 76 69.5 92 73 92 83.5 C 92 93.5 84 98 71 98 L 45 98 C 35 98 30 93.5 30 85 Z";
 const SIDE_TAIL_D = "M 32 82 C 21 80 16 70 18 60 C 19 55 23 53 25.5 56";
 const LEGS = [
-  { x: 39, far: true, phase: 0 },
-  { x: 73, far: true, phase: 1 },
-  { x: 47, far: false, phase: 1 },
-  { x: 81, far: false, phase: 0 },
+  { x: 39, far: true, phase: 0, front: false },
+  { x: 73, far: true, phase: 1, front: true },
+  { x: 47, far: false, phase: 1, front: false },
+  { x: 81, far: false, phase: 0, front: true },
 ] as const;
 const legD = (x: number) =>
   `M ${x - 3.4} 88 L ${x - 3.4} 104.6 Q ${x - 3.4} 108.2 ${x} 108.2 Q ${x + 3.4} 108.2 ${x + 3.4} 104.6 L ${x + 3.4} 88 Z`;
-/** One full stride, seconds. */
-const STEP_S = 0.5;
-const NECK_TONE: Partial<Record<AccessoryId, string>> = {
-  "bell-collar": "stroke-bad",
-  "bow-tie": "stroke-accent",
-  "gold-chain": "stroke-(--cat-gold)",
-  bandana: "stroke-bad",
-};
 
 const BODY_D = "M 41 104 C 35 104 33 96 34.5 87 C 36.5 75 45 63 60 63 C 75 63 83.5 75 85.5 87 C 87 96 85 104 79 104 Z";
+const HEAD_D =
+  "M 30 47 C 30 31 43 23 60 23 C 77 23 90 31 90 47 C 90 55 87 61 82 64 C 76 68 68 69 60 69 C 52 69 44 68 38 64 C 33 61 30 55 30 47 Z";
+/** The cape behind the body, wide enough to show down both sides from the front; and billowing (same commands, so Motion morphs between them). */
+const CAPE_HANG = "M 46 66 Q 60 70 74 66 L 103 106 Q 80 111 60 108 Q 40 111 17 106 Z";
+const CAPE_BILLOW = "M 46 66 Q 60 70 74 66 L 109 95 Q 84 104 60 100 Q 36 104 11 95 Z";
 const BLINKABLE: ReadonlySet<Eyes> = new Set(["open", "wide", "up", "relaxed", "down", "confused"]);
 const EYE_L = { cx: 48, cy: 45 };
 const EYE_R = { cx: 72, cy: 45 };
 /** Mosaic block size in viewBox units (120 units = the cat's width). */
 const BLOCK = 5;
+/** Moods in the air: the cape billows. */
+const AIRBORNE: ReadonlySet<CompanionMood> = new Set<CompanionMood>(["dragged", "falling", "jumping"]);
 
 type CatStyle = CSSProperties & Record<`--${string}`, string>;
-/** Palette derived from tokens (no hex): fur is --amber, lines and eyes are darkened amber. */
+/**
+ * Palette. Fur derives from tokens (--amber), so it follows the theme. Costume colours are fixed art
+ * colours (the same suit in both themes), chosen to contrast with the fur, the outline and both page grounds.
+ */
 const CAT_STYLE: CatStyle = {
   "--cat-fur": "var(--amber)",
   "--cat-fur-dark": "color-mix(in oklab, var(--amber) 70%, black)",
@@ -257,9 +289,44 @@ const CAT_STYLE: CatStyle = {
   "--cat-mouth": "color-mix(in oklab, var(--bad) 45%, black)",
   "--cat-shine": "white",
   "--cat-gold": "color-mix(in oklab, var(--amber) 72%, white)",
+  // Jewellery gold: brighter and cooler than the fur, always with a dark outline.
+  "--cat-gold-hi": "oklch(0.9 0.14 95)",
+  "--cat-gold-lo": "oklch(0.66 0.13 80)",
+  "--suit-slate": "oklch(0.41 0.03 265)",
+  "--suit-slate-2": "oklch(0.53 0.035 265)",
+  "--suit-slate-3": "oklch(0.29 0.025 265)",
+  "--suit-red": "oklch(0.57 0.2 27)",
+  "--suit-red-2": "oklch(0.45 0.17 25)",
+  "--suit-blue": "oklch(0.47 0.15 262)",
+  "--suit-blue-2": "oklch(0.37 0.12 262)",
+  "--suit-web": "oklch(0.24 0.06 25)",
+  "--fish": "oklch(0.8 0.07 228)",
+  "--fish-back": "oklch(0.58 0.11 240)",
+  "--fish-belly": "oklch(0.94 0.025 220)",
+  "--fish-bone": "oklch(0.97 0.01 90)",
+  "--cat-lens": "oklch(0.98 0.008 90)",
   filter:
     "drop-shadow(0 0 0.8px color-mix(in srgb, var(--ink) 45%, transparent)) drop-shadow(0 3px 5px hsl(var(--shadow-color) / 0.22))",
 };
+
+/** Costume colours for the body, tail, legs and paws: the fur variables, redirected. */
+const SUIT_BODY: Record<Suit, CatStyle> = {
+  "night-vigilante": { "--cat-fur": "var(--suit-slate)", "--cat-fur-dark": "var(--suit-slate-3)", "--cat-cream": "var(--suit-slate-2)" },
+  // Blue sides and legs, a red chest panel and red gloves.
+  "web-hero": { "--cat-fur": "var(--suit-blue)", "--cat-fur-dark": "var(--suit-blue-2)", "--cat-cream": "var(--suit-red)" },
+};
+/** Costume colours for the head: the vigilante's cowl only covers the ears and brow (drawn on top); the web hero's mask is the whole head. */
+const SUIT_EARS: Record<Suit, CatStyle> = {
+  "night-vigilante": { "--cat-fur": "var(--suit-slate)", "--cat-pink": "var(--suit-slate-3)" },
+  "web-hero": { "--cat-fur": "var(--suit-red)", "--cat-pink": "var(--suit-red-2)" },
+};
+const SUIT_HEAD: Partial<Record<Suit, CatStyle>> = {
+  "web-hero": { "--cat-fur": "var(--suit-red)", "--cat-cream": "var(--suit-red)", "--cat-fur-dark": "var(--suit-red-2)" },
+};
+
+function suitOf(id: AccessoryId | undefined): Suit | null {
+  return id === "night-vigilante" || id === "web-hero" ? id : null;
+}
 
 /** Transform origin in viewBox units (Motion sets transform-box for SVG; we pin it to the view box). */
 const pivot = (x: number, y: number) => ({ originX: `${x}px`, originY: `${y}px`, transformBox: "view-box" as const });
@@ -277,8 +344,12 @@ export type EquippedAccessories = Partial<Record<AccessorySlot, AccessoryId>>;
 
 export interface PixelCatProps {
   mood?: CompanionMood;
-  /** Which way the cat walks (the side view is mirrored for "left"). */
+  /** Which way the cat is heading (the side view is mirrored for "left"). */
   facing?: "left" | "right";
+  /** Walking cadence; the position hook moves the cat at the matching speed. */
+  gait?: Gait;
+  /** During a leap: true on the way up (nose up), false on the way down. */
+  rising?: boolean;
   /** "normal" poses with springs and plays idle beats; "reduced" (prefers-reduced-motion) snaps between poses. */
   motionLevel?: AnimationLevel;
   /** Allow occasional idle micro-motions (blink, tail flick, ear twitch, drifting z). */
@@ -294,24 +365,29 @@ export interface PixelCatProps {
   className?: string;
 }
 
-function hopFor(mood: CompanionMood, animated: boolean): { y: number | number[]; transition: Transition } {
+function hopFor(mood: CompanionMood, animated: boolean, gait: Gait): { y: number | number[]; transition: Transition } {
   if (!animated) return { y: 0, transition: { duration: 0 } };
   switch (mood) {
-    case "walking":
-      // Two small lifts per stride, in step with the legs.
-      return { y: [0, -1.4, 0], transition: { y: { duration: STEP_S / 2, repeat: Infinity, ease: "easeInOut" } } };
+    case "walking": {
+      // Two lifts per cycle, at each mid-stance, in step with the legs (same cycle, same start).
+      const bob = bobKeyframes(gait);
+      return { y: bob.y, transition: { y: { duration: GAITS[gait].cycleS, times: bob.times, repeat: Infinity, ease: "easeInOut" } } };
+    }
     case "celebrating":
       return { y: [0, -12, 0, -4, 0], transition: { y: { duration: 0.9, ease: "easeOut" } } };
     case "happy":
       return { y: [0, -5, 0], transition: { y: { duration: 0.45, ease: "easeOut" } } };
     case "eating":
-      return { y: [0, 1.6, 0], transition: { y: { duration: 0.32, repeat: 4, ease: "easeInOut" } } };
+      // Chewing: small nods while the fish is nibbled.
+      return { y: [0, 1.4, 0], transition: { y: { duration: 0.34, repeat: 5, ease: "easeInOut", delay: 0.25 } } };
     case "playing":
       return { y: [0, -3, 0], transition: { y: { duration: 0.3, ease: "easeOut" } } };
     case "landing":
       return { y: [0, 2, 0], transition: { y: { duration: 0.28, ease: "easeOut" } } };
     case "stretching":
       return { y: [0, 1.5, 0], transition: { y: { duration: 0.7, ease: "easeInOut" } } };
+    case "yawning":
+      return { y: [0, -1.2, 0], transition: { y: { duration: 1.1, ease: "easeInOut" } } };
     default:
       return { y: 0, transition: { y: { duration: 0.25, ease: "easeOut" } } };
   }
@@ -320,6 +396,8 @@ function hopFor(mood: CompanionMood, animated: boolean): { y: number | number[];
 function PixelCatImpl({
   mood = "idle",
   facing = "right",
+  gait = "walk",
+  rising = false,
   motionLevel = "normal",
   ambient = false,
   gaze = false,
@@ -330,15 +408,19 @@ function PixelCatImpl({
 }: PixelCatProps) {
   const pose = POSES[mood];
   const animated = motionLevel !== "reduced";
-  const side = mood === "walking";
+  const side = SIDE_MOODS.has(mood);
+  const sideMode: SideMode = mood === "crouching" ? "crouch" : mood === "leaping" ? "leap" : "walk";
   const dir = facing === "left" ? -1 : 1;
   const svgRef = useRef<SVGSVGElement>(null);
   const moodRef = useRef(mood);
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const pxId = `cat-px-${uid}`;
   const clipId = `cat-body-${uid}`;
+  const headClipId = `cat-head-${uid}`;
   const fur = pixelated ? `url(#${pxId})` : undefined;
   const wear = accessories ?? {};
+  const suit = suitOf(wear.body);
+  const caped = wear.body === "hero-cape" || suit === "night-vigilante";
 
   // Imperative one-shot motions, driven by the beat timer below (no continuous loops at rest).
   const blink = useMotionValue(1);
@@ -367,7 +449,7 @@ function PixelCatImpl({
         if (beat % 4 === 2) running.push(animate(earTwitch, [0, -11, 0], { duration: 0.34, ease: "easeOut" }));
       }
       if (running.length > 8) running.splice(0, running.length - 8);
-      timer = window.setTimeout(play, (3200 + Math.random() * 4800));
+      timer = window.setTimeout(play, 3200 + Math.random() * 4800);
     };
     timer = window.setTimeout(play, 1800 + Math.random() * 2500);
     return () => {
@@ -414,13 +496,28 @@ function PixelCatImpl({
   const spring: Transition = animated ? { type: "spring", stiffness: 300, damping: 24, mass: 0.8 } : { duration: 0 };
   const morph: Transition = animated ? { duration: 0.32, ease: "easeOut" } : { duration: 0 };
   const fade: Transition = animated ? { duration: 0.2 } : { duration: 0 };
-  // Swapping between the front (sitting) and side (walking) bodies is a short cross-fade, never a cut.
+  // Swapping between the front (sitting) and side (moving) bodies is a short cross-fade, never a cut.
   const swap: Transition = animated ? { duration: 0.16, ease: "easeOut" } : { duration: 0 };
   const has = (e: Extra) => pose.extras.includes(e);
-  const hop = hopFor(mood, animated);
-  // While walking the head leads, slightly ahead of the side body, and tips into the direction of travel.
-  const head = side ? { x: dir * 21, y: 3, rotate: dir * 5 } : pose.head;
-  const shadow = side ? { rx: 33, opacity: 0.13 } : pose.shadow;
+  const hop = hopFor(mood, animated, gait);
+  // In side view the head leads, ahead of the body, tipping into the direction of travel.
+  const head = side
+    ? sideMode === "crouch"
+      ? { x: dir * 23, y: 9, rotate: dir * 3 }
+      : sideMode === "leap"
+        ? { x: dir * 22, y: rising ? -2 : 1, rotate: dir * (rising ? -7 : 6) }
+        : { x: dir * 21, y: 3, rotate: dir * 5 }
+    : pose.head;
+  const shadow = side
+    ? sideMode === "leap"
+      ? { rx: 20, opacity: 0.06 }
+      : sideMode === "crouch"
+        ? { rx: 35, opacity: 0.15 }
+        : { rx: 33, opacity: 0.13 }
+    : pose.shadow;
+  const bodyVars = suit ? SUIT_BODY[suit] : undefined;
+  const earVars = suit ? SUIT_EARS[suit] : undefined;
+  const headVars = suit ? SUIT_HEAD[suit] : undefined;
 
   return (
     <svg
@@ -432,6 +529,7 @@ function PixelCatImpl({
       className={cn("block select-none", className)}
       style={CAT_STYLE}
       focusable="false"
+      data-view={side ? `side-${sideMode}` : "front"}
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}
     >
       <defs>
@@ -445,6 +543,9 @@ function PixelCatImpl({
         </filter>
         <clipPath id={clipId}>
           <path d={BODY_D} />
+        </clipPath>
+        <clipPath id={headClipId}>
+          <path d={HEAD_D} />
         </clipPath>
       </defs>
 
@@ -460,66 +561,86 @@ function PixelCatImpl({
       />
 
       <motion.g initial={false} animate={{ y: hop.y }} transition={hop.transition}>
-        {/* side view (walking), cross-faded with the front view */}
+        {/* side view (walking, crouching, leaping), cross-faded with the front view */}
         <AnimatePresence initial={false}>
           {side ? (
             <motion.g key="side" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={swap}>
-              <SideBody fur={fur} flip={dir === -1} animated={animated} wear={wear} clipId={`${clipId}-side`} />
+              <SideBody
+                fur={fur}
+                flip={dir === -1}
+                animated={animated}
+                wear={wear}
+                suit={suit}
+                clipId={`${clipId}-side`}
+                mode={sideMode}
+                gait={gait}
+                rising={rising}
+              />
             </motion.g>
           ) : null}
         </AnimatePresence>
 
-        {/* front view: tail and body fade out while walking */}
+        {/* front view: tail and body fade out in side view */}
         <motion.g initial={false} animate={{ opacity: side ? 0 : 1 }} transition={swap}>
-        {/* tail */}
-        <motion.g style={{ rotate: tailFlick, ...pivot(80, 100) }}>
-          <g filter={fur}>
-            <motion.path
-              className="fill-none stroke-(--cat-line)"
-              strokeWidth={10.5}
-              strokeLinecap="round"
-              initial={false}
-              animate={{ d: TAILS[pose.tail] }}
-              transition={morph}
-            />
-            <motion.path
-              className="fill-none stroke-(--cat-fur)"
-              strokeWidth={7}
-              strokeLinecap="round"
-              initial={false}
-              animate={{ d: TAILS[pose.tail] }}
-              transition={morph}
-            />
-          </g>
-        </motion.g>
-
-        {/* body (+ cape behind, sweater and neckwear in front) */}
-        <motion.g style={pivot(60, 106)} initial={false} animate={pose.body} transition={spring}>
-          <g filter={fur}>
-            {wear.body === "hero-cape" ? <Cape /> : null}
-            <path d={BODY_D} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={2.2} strokeLinejoin="round" />
-            {wear.body === "striped-sweater" ? (
-              <Sweater clipId={clipId} />
-            ) : (
-              <>
-                <ellipse cx={60} cy={88} rx={10.5} ry={13.5} className="fill-(--cat-cream)" />
-                <path
-                  d="M 37.5 88 Q 41.5 89 43.5 86 M 37 95 Q 41 96 43 93 M 82.5 88 Q 78.5 89 76.5 86 M 83 95 Q 79 96 77 93"
-                  className="fill-none stroke-(--cat-fur-dark)"
-                  strokeWidth={2.1}
+          {/* tail */}
+          <g style={bodyVars}>
+            <motion.g style={{ rotate: tailFlick, ...pivot(80, 100) }}>
+              <g filter={fur}>
+                <motion.path
+                  className="fill-none stroke-(--cat-line)"
+                  strokeWidth={10.5}
                   strokeLinecap="round"
+                  initial={false}
+                  animate={{ d: TAILS[pose.tail] }}
+                  transition={morph}
                 />
-              </>
-            )}
-            {wear.body === "hero-cape" ? (
-              <g>
-                <circle cx={47.5} cy={68.5} r={2.2} className="fill-(--cat-gold) stroke-(--cat-line)" strokeWidth={0.8} />
-                <circle cx={72.5} cy={68.5} r={2.2} className="fill-(--cat-gold) stroke-(--cat-line)" strokeWidth={0.8} />
+                <motion.path
+                  className="fill-none stroke-(--cat-fur)"
+                  strokeWidth={7}
+                  strokeLinecap="round"
+                  initial={false}
+                  animate={{ d: TAILS[pose.tail] }}
+                  transition={morph}
+                />
               </g>
-            ) : null}
-            {wear.neck ? <Neckwear id={wear.neck} /> : null}
+            </motion.g>
           </g>
-        </motion.g>
+
+          {/* body: cape behind, then the body, then sweater or costume details */}
+          <g style={bodyVars}>
+            <motion.g style={pivot(60, 106)} initial={false} animate={pose.body} transition={spring}>
+              <g filter={fur}>
+                {caped ? (
+                  <motion.path
+                    className={cn(
+                      "stroke-(--cat-line)",
+                      suit === "night-vigilante" ? "fill-(--suit-slate-3)" : "fill-bad",
+                    )}
+                    strokeWidth={1.8}
+                    strokeLinejoin="round"
+                    initial={false}
+                    animate={{ d: animated && AIRBORNE.has(mood) ? CAPE_BILLOW : CAPE_HANG }}
+                    transition={animated ? { type: "spring", stiffness: 160, damping: 14 } : { duration: 0 }}
+                  />
+                ) : null}
+                <path d={BODY_D} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={2.2} strokeLinejoin="round" />
+                {wear.body === "striped-sweater" ? (
+                  <Sweater clipId={clipId} />
+                ) : (
+                  <>
+                    <ellipse cx={60} cy={88} rx={10.5} ry={13.5} className="fill-(--cat-cream)" />
+                    <path
+                      d="M 37.5 88 Q 41.5 89 43.5 86 M 37 95 Q 41 96 43 93 M 82.5 88 Q 78.5 89 76.5 86 M 83 95 Q 79 96 77 93"
+                      className="fill-none stroke-(--cat-fur-dark)"
+                      strokeWidth={2.1}
+                      strokeLinecap="round"
+                    />
+                  </>
+                )}
+              </g>
+              {suit ? <SuitFront suit={suit} clipId={clipId} /> : null}
+            </motion.g>
+          </g>
         </motion.g>
 
         {/* book (studying) */}
@@ -556,35 +677,32 @@ function PixelCatImpl({
 
         {/* head */}
         <motion.g style={pivot(60, 66)} initial={false} animate={head} transition={spring}>
-          <g filter={fur}>
+          <g filter={fur} style={headVars}>
             {/* ears sit behind the head shape */}
-            <motion.g style={pivot(45, 31)} initial={false} animate={{ rotate: pose.earL, scaleY: pose.earScale }} transition={spring}>
-              <path
-                d="M 37 35 C 34 26 32 17 33 11 C 33.5 8.5 35.5 8 37.5 9.5 C 42 13 48 19 53 27 Z"
-                className="fill-(--cat-fur) stroke-(--cat-line)"
-                strokeWidth={2.2}
-                strokeLinejoin="round"
-              />
-              <path d="M 38.5 30 C 37 24 36 18 36.5 14 C 40 17 44 21 47.5 25.5 Z" className="fill-(--cat-pink)" />
-            </motion.g>
-            <motion.g style={pivot(75, 31)} initial={false} animate={{ rotate: pose.earR, scaleY: pose.earScale }} transition={spring}>
-              <motion.g style={{ rotate: earTwitch, ...pivot(75, 31) }}>
+            <g style={earVars}>
+              <motion.g style={pivot(45, 31)} initial={false} animate={{ rotate: pose.earL, scaleY: pose.earScale }} transition={spring}>
                 <path
-                  d="M 83 35 C 86 26 88 17 87 11 C 86.5 8.5 84.5 8 82.5 9.5 C 78 13 72 19 67 27 Z"
+                  d="M 37 35 C 34 26 32 17 33 11 C 33.5 8.5 35.5 8 37.5 9.5 C 42 13 48 19 53 27 Z"
                   className="fill-(--cat-fur) stroke-(--cat-line)"
                   strokeWidth={2.2}
                   strokeLinejoin="round"
                 />
-                <path d="M 81.5 30 C 83 24 84 18 83.5 14 C 80 17 76 21 72.5 25.5 Z" className="fill-(--cat-pink)" />
+                <path d="M 38.5 30 C 37 24 36 18 36.5 14 C 40 17 44 21 47.5 25.5 Z" className="fill-(--cat-pink)" />
               </motion.g>
-            </motion.g>
+              <motion.g style={pivot(75, 31)} initial={false} animate={{ rotate: pose.earR, scaleY: pose.earScale }} transition={spring}>
+                <motion.g style={{ rotate: earTwitch, ...pivot(75, 31) }}>
+                  <path
+                    d="M 83 35 C 86 26 88 17 87 11 C 86.5 8.5 84.5 8 82.5 9.5 C 78 13 72 19 67 27 Z"
+                    className="fill-(--cat-fur) stroke-(--cat-line)"
+                    strokeWidth={2.2}
+                    strokeLinejoin="round"
+                  />
+                  <path d="M 81.5 30 C 83 24 84 18 83.5 14 C 80 17 76 21 72.5 25.5 Z" className="fill-(--cat-pink)" />
+                </motion.g>
+              </motion.g>
+            </g>
 
-            <path
-              d="M 30 47 C 30 31 43 23 60 23 C 77 23 90 31 90 47 C 90 55 87 61 82 64 C 76 68 68 69 60 69 C 52 69 44 68 38 64 C 33 61 30 55 30 47 Z"
-              className="fill-(--cat-fur) stroke-(--cat-line)"
-              strokeWidth={2.2}
-              strokeLinejoin="round"
-            />
+            <path d={HEAD_D} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={2.2} strokeLinejoin="round" />
             <path
               d="M 55 26 L 56 31.5 M 60 25 L 60 31 M 65 26 L 64 31.5"
               className="fill-none stroke-(--cat-fur-dark)"
@@ -593,11 +711,12 @@ function PixelCatImpl({
             />
             <ellipse cx={55.2} cy={56} rx={5.8} ry={4.4} className="fill-(--cat-cream)" />
             <ellipse cx={64.8} cy={56} rx={5.8} ry={4.4} className="fill-(--cat-cream)" />
+            {suit === "night-vigilante" ? <Cowl /> : null}
             {wear.head ? <Hat id={wear.head} /> : null}
           </g>
 
           <AnimatePresence initial={false}>
-            {has("blush") ? (
+            {has("blush") && suit !== "web-hero" ? (
               <motion.g key="blush" initial={{ opacity: 0 }} animate={{ opacity: 0.75 }} exit={{ opacity: 0 }} transition={fade}>
                 <ellipse cx={41.5} cy={55} rx={4.2} ry={2.5} className="fill-(--cat-pink)" />
                 <ellipse cx={78.5} cy={55} rx={4.2} ry={2.5} className="fill-(--cat-pink)" />
@@ -605,13 +724,17 @@ function PixelCatImpl({
             ) : null}
           </AnimatePresence>
 
-          {/* eyes stay crisp: gaze shifts both, blink squashes each around its own centre */}
-          <motion.g style={{ x: gazeX }}>
-            <motion.g style={{ scaleY: blink, ...pivot(EYE_L.cx, EYE_L.cy) }}>
-              <Eye {...EYE_L} shape={pose.eyes} side="left" />
-            </motion.g>
-            <motion.g style={{ scaleY: blink, ...pivot(EYE_R.cx, EYE_R.cy) }}>
-              <Eye {...EYE_R} shape={pose.eyes} side="right" />
+          {suit ? <MaskDetails suit={suit} headClipId={headClipId} /> : null}
+
+          {/* eyes stay crisp: gaze shifts both, blink squashes each around its own centre; in side view they look ahead */}
+          <motion.g initial={false} animate={{ x: side ? dir * 1.6 : 0 }} transition={spring}>
+            <motion.g style={{ x: gazeX }}>
+              <motion.g style={{ scaleY: blink, ...pivot(EYE_L.cx, EYE_L.cy) }}>
+                <Eye {...EYE_L} shape={pose.eyes} side="left" />
+              </motion.g>
+              <motion.g style={{ scaleY: blink, ...pivot(EYE_R.cx, EYE_R.cy) }}>
+                <Eye {...EYE_R} shape={pose.eyes} side="right" />
+              </motion.g>
             </motion.g>
           </motion.g>
 
@@ -630,6 +753,10 @@ function PixelCatImpl({
             opacity={0.5}
           />
 
+          {/* Neckwear and cape clasps sit under the chin, in front of the head, and move with it in every pose. */}
+          {caped ? <CapeClasps dark={suit === "night-vigilante"} /> : null}
+          {wear.neck ? <Neckwear id={wear.neck} /> : null}
+
           {wear.eyes ? <Eyewear id={wear.eyes} /> : null}
           <AnimatePresence initial={false}>
             {has("glasses") && !wear.eyes ? (
@@ -640,25 +767,21 @@ function PixelCatImpl({
           </AnimatePresence>
         </motion.g>
 
-        {/* paws (front layer, so a paw can rest on the chin, hold the book or bat the yarn); hidden while walking */}
-        <motion.g filter={fur} initial={false} animate={{ opacity: side ? 0 : 1 }} transition={swap}>
-          {PAWS[pose.paws].map((paw, i) => (
-            <motion.ellipse key={i} className="fill-(--cat-cream) stroke-(--cat-line)" strokeWidth={1.8} initial={false} animate={paw} transition={spring} />
-          ))}
-        </motion.g>
+        {/* the fish (Feed): held in both paws, drawn between the head and the paws */}
+        <AnimatePresence initial={false}>{has("fish") ? <FishSnack key="fish" uid={uid} animated={animated} /> : null}</AnimatePresence>
+
+        {/* paws (front layer, so a paw can rest on the chin, hold the book or the fish, or bat the yarn); hidden in side view */}
+        <g style={bodyVars}>
+          <motion.g filter={fur} initial={false} animate={{ opacity: side ? 0 : 1 }} transition={swap}>
+            {PAWS[pose.paws].map((paw, i) => (
+              <motion.ellipse key={i} className="fill-(--cat-cream) stroke-(--cat-line)" strokeWidth={1.8} initial={false} animate={paw} transition={spring} />
+            ))}
+          </motion.g>
+        </g>
       </motion.g>
 
       {/* overlays */}
       <AnimatePresence initial={false}>
-        {has("fish") ? (
-          <motion.g key="fish" initial={animated ? { opacity: 0, y: 4 } : { opacity: 0 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={fade}>
-            <g transform="translate(60 110)">
-              <path d="M -10 0 Q -3 -6 5 0 Q -3 6 -10 0 Z" className="fill-accent stroke-(--cat-line)" strokeWidth={1} />
-              <path d="M 5 0 L 11 -4.5 L 11 4.5 Z" className="fill-accent stroke-(--cat-line)" strokeWidth={1} strokeLinejoin="round" />
-              <circle cx={-5.5} cy={-1} r={1} className="fill-(--cat-eye)" />
-            </g>
-          </motion.g>
-        ) : null}
         {has("hearts") ? (
           <motion.g key="hearts" initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fade}>
             {[
@@ -736,76 +859,146 @@ function PixelCatImpl({
   );
 }
 
-/* ------------------------------------------------------------------ side view (walking) */
+/* ------------------------------------------------------------------ side view (walking, crouching, leaping) */
 
 interface SideBodyProps {
   fur: string | undefined;
   flip: boolean;
   animated: boolean;
   wear: EquippedAccessories;
+  suit: Suit | null;
   clipId: string;
+  mode: SideMode;
+  gait: Gait;
+  rising: boolean;
 }
 
-function SideBody({ fur, flip, animated, wear, clipId }: SideBodyProps) {
-  // Legs swing only while this layer exists (that is, while walking), so nothing loops at rest.
-  const swing = (phase: number, x: number) => ({
-    style: pivot(x, 89),
-    initial: false as const,
-    animate: animated ? { rotate: phase ? [-15, 15, -15] : [15, -15, 15] } : { rotate: 0 },
-    transition: animated ? { duration: STEP_S, repeat: Infinity, ease: "easeInOut" as const } : { duration: 0 },
-  });
-  const neckTone = wear.neck ? NECK_TONE[wear.neck] : undefined;
+const SIDE_BODY_POSE: Record<SideMode, { y: number; scaleX: number; scaleY: number }> = {
+  walk: { y: 0, scaleX: 1, scaleY: 1 },
+  // Gathered low over bent legs before a jump.
+  crouch: { y: 5, scaleX: 1.05, scaleY: 0.9 },
+  // Stretched out in the air.
+  leap: { y: -1, scaleX: 1.07, scaleY: 0.97 },
+};
+
+function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising }: SideBodyProps) {
+  const spec = GAITS[gait];
+  // Legs loop only while this layer exists in walk mode (that is, while walking): nothing loops at rest.
+  const leg = (phase: 0 | 1, x: number, front: boolean) => {
+    const base = { style: pivot(x, 89), initial: false as const };
+    if (!animated) return { ...base, animate: { rotate: 0, scaleY: 1 }, transition: { duration: 0 } };
+    if (mode === "walk") {
+      const k = legKeyframes(gait, phase);
+      return {
+        ...base,
+        animate: { rotate: k.rotate, scaleY: k.scaleY },
+        transition: { duration: spec.cycleS, times: k.times, ease: k.ease, repeat: Infinity },
+      };
+    }
+    if (mode === "crouch") {
+      // Front legs braced forward, hind legs folded under, ready to push.
+      return { ...base, animate: { rotate: front ? -12 : 16, scaleY: 0.8 }, transition: { duration: 0.2, ease: "easeOut" as const } };
+    }
+    // Leap: front legs reach ahead, hind legs trail after the push; they swap emphasis for the landing.
+    const angle = front ? (rising ? -58 : -26) : rising ? 52 : 22;
+    return { ...base, animate: { rotate: angle, scaleY: 1 }, transition: { duration: 0.18, ease: "easeOut" as const } };
+  };
+
+  const bodyMotion = !animated
+    ? { animate: { ...SIDE_BODY_POSE[mode], rotate: 0 }, transition: { duration: 0 } }
+    : mode === "crouch"
+      ? {
+          // A little wiggle of the hips before the pounce.
+          animate: { ...SIDE_BODY_POSE.crouch, rotate: [0, 1.8, -0.8, 1.8, 0] },
+          transition: { rotate: { duration: 0.42, repeat: Infinity, ease: "easeInOut" as const }, default: { duration: 0.2 } },
+        }
+      : mode === "leap"
+        ? { animate: { ...SIDE_BODY_POSE.leap, rotate: rising ? -11 : 9 }, transition: { duration: 0.22, ease: "easeOut" as const } }
+        : { animate: { ...SIDE_BODY_POSE.walk, rotate: 0 }, transition: { duration: 0.2 } };
+
+  const tailMotion = !animated
+    ? { animate: { rotate: 0 }, transition: { duration: 0 } }
+    : mode === "walk"
+      ? { animate: { rotate: [-5, 6, -5] }, transition: { duration: spec.cycleS * 2, repeat: Infinity, ease: "easeInOut" as const } }
+      : mode === "crouch"
+        ? { animate: { rotate: [-34, -24, -34] }, transition: { duration: 0.3, repeat: Infinity, ease: "easeInOut" as const } }
+        : { animate: { rotate: -46 }, transition: { duration: 0.2 } };
+
+  const capeMotion = !animated
+    ? { animate: { rotate: 0 }, transition: { duration: 0 } }
+    : mode === "walk"
+      ? { animate: { rotate: [0, -3, 0] }, transition: { duration: spec.cycleS, repeat: Infinity, ease: "easeInOut" as const } }
+      : { animate: { rotate: mode === "leap" ? -9 : 2 }, transition: { duration: 0.2 } };
+
+  const vars = suit ? SUIT_BODY[suit] : undefined;
   return (
-    <g transform={flip ? "translate(120 0) scale(-1 1)" : undefined}>
+    <g transform={flip ? "translate(120 0) scale(-1 1)" : undefined} style={vars}>
       <defs>
         <clipPath id={clipId}>
           <path d={SIDE_BODY_D} />
         </clipPath>
       </defs>
-      <g filter={fur}>
-        {/* far legs and tail, behind the body */}
-        {LEGS.filter((l) => l.far).map((l) => (
-          <motion.path key={l.x} d={legD(l.x)} className="fill-(--cat-fur-dark) stroke-(--cat-line)" strokeWidth={1.8} {...swing(l.phase, l.x)} />
-        ))}
-        <motion.g
-          style={pivot(32, 82)}
-          initial={false}
-          animate={animated ? { rotate: [-5, 6, -5] } : { rotate: 0 }}
-          transition={animated ? { duration: STEP_S * 2, repeat: Infinity, ease: "easeInOut" } : { duration: 0 }}
-        >
-          <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-line)" strokeWidth={10.5} strokeLinecap="round" />
-          <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-fur)" strokeWidth={7} strokeLinecap="round" />
-        </motion.g>
-        <path d={SIDE_BODY_D} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={2.2} strokeLinejoin="round" />
-        {wear.body === "striped-sweater" ? (
+      <motion.g style={pivot(66, 106)} initial={false} {...bodyMotion}>
+        <g filter={fur}>
+          {/* far legs and tail, behind the body */}
+          {LEGS.filter((l) => l.far).map((l) => (
+            <motion.path key={l.x} d={legD(l.x)} className="fill-(--cat-fur-dark) stroke-(--cat-line)" strokeWidth={1.8} {...leg(l.phase, l.x, l.front)} />
+          ))}
+          <motion.g style={pivot(32, 82)} initial={false} {...tailMotion}>
+            <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-line)" strokeWidth={10.5} strokeLinecap="round" />
+            <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-fur)" strokeWidth={7} strokeLinecap="round" />
+          </motion.g>
+          <path d={SIDE_BODY_D} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={2.2} strokeLinejoin="round" />
+          {wear.body === "striped-sweater" ? (
+            <g clipPath={`url(#${clipId})`}>
+              <rect x={28} y={68} width={66} height={32} className="fill-accent" />
+              <rect x={28} y={78} width={66} height={3} className="fill-(--cat-cream)" />
+              <rect x={28} y={87} width={66} height={3} className="fill-(--cat-cream)" />
+            </g>
+          ) : (
+            <>
+              <ellipse cx={62} cy={93} rx={19} ry={4.6} className="fill-(--cat-cream)" />
+              <path d="M 50 72.5 Q 52 77 49 80 M 60 71.5 Q 62 76 59 79.5" className="fill-none stroke-(--cat-fur-dark)" strokeWidth={2.1} strokeLinecap="round" />
+            </>
+          )}
+        </g>
+        {/* costume details stay crisp */}
+        {suit === "night-vigilante" ? (
           <g clipPath={`url(#${clipId})`}>
-            <rect x={28} y={68} width={66} height={32} className="fill-accent" />
-            <rect x={28} y={78} width={66} height={3} className="fill-(--cat-cream)" />
-            <rect x={28} y={87} width={66} height={3} className="fill-(--cat-cream)" />
+            <rect x={28} y={86} width={66} height={4} className="fill-(--cat-gold-hi) stroke-(--suit-slate-3)" strokeWidth={0.8} />
+            <rect x={70} y={85.2} width={5} height={5.6} rx={1} className="fill-(--cat-gold-lo) stroke-(--suit-slate-3)" strokeWidth={0.8} />
           </g>
-        ) : (
-          <>
-            <ellipse cx={62} cy={93} rx={19} ry={4.6} className="fill-(--cat-cream)" />
-            <path d="M 50 72.5 Q 52 77 49 80 M 60 71.5 Q 62 76 59 79.5" className="fill-none stroke-(--cat-fur-dark)" strokeWidth={2.1} strokeLinecap="round" />
-          </>
-        )}
-        {wear.body === "hero-cape" ? (
-          <path
-            d="M 80 71 C 66 65.5 46 67 34 76 L 29 95 C 41 90.5 54 90 64 85.5 Z"
-            className="fill-bad stroke-(--cat-line)"
+        ) : suit === "web-hero" ? (
+          <g clipPath={`url(#${clipId})`} className="fill-none stroke-(--suit-web)" strokeWidth={0.7} opacity={0.75}>
+            <path d="M 44 89 Q 62 94 82 89 M 46 95 Q 62 99 80 95 M 54 88 L 52 98 M 66 88 L 66 98 M 77 88 L 79 97" />
+          </g>
+        ) : null}
+        {/* cape over the back, fluttering with the stride */}
+        {wear.body === "hero-cape" || suit === "night-vigilante" ? (
+          <motion.path
+            d={
+              suit === "night-vigilante"
+                ? "M 80 71 C 66 65.5 46 67 34 76 L 29 93 Q 33 90.5 36 93.5 Q 39.5 90 43 93 Q 47 89.5 51 91.5 C 56 89.5 61 87.5 64 85.5 Z"
+                : "M 80 71 C 66 65.5 46 67 34 76 L 29 95 C 41 90.5 54 90 64 85.5 Z"
+            }
+            className={cn("stroke-(--cat-line)", suit === "night-vigilante" ? "fill-(--suit-slate-3)" : "fill-bad")}
             strokeWidth={1.4}
             strokeLinejoin="round"
+            style={pivot(80, 71)}
+            initial={false}
+            {...capeMotion}
           />
         ) : null}
-        {neckTone ? <path d="M 80.5 71.5 Q 86 78.5 84 87" className={cn("fill-none", neckTone)} strokeWidth={3.2} strokeLinecap="round" /> : null}
         {/* near legs, in front of the body */}
-        {LEGS.filter((l) => !l.far).map((l) => (
-          <motion.g key={l.x} {...swing(l.phase, l.x)}>
-            <path d={legD(l.x)} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={1.8} />
-            <ellipse cx={l.x} cy={106.4} rx={3.6} ry={1.8} className="fill-(--cat-cream)" />
-          </motion.g>
-        ))}
-      </g>
+        <g filter={fur}>
+          {LEGS.filter((l) => !l.far).map((l) => (
+            <motion.g key={l.x} {...leg(l.phase, l.x, l.front)}>
+              <path d={legD(l.x)} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={1.8} />
+              <ellipse cx={l.x} cy={106.4} rx={3.6} ry={1.8} className="fill-(--cat-cream)" />
+            </motion.g>
+          ))}
+        </g>
+      </motion.g>
     </g>
   );
 }
@@ -869,42 +1062,88 @@ function Eyewear({ id }: { id: AccessoryId }) {
   );
 }
 
+/** Points along the collar line under the chin (a quadratic from (43, 65.5) via (60, 75) to (77, 65.5)). */
+const CHAIN_LINKS = Array.from({ length: 11 }, (_, i) => {
+  const t = i / 10;
+  const u = 1 - t;
+  const x = u * u * 43 + 2 * u * t * 60 + t * t * 77;
+  const y = u * u * 65.5 + 2 * u * t * 75 + t * t * 65.5;
+  // Tangent angle, for alternating link orientation.
+  const dx = 2 * u * (60 - 43) + 2 * t * (77 - 60);
+  const dy = 2 * u * (75 - 65.5) + 2 * t * (65.5 - 75);
+  return { x, y, angle: (Math.atan2(dy, dx) * 180) / Math.PI, flat: i % 2 === 0 };
+});
+
+/**
+ * Neckwear, drawn under the chin in front of the head (crisp, outlined), so it stays visible in every pose
+ * and on both page themes. Coordinates are in the head's frame.
+ */
 function Neckwear({ id }: { id: AccessoryId }) {
   switch (id) {
     case "bell-collar":
       return (
         <g>
-          <path d="M 43.5 66.5 Q 60 74.5 76.5 66.5" className="fill-none stroke-bad" strokeWidth={3.4} strokeLinecap="round" />
-          <circle cx={60} cy={73.4} r={3.4} className="fill-(--cat-gold) stroke-(--cat-line)" strokeWidth={1} />
-          <path d="M 58.2 74.6 L 61.8 74.6" className="fill-none stroke-(--cat-line)" strokeWidth={0.9} strokeLinecap="round" />
+          <path d="M 43 65.5 Q 60 75 77 65.5" className="fill-none stroke-(--cat-line)" strokeWidth={5} strokeLinecap="round" />
+          <path d="M 43 65.5 Q 60 75 77 65.5" className="fill-none stroke-bad" strokeWidth={3.2} strokeLinecap="round" />
+          <circle cx={60} cy={73.6} r={3.6} className="fill-(--cat-gold-hi) stroke-(--cat-line)" strokeWidth={1.1} />
+          <path d="M 58 74.9 L 62 74.9" className="fill-none stroke-(--cat-line)" strokeWidth={0.9} strokeLinecap="round" />
+          <circle cx={58.8} cy={72.4} r={0.8} className="fill-(--cat-shine)" opacity={0.8} />
         </g>
       );
     case "bow-tie":
       return (
         <g>
-          <path d="M 60 72.5 L 51 67.5 Q 49.4 72.5 51 77.5 Z M 60 72.5 L 69 67.5 Q 70.6 72.5 69 77.5 Z" className="fill-accent stroke-(--cat-line)" strokeWidth={1.1} strokeLinejoin="round" />
-          <rect x={57.6} y={70.2} width={4.8} height={4.6} rx={1.3} className="fill-accent stroke-(--cat-line)" strokeWidth={1.1} />
+          <path d="M 60 71.5 L 50.5 66.5 Q 48.8 71.5 50.5 76.5 Z M 60 71.5 L 69.5 66.5 Q 71.2 71.5 69.5 76.5 Z" className="fill-accent stroke-(--cat-line)" strokeWidth={1.2} strokeLinejoin="round" />
+          <rect x={57.5} y={69.2} width={5} height={4.6} rx={1.3} className="fill-accent stroke-(--cat-line)" strokeWidth={1.2} />
         </g>
       );
     case "gold-chain":
+      // Chunky alternating links with a dark rim (readable on amber fur and on both themes) and a medallion.
       return (
         <g>
-          <path d="M 44 66.5 Q 60 76.5 76 66.5" className="fill-none stroke-(--cat-gold)" strokeWidth={2.4} strokeDasharray="2.6 1.4" strokeLinecap="round" />
-          <circle cx={60} cy={76.5} r={2.8} className="fill-(--cat-gold) stroke-(--cat-line)" strokeWidth={0.8} />
+          <path d="M 43 65.5 Q 60 75 77 65.5" className="fill-none stroke-(--cat-line)" strokeWidth={4.4} strokeLinecap="round" />
+          {CHAIN_LINKS.map((l, i) => (
+            <ellipse
+              key={i}
+              cx={l.x}
+              cy={l.y}
+              rx={l.flat ? 2.2 : 1.7}
+              ry={l.flat ? 1.35 : 1.05}
+              transform={`rotate(${l.angle} ${l.x} ${l.y})`}
+              className="fill-(--cat-gold-hi) stroke-(--cat-gold-lo)"
+              strokeWidth={0.7}
+            />
+          ))}
+          <path d="M 60 70.4 L 60 72.6" className="fill-none stroke-(--cat-line)" strokeWidth={1.4} strokeLinecap="round" />
+          <circle cx={60} cy={76.2} r={3.9} className="fill-(--cat-gold-hi) stroke-(--cat-line)" strokeWidth={1.2} />
+          <circle cx={60} cy={76.2} r={2.2} className="fill-none stroke-(--cat-gold-lo)" strokeWidth={0.9} />
+          <path d="M 58.4 74.6 L 59.4 74.2" className="fill-none stroke-(--cat-shine)" strokeWidth={0.9} strokeLinecap="round" />
         </g>
       );
     case "bandana":
       return (
         <g>
-          <path d="M 45 66 Q 60 72 75 66 L 61.6 85 Q 60 86.6 58.4 85 Z" className="fill-bad stroke-(--cat-line)" strokeWidth={1.1} strokeLinejoin="round" />
-          <circle cx={55} cy={72} r={1.1} className="fill-(--cat-cream)" />
-          <circle cx={63.5} cy={74.5} r={1.1} className="fill-(--cat-cream)" />
-          <circle cx={59.5} cy={79.5} r={1.1} className="fill-(--cat-cream)" />
+          <path d="M 44.5 65 Q 60 71 75.5 65 L 61.6 84 Q 60 85.6 58.4 84 Z" className="fill-bad stroke-(--cat-line)" strokeWidth={1.2} strokeLinejoin="round" />
+          <circle cx={55} cy={71} r={1.1} className="fill-(--cat-cream)" />
+          <circle cx={63.5} cy={73.5} r={1.1} className="fill-(--cat-cream)" />
+          <circle cx={59.5} cy={78.5} r={1.1} className="fill-(--cat-cream)" />
         </g>
       );
     default:
       return null;
   }
+}
+
+/** The cape's clasps, at the corners of the jaw (in front of the head, so they always show). */
+function CapeClasps({ dark }: { dark: boolean }) {
+  const tone = dark ? "fill-(--suit-slate-2)" : "fill-(--cat-gold-hi)";
+  return (
+    <g>
+      <path d="M 45.5 66.2 Q 52 69 57 69.6 M 63 69.6 Q 68 69 74.5 66.2" className={cn("fill-none", dark ? "stroke-(--suit-slate-3)" : "stroke-bad")} strokeWidth={2.4} strokeLinecap="round" />
+      <circle cx={45} cy={66} r={2.5} className={cn(tone, "stroke-(--cat-line)")} strokeWidth={1} />
+      <circle cx={75} cy={66} r={2.5} className={cn(tone, "stroke-(--cat-line)")} strokeWidth={1} />
+    </g>
+  );
 }
 
 function Sweater({ clipId }: { clipId: string }) {
@@ -922,14 +1161,118 @@ function Sweater({ clipId }: { clipId: string }) {
   );
 }
 
-function Cape() {
+/* ------------------------------------------------------------------ costumes (original designs) */
+
+/** Crisp costume details on the front body (in the body's frame, so they follow every pose). */
+function SuitFront({ suit, clipId }: { suit: Suit; clipId: string }) {
+  if (suit === "night-vigilante") {
+    return (
+      <g>
+        {/* utility belt with a buckle */}
+        <g clipPath={`url(#${clipId})`}>
+          <rect x={32} y={94.5} width={56} height={4.2} className="fill-(--cat-gold-hi) stroke-(--suit-slate-3)" strokeWidth={0.8} />
+          <path d="M 42 95 L 42 98.2 M 50 95 L 50 98.2 M 70 95 L 70 98.2 M 78 95 L 78 98.2" className="fill-none stroke-(--cat-gold-lo)" strokeWidth={1.2} />
+        </g>
+        <rect x={56.6} y={93.8} width={6.8} height={5.6} rx={1.2} className="fill-(--cat-gold-lo) stroke-(--suit-slate-3)" strokeWidth={0.9} />
+        {/* an original crescent-moon emblem (no logo) */}
+        <path d="M 63.2 75.6 A 5.2 5.2 0 1 0 63.2 85.6 A 4.1 4.1 0 1 1 63.2 75.6 Z" className="fill-(--cat-gold-hi) stroke-(--suit-slate-3)" strokeWidth={0.8} />
+      </g>
+    );
+  }
+  // Web hero: a web pattern over the red chest panel (no emblem).
+  return (
+    <g className="fill-none stroke-(--suit-web)" strokeWidth={0.7} opacity={0.8}>
+      <path d="M 60 74.6 L 60 101.4 M 60 76 L 51.5 80 M 60 76 L 68.5 80 M 60 76 L 50 90 M 60 76 L 70 90 M 60 76 L 54 101 M 60 76 L 66 101" />
+      <path d="M 53.4 82 Q 60 84.2 66.6 82 M 51 89 Q 60 92 69 89 M 52.4 96 Q 60 99 67.6 96" />
+    </g>
+  );
+}
+
+/** The vigilante's cowl: covers the brow down to the eyes, with a point over the nose; the eye holes come next. */
+function Cowl() {
   return (
     <path
-      d="M 47 66 Q 60 70 73 66 L 93 104 Q 77 109 60 106 Q 43 109 27 104 Z"
-      className="fill-bad stroke-(--cat-line)"
+      d="M 30 47 C 30 31 43 23 60 23 C 77 23 90 31 90 47 L 90 50.5 C 84 50.2 78 52.6 71 52.6 Q 64 52.6 60 49.2 Q 56 52.6 49 52.6 C 42 52.6 36 50.2 30 50.5 Z"
+      className="fill-(--suit-slate) stroke-(--suit-slate-3)"
       strokeWidth={1.6}
       strokeLinejoin="round"
     />
+  );
+}
+
+/** Crisp mask parts drawn under the eyes: the vigilante's eye holes, the web hero's web lines and lenses. */
+function MaskDetails({ suit, headClipId }: { suit: Suit; headClipId: string }) {
+  if (suit === "night-vigilante") {
+    return (
+      <g>
+        <path d="M 40.4 44.8 Q 47.5 38.6 55.2 43.6 Q 54 50.4 47.6 50.6 Q 41.6 50 40.4 44.8 Z" className="fill-(--cat-lens) stroke-(--suit-slate-3)" strokeWidth={1.2} />
+        <path d="M 79.6 44.8 Q 72.5 38.6 64.8 43.6 Q 66 50.4 72.4 50.6 Q 78.4 50 79.6 44.8 Z" className="fill-(--cat-lens) stroke-(--suit-slate-3)" strokeWidth={1.2} />
+      </g>
+    );
+  }
+  return (
+    <g>
+      <g clipPath={`url(#${headClipId})`} className="fill-none stroke-(--suit-web)" strokeWidth={0.65} opacity={0.75}>
+        <path d="M 60 52 L 60 20 M 60 52 L 38 26 M 60 52 L 82 26 M 60 52 L 28 44 M 60 52 L 92 44 M 60 52 L 32 66 M 60 52 L 88 66 M 60 52 L 48 72 M 60 52 L 72 72" />
+        <ellipse cx={60} cy={50} rx={12} ry={9.5} />
+        <ellipse cx={60} cy={48} rx={22} ry={17.5} />
+        <ellipse cx={60} cy={46} rx={31} ry={25} />
+      </g>
+      {/* big lenses; the eyes are drawn on top, so every expression still reads */}
+      <path d="M 39 41.2 Q 46.4 34.8 55.6 40.8 Q 55.6 50.6 48 51.6 Q 40.2 50.6 39 41.2 Z" className="fill-(--cat-lens) stroke-(--suit-web)" strokeWidth={1.8} strokeLinejoin="round" />
+      <path d="M 81 41.2 Q 73.6 34.8 64.4 40.8 Q 64.4 50.6 72 51.6 Q 79.8 50.6 81 41.2 Z" className="fill-(--cat-lens) stroke-(--suit-web)" strokeWidth={1.8} strokeLinejoin="round" />
+    </g>
+  );
+}
+
+/* ------------------------------------------------------------------ the fish (Feed) */
+
+/**
+ * A fish held up in both paws: it drops in, two bites disappear from it, and it ends as a tidy fishbone.
+ * Big (about a third of the cat's width), cool blue-silver against the warm fur, with a dark outline and an
+ * eye, so it reads as a fish at every size. Declarative keyframes only: no timers to clean up.
+ */
+function FishSnack({ uid, animated }: { uid: string; animated: boolean }) {
+  const maskId = `cat-bite-${uid}`;
+  const t = (delay: number): Transition => (animated ? { duration: 0.16, delay, ease: "easeOut" } : { duration: 0 });
+  return (
+    <motion.g
+      data-part="fish"
+      style={pivot(60, 80)}
+      initial={animated ? { opacity: 0, y: -16, scale: 0.6 } : { opacity: 1 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={animated ? { opacity: 0, scale: 0.85, transition: { duration: 0.2 } } : { opacity: 0, transition: { duration: 0 } }}
+      transition={animated ? { type: "spring", stiffness: 420, damping: 20 } : { duration: 0 }}
+    >
+      <defs>
+        <mask id={maskId} maskUnits="userSpaceOnUse" x={36} y={64} width={50} height={30}>
+          <rect x={36} y={64} width={50} height={30} fill="white" />
+          <motion.circle cx={57} cy={73.2} fill="black" initial={{ r: 0 }} animate={{ r: animated ? 4.8 : 0 }} transition={t(0.75)} />
+          <motion.circle cx={64.6} cy={74} fill="black" initial={{ r: 0 }} animate={{ r: animated ? 4.4 : 0 }} transition={t(1.3)} />
+        </mask>
+      </defs>
+      {/* whole fish (bitten), fades to the bones near the end */}
+      <motion.g mask={`url(#${maskId})`} initial={{ opacity: 1 }} animate={{ opacity: animated ? 0 : 1 }} transition={animated ? { duration: 0.22, delay: 1.85 } : { duration: 0 }}>
+        <path d="M 71 80 L 80.5 73 Q 78.2 80 80.5 87 Z" className="fill-(--fish-back) stroke-(--cat-line)" strokeWidth={1.2} strokeLinejoin="round" />
+        <path d="M 44 80 C 48 73.2 58 72.2 66 75.4 C 69 76.7 71 78.3 72 80 C 71 81.7 69 83.3 66 84.6 C 58 87.8 48 86.8 44 80 Z" className="fill-(--fish) stroke-(--cat-line)" strokeWidth={1.3} />
+        <path d="M 46.5 81.6 C 52 85.6 61 86 69 82.4" className="fill-none stroke-(--fish-belly)" strokeWidth={2.2} strokeLinecap="round" />
+        <path d="M 49 76.6 C 55 73.8 62 73.8 68 76.4" className="fill-none stroke-(--fish-back)" strokeWidth={1.8} strokeLinecap="round" />
+        <path d="M 56 73.8 Q 60.5 69.8 64.4 74.6" className="fill-(--fish-back) stroke-(--cat-line)" strokeWidth={0.9} strokeLinejoin="round" />
+        <path d="M 52.6 76.4 Q 54.8 80 52.6 83.6" className="fill-none stroke-(--cat-line)" strokeWidth={0.9} strokeLinecap="round" />
+        <path d="M 58 79 q 1.4 1 0 2 M 61.6 79 q 1.4 1 0 2 M 65.2 79 q 1.4 1 0 2" className="fill-none stroke-(--fish-back)" strokeWidth={0.8} strokeLinecap="round" />
+        <circle cx={48.6} cy={78.8} r={1.6} className="fill-(--cat-eye)" />
+        <circle cx={49.1} cy={78.3} r={0.55} className="fill-(--cat-shine)" />
+      </motion.g>
+      {/* the bones that are left */}
+      {animated ? (
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.22, delay: 1.9 }}>
+          <path d="M 71 80 L 80.5 73 Q 78.2 80 80.5 87 Z" className="fill-(--fish-bone) stroke-(--cat-line)" strokeWidth={1.1} strokeLinejoin="round" />
+          <path d="M 44 80 C 46.5 75.8 50 74.8 53.4 75.6 L 53.4 84.4 C 50 85.2 46.5 84.2 44 80 Z" className="fill-(--fish-bone) stroke-(--cat-line)" strokeWidth={1.1} />
+          <path d="M 53.4 80 L 71.5 80 M 56.5 76.6 L 56.5 83.4 M 60 76.2 L 60 83.8 M 63.5 76.6 L 63.5 83.4 M 67 77.4 L 67 82.6" className="fill-none stroke-(--cat-line)" strokeWidth={1.1} strokeLinecap="round" />
+          <circle cx={48.4} cy={79} r={1.3} className="fill-none stroke-(--cat-line)" strokeWidth={0.9} />
+        </motion.g>
+      ) : null}
+    </motion.g>
   );
 }
 
@@ -1025,6 +1368,13 @@ function Mouth({ shape }: { shape: Mouth }) {
       );
     case "o":
       return <ellipse cx={60} cy={58} rx={2.4} ry={3} className="fill-(--cat-mouth) stroke-(--cat-line)" strokeWidth={1} />;
+    case "yawn":
+      return (
+        <g>
+          <ellipse cx={60} cy={59.4} rx={3.6} ry={4.8} className="fill-(--cat-mouth) stroke-(--cat-line)" strokeWidth={1.1} />
+          <ellipse cx={60} cy={62} rx={2.2} ry={1.5} className="fill-(--cat-pink)" />
+        </g>
+      );
     case "wavy":
       return <path d="M 55 57.5 Q 57.5 55.8 60 57.5 Q 62.5 59.2 65 57.5" className={stroke} strokeWidth={1.7} strokeLinecap="round" />;
     case "flat":

@@ -18,7 +18,8 @@ import { NOTE_MAX_LENGTH, useNotesHydrated, useNotesStore } from "@/stores/notes
 
 /*
  * Study notes: one plain-text note per lesson, saved in this browser (stores/notes-store.ts).
- * - xl and up: <LessonNotesPanel> in the right column, under "On this page", collapsed by default.
+ * - xl and up: <LessonNotesPanel> in the right column, under "On this page". <LessonSidePanels> decides
+ *   which of the two is open (never both; Notes starts closed).
  * - Below xl: <LessonNotesChip> in the lesson header opens the same editor in a bottom sheet.
  */
 
@@ -264,37 +265,36 @@ function NotesEditor({ slug, lessonTitle, variant }: { slug: string; lessonTitle
   );
 }
 
-/** xl and up: a collapsible Notes section in the right column. Collapsed by default; the choice is remembered. */
-export function LessonNotesPanel({ slug, title }: { slug: string; title: string }) {
+/**
+ * xl and up: a collapsible Notes section in the right column. `open` and `onToggle` come from
+ * <LessonSidePanels>, which keeps it and "On this page" from being open together (Notes starts closed).
+ */
+export function LessonNotesPanel({ slug, title, open, onToggle }: { slug: string; title: string; open: boolean; onToggle: () => void }) {
   const hydrated = useNotesHydrated();
   const note = useNotesStore((s) => s.notes[slug]?.text ?? "");
-  const panelOpen = useNotesStore((s) => s.panelOpen);
-  const setPanelOpen = useNotesStore((s) => s.setPanelOpen);
   const isXl = useIsXl();
   const regionRef = useRef<HTMLDivElement>(null);
   const id = useId();
   const regionId = `${id}-notes`;
 
-  const expanded = hydrated && panelOpen;
   const preview = hydrated ? previewOf(note) : "";
 
   const toggle = () => {
-    const next = !expanded;
-    setPanelOpen(next);
+    onToggle();
     // The column scrolls on its own; bring the opened editor into view when it lands below the fold.
-    if (next) requestAnimationFrame(() => regionRef.current?.scrollIntoView({ block: "nearest" }));
+    if (!open) requestAnimationFrame(() => regionRef.current?.scrollIntoView({ block: "nearest" }));
   };
 
   return (
-    <section aria-label="Study notes" data-companion-avoid="" className="text-sm not-first:mt-8 not-first:border-t not-first:border-line not-first:pt-6">
+    <section aria-label="Study notes" data-companion-avoid="" className="text-sm not-first:mt-5 not-first:border-t not-first:border-line not-first:pt-5">
       <h2>
         <button
           type="button"
-          aria-expanded={expanded}
+          aria-expanded={open}
           aria-controls={regionId}
           onClick={toggle}
-          disabled={!hydrated}
-          className="group block w-full rounded-md py-1 text-left disabled:opacity-60"
+          data-testid="side-panel-notes-toggle"
+          className="group block w-full rounded-md py-1 text-left"
         >
           <span className="flex items-center gap-2 text-ink-3 transition-colors group-hover:text-ink">
             <NotebookPen aria-hidden="true" className="size-3.5 shrink-0" />
@@ -305,17 +305,17 @@ export function LessonNotesPanel({ slug, title }: { slug: string; title: string 
                 <span className="sr-only">, has notes</span>
               </>
             ) : null}
-            <ChevronDown aria-hidden="true" className={cn("ml-auto size-4 shrink-0 transition-transform", expanded && "rotate-180")} />
+            <ChevronDown aria-hidden="true" className={cn("ml-auto size-4 shrink-0 transition-transform", open && "rotate-180")} />
           </span>
-          {!expanded && preview ? (
+          {!open && preview ? (
             <span aria-hidden="true" className="mt-1 block truncate text-[0.8rem] text-ink-2">
               {preview}
             </span>
           ) : null}
         </button>
       </h2>
-      <div ref={regionRef} id={regionId} hidden={!expanded} className="mt-3">
-        {expanded && isXl ? <NotesEditor key={slug} slug={slug} lessonTitle={title} variant="panel" /> : null}
+      <div ref={regionRef} id={regionId} hidden={!open} data-testid="side-panel-notes" data-open={open ? "true" : "false"} className="mt-3">
+        {open && isXl ? <NotesEditor key={slug} slug={slug} lessonTitle={title} variant="panel" /> : null}
       </div>
     </section>
   );

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { animate, useDragControls, useMotionValue, type PanInfo } from "motion/react";
 import type { BodyPhase } from "@/lib/companion/behaviour";
+import { rampEase, walkPlan, type Gait } from "@/lib/companion/gait";
 import { clampVelocity, GRAVITY, isSettled, stepFall, type Arena, type Body } from "@/lib/companion/physics";
 import { floorXFrom, getWorld, normalizeFloorX, readFloorLine, readViewport, type Point, type Size, type World } from "@/lib/companion/resting";
 import { clamp } from "@/lib/utils";
@@ -29,7 +30,6 @@ export interface Layout {
 
 /** Height changes smaller than this with the same width are browser toolbars, not a new layout. */
 const TOOLBAR_DELTA = 160;
-const WALK_SPEED = { desktop: 150, compact: 130 } as const;
 /** How long the landing squash shows before the cat settles into its resting pose. */
 const LAND_MS = 280;
 /** Gravity used for the plain drop (physics off), px/s², matching the desktop profile. */
@@ -62,6 +62,7 @@ export function useCompanionPosition(options: PositionOptions) {
   const [phase, setPhase] = useState<BodyPhase>("resting");
   const [facing, setFacing] = useState<Facing>("left");
   const [rising, setRising] = useState(false);
+  const [gait, setGait] = useState<Gait>("walk");
 
   const optsRef = useRef(options);
   const layoutRef = useRef<Layout>(initialLayout);
@@ -146,9 +147,13 @@ export function useCompanionPosition(options: PositionOptions) {
     if (Math.abs(dx) >= 1) setFacing(dx < 0 ? "left" : "right");
   }, []);
 
-  /** Tween to `target`. Resolves true when it arrived, false when something newer interrupted it. */
+  /**
+   * Tween to `target`. Resolves true when it arrived, false when something newer interrupted it.
+   * Walks follow lib/companion/gait.ts: a whole number of steps at the gait's cadence, constant speed while
+   * the feet are planted and a gentle first and last step, so the legs never skate.
+   */
   const moveTo = useCallback(
-    (target: Point, kind: "walk" | "drop"): Promise<boolean> => {
+    (target: Point, kind: "walk" | "drop", walkGait?: Gait): Promise<boolean> => {
       stopMotion();
       const o = optsRef.current;
       const dx = target.x - x.get();
@@ -159,7 +164,7 @@ export function useCompanionPosition(options: PositionOptions) {
         return Promise.resolve(true);
       }
       const reduced = o.motionLevel === "reduced";
-      const speed = o.compact ? WALK_SPEED.compact : WALK_SPEED.desktop;
+      const plan = walkPlan(Math.abs(dx), o.size, walkGait);
       const duration =
         kind === "drop"
           ? reduced
@@ -167,11 +172,15 @@ export function useCompanionPosition(options: PositionOptions) {
             : clamp(Math.sqrt((2 * dy) / DROP_GRAVITY), 0.14, 0.55)
           : reduced
             ? 0.2
-            : clamp(Math.abs(dx) / speed, 0.35, 4);
+            : plan.duration;
       const token = tokenRef.current;
-      if (kind === "walk") face(dx);
+      if (kind === "walk") {
+        face(dx);
+        setGait(plan.gait);
+      }
       go(kind === "drop" ? "dropping" : "walking");
-      const ax = animate(x, target.x, { duration, ease: kind === "drop" ? "easeOut" : reduced ? "easeOut" : [0.35, 0, 0.65, 1] });
+      const walkEase = reduced ? "easeOut" : rampEase(duration, plan.gait);
+      const ax = animate(x, target.x, { duration, ease: kind === "drop" ? "easeOut" : walkEase });
       const ay = animate(y, target.y, { duration, ease: kind === "drop" ? "easeIn" : "linear" });
       animsRef.current = [ax, ay];
       return Promise.all([ax.finished, ay.finished])
@@ -236,12 +245,12 @@ export function useCompanionPosition(options: PositionOptions) {
     [face, go, land, stopMotion, world, x, y],
   );
 
-  /** Walk along the floor to `targetX` (play, lamp). Resolves false if interrupted. */
+  /** Walk along the floor to `targetX` (play, lamp, reset). The gait follows the distance unless given. Resolves false if interrupted. */
   const walkTo = useCallback(
-    (targetX: number) => {
+    (targetX: number, walkGait?: Gait) => {
       const w = world();
       const tx = clamp(targetX, w.minX, w.maxX);
-      return moveTo({ x: tx, y: w.floorY }, "walk").then((ok) => {
+      return moveTo({ x: tx, y: w.floorY }, "walk", walkGait).then((ok) => {
         if (ok) commitRest(tx);
         return ok;
       });
@@ -280,11 +289,16 @@ export function useCompanionPosition(options: PositionOptions) {
       const y0 = y.get();
       face(tx - x0);
       go("jumping");
+      // A believable arc: up fast and slowing to the apex, then gravity; the body pitches nose-up while
+      // rising and nose-down on the way down (the sprite reads `rising`).
       const peak = Math.min(y0, ty) - Math.max(18, o.size * 0.45);
       const duration = clamp(0.42 + Math.abs(tx - x0) / 900 + Math.abs(ty - y0) / 1400, 0.45, 0.8);
+      const apex = 0.42;
+      setRising(true);
+      const apexTimer = window.setTimeout(() => setRising(false), duration * apex * 1000);
       const ax = animate(x, tx, { duration, ease: "linear" });
-      const ay = animate(y, [y0, peak, ty], { duration, times: [0, 0.42, 1], ease: ["easeOut", "easeIn"] });
-      animsRef.current = [ax, ay];
+      const ay = animate(y, [y0, peak, ty], { duration, times: [0, apex, 1], ease: ["easeOut", "easeIn"] });
+      animsRef.current = [ax, ay, { stop: () => window.clearTimeout(apexTimer) }];
       return Promise.all([ax.finished, ay.finished])
         .then(() => {
           if (tokenRef.current !== token) return false;
@@ -471,6 +485,8 @@ export function useCompanionPosition(options: PositionOptions) {
   }, [settle]);
 
   const getPhase = useCallback(() => phaseRef.current, []);
+  /** Turn towards a horizontal offset (a routine looking at its target before a crouch or a pounce). */
+  const faceTo = useCallback((dx: number) => face(dx), [face]);
 
   return {
     x,
@@ -482,7 +498,9 @@ export function useCompanionPosition(options: PositionOptions) {
     phase,
     facing,
     rising,
+    gait,
     getPhase,
+    faceTo,
     dragControls,
     dragConstraints,
     onPointerDown,

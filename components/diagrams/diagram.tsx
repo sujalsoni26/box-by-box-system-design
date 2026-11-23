@@ -1,14 +1,15 @@
+import { DiagramFrame } from "./diagram-frame";
 import { staticDiagrams } from "./static";
 
-/** A hand-drawn static SVG diagram (components/diagrams/static) in a scrollable, captioned figure. */
+/**
+ * A hand-drawn static SVG diagram (components/diagrams/static) in a scrollable, captioned figure. When it
+ * is too cramped to read inline, DiagramFrame offers the same component again in a zoomable lightbox.
+ */
 export function Diagram({ name, caption }: { name: string; caption?: string }) {
   const Svg = staticDiagrams[name];
   return (
-    <figure className="not-prose my-8" data-companion-avoid="">
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface p-4">
-        {Svg ? <Svg /> : <p className="text-sm text-bad">Missing diagram “{name}”.</p>}
-      </div>
-      {caption ? <figcaption className="mt-2 text-center text-sm italic text-ink-3">{caption}</figcaption> : null}
-    </figure>
+    <DiagramFrame caption={caption} expandedNode={Svg ? <Svg /> : undefined}>
+      {Svg ? <Svg /> : <p className="text-sm text-bad">Missing diagram “{name}”.</p>}
+    </DiagramFrame>
   );
 }

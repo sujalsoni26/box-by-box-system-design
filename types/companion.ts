@@ -18,10 +18,14 @@ export type CompanionMood =
   | "landing"
   /** Gathering for a jump (lamp). */
   | "crouching"
-  /** In the air on purpose: a jump, or rising after a throw. */
+  /** Rising after a throw: legs dangling, front view. */
   | "jumping"
+  /** A deliberate leap (onto the lamp, a pounce): side view, front legs reaching, hind legs pushing. */
+  | "leaping"
   /** Waking from a nap: a long stretch and a yawn. */
-  | "stretching";
+  | "stretching"
+  /** Drowsy: a big yawn on the way to sleep. */
+  | "yawning";
 
 /**
  * Motion level from the operating system's prefers-reduced-motion. There is no site-wide speed
@@ -51,7 +55,11 @@ export type AccessoryId =
   | "round-glasses"
   | "sunglasses"
   | "striped-sweater"
-  | "hero-cape";
+  | "hero-cape"
+  /** Original "dark vigilante" costume: cowl with eye holes, slate suit, gold belt and a crescent emblem. */
+  | "night-vigilante"
+  /** Original "web hero" costume: red mask with web lines and big lenses, red and blue suit. */
+  | "web-hero";
 
 /** Play and focus counters, used to unlock accessories. */
 export interface CompanionStats {

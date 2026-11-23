@@ -9,9 +9,8 @@ import {
   EyeOff,
   Fish,
   Heart,
+  LampFloor,
   Lightbulb,
-  ListTree,
-  MessageCircleQuestionMark,
   MessageCircleOff,
   MessageCircleHeart,
   Moon,
@@ -25,8 +24,8 @@ import {
 import {
   explainSimply,
   feedCache,
-  giveHint,
   hideCompanion,
+  lampNap,
   meowAboutTopic,
   openWardrobe,
   petCache,
@@ -36,7 +35,6 @@ import {
   toggleFocus,
   toggleNap,
   toggleTopicMeows,
-  topicSummary,
 } from "@/lib/companion/actions";
 import { cn } from "@/lib/utils";
 import { useCompanionStore, useFocusStore } from "@/stores/companion-store";
@@ -64,10 +62,12 @@ interface CompanionMenuProps {
   animated: boolean;
   /** The cat button: focus returns here, and clicks on it do not count as "outside". */
   anchorRef: RefObject<HTMLElement | null>;
+  /** "Lamp nap" is offered where the lamp routine can run (desktop-sized viewport, motion allowed). */
+  lampAvailable: boolean;
 }
 
 /** Compact, keyboard-navigable menu (role="menu"): arrows, Home/End, Escape, Tab closes. */
-export function CompanionMenu({ id, lesson, above, animated, anchorRef }: CompanionMenuProps) {
+export function CompanionMenu({ id, lesson, above, animated, anchorRef, lampAvailable }: CompanionMenuProps) {
   const view = useCompanionStore((s) => s.menuView);
   const initialFocus = useCompanionStore((s) => s.menuFocus);
   const closeMenu = useCompanionStore((s) => s.closeMenu);
@@ -75,6 +75,7 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
   const focusRunning = useFocusStore((s) => s.session !== null);
   const focusMinutes = useFocusStore((s) => s.focusMinutes);
   const napping = useCompanionStore((s) => s.napping);
+  const onLamp = useCompanionStore((s) => s.activity?.kind === "lamp");
   const topicMeows = usePreferencesStore((s) => s.companion.topicMeows);
   const newAccessories = useNewAccessoryCount();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,7 +85,6 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
   const needs = lesson ? undefined : "needs a lesson";
   const items: MenuItem[] = [
     { id: "explain", label: "Explain simply", hint: needs, icon: Lightbulb, run: () => explainSimply(lesson) },
-    { id: "hint", label: "Give me a hint", hint: needs, icon: MessageCircleQuestionMark, run: () => giveHint(lesson) },
     { id: "revise", label: "Quick revision", hint: "recall", icon: Brain, run: quickRevision },
     {
       id: "focus",
@@ -93,7 +93,6 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
       icon: Timer,
       run: toggleFocus,
     },
-    { id: "summary", label: "Current topic summary", hint: needs, icon: ListTree, run: () => topicSummary(lesson) },
     { id: "next", label: "What should I learn next?", icon: Compass, run: () => suggestNext(lesson) },
     { id: "meow", label: "Meow about this topic", hint: lesson ? undefined : "general", icon: Cat, run: () => meowAboutTopic(lesson) },
     {
@@ -116,7 +115,8 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
     },
     { id: "feed", label: "Feed", icon: Fish, run: feedCache },
     { id: "pet", label: "Pet", icon: Heart, run: () => petCache(lesson) },
-    { id: "nap", label: napping ? "Wake up" : "Nap", icon: napping ? Sun : Moon, run: toggleNap },
+    { id: "nap", label: napping || onLamp ? "Wake up" : "Nap", icon: napping || onLamp ? Sun : Moon, run: toggleNap },
+    ...(lampAvailable && !onLamp ? [{ id: "lamp", label: "Lamp nap", hint: "cosy", icon: LampFloor, run: lampNap }] : []),
     { id: "play", label: "Play", hint: "yarn", icon: Volleyball, run: playWithCache },
   ];
   const endItems: MenuItem[] = [
