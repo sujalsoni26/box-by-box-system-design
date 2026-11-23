@@ -354,7 +354,7 @@ function TcpUdp() {
         <LaneCard proto="udp" lane={race.udp} t={shownT} layout={!reduced} firstDone={race.udp.done === firstDone} />
         <p className="text-[0.78rem] text-ink-3">
           One one-way trip = 30 ms. Colours: <span className="font-bold text-violet">handshake</span> ·{" "}
-          <span className="font-bold text-accent">data</span> · <span className="font-bold text-good">ACK</span> ·{" "}
+          <span className="font-bold text-link">data</span> · <span className="font-bold text-good">ACK</span> ·{" "}
           <span className="font-bold text-amber-ink">resend</span> · <span className="font-bold text-bad">lost</span>
         </p>
       </div>

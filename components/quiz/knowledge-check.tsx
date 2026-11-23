@@ -80,7 +80,7 @@ function Question({
             {!correct && review ? (
               <>
                 {" "}
-                <Link href={`/learn/${review.slug}`} className="font-bold text-accent underline underline-offset-2">
+                <Link href={`/learn/${review.slug}`} className="font-bold text-link underline underline-offset-2">
                   Review {review.title}
                 </Link>
               </>

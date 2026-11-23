@@ -184,7 +184,7 @@ function LittlesLaw() {
       <div ref={rootRef} className="@container flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 rounded-xl bg-surface-2 px-3 py-3 text-center font-display">
           <span className="flex flex-col">
-            <span className={cn("text-3xl font-bold tabular-nums", overloaded ? "text-bad" : "text-accent")}>{formatSmart(inFlight)}</span>
+            <span className={cn("text-3xl font-bold tabular-nums", overloaded ? "text-bad" : "text-link")}>{formatSmart(inFlight)}</span>
             <span className="font-sans text-[0.72rem] text-ink-3">in flight (L)</span>
           </span>
           <span className="text-2xl text-ink-3">=</span>

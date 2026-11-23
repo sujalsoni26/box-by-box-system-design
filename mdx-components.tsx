@@ -19,7 +19,7 @@ function Heading2({ children }: { children?: ReactNode }) {
     <h2 id={id} className="group mb-3 mt-12 flex scroll-mt-24 items-baseline gap-2.5 font-display text-[1.45rem] font-bold leading-tight tracking-[-0.015em] text-ink">
       <span aria-hidden="true" className="size-2.5 shrink-0 translate-y-[-2px] rounded-[2px] bg-accent" />
       <span>{children}</span>
-      <a href={`#${id}`} className="text-base text-ink-3 opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 group-hover:opacity-100" aria-label="Link to this section">
+      <a href={`#${id}`} className="text-base text-ink-3 opacity-0 transition-opacity hover:text-link focus-visible:opacity-100 group-hover:opacity-100" aria-label="Link to this section">
         #
       </a>
     </h2>
@@ -36,7 +36,7 @@ function Heading3({ children }: { children?: ReactNode }) {
 }
 
 function Anchor({ href = "", children, ...props }: ComponentPropsWithoutRef<"a">) {
-  const cls = "font-semibold text-accent underline decoration-1 underline-offset-[3px] hover:decoration-2";
+  const cls = "font-semibold text-link underline decoration-1 underline-offset-[3px] hover:decoration-2";
   if (href.startsWith("/")) {
     return (
       <Link href={href} className={cls}>

@@ -512,7 +512,7 @@ function PubsubFanout() {
 
       <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2 px-3 py-2">
         <span className="font-mono text-[0.66rem] uppercase tracking-[0.08em] text-ink-3">post service code</span>
-        <code className="font-mono text-[0.8rem] text-accent [overflow-wrap:anywhere]">
+        <code className="font-mono text-[0.8rem] text-link [overflow-wrap:anywhere]">
           {isPubsub ? 'publish("post-events", { type: "PostCreated", postId })' : 'send("post-jobs", { type: "PostCreated", postId })'}
         </code>
         <span className="text-[0.76rem] text-ink-3">

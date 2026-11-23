@@ -185,7 +185,7 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
           "hover:bg-surface-2 hover:text-ink focus-visible:bg-accent-soft focus-visible:text-ink",
         )}
       >
-        <Icon aria-hidden="true" className="size-4 shrink-0 text-accent" />
+        <Icon aria-hidden="true" className="size-4 shrink-0 text-link" />
         <span className="min-w-0 flex-1">{item.label}</span>
         {item.hint ? <span className="shrink-0 font-mono text-[0.66rem] font-medium text-ink-3">{item.hint}</span> : null}
       </button>
@@ -241,7 +241,7 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
               type="button"
               data-testid="companion-menu-back"
               onClick={() => setMenuView("main")}
-              className="-ml-1 mb-1 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[0.8rem] font-bold text-accent hover:bg-surface-2"
+              className="-ml-1 mb-1 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[0.8rem] font-bold text-link hover:bg-surface-2"
             >
               <ChevronLeft aria-hidden="true" className="size-4" />
               Back to menu

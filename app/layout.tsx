@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f2f4f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c111e" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0f12" },
   ],
 };
 
@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main" tabIndex={-1} className="outline-none">
             {children}
           </main>
-          <footer className="mx-auto max-w-[90rem] px-4 pb-28 pt-12 text-sm text-ink-3 sm:px-6 md:pb-12">
+          <footer className="mx-auto max-w-[90rem] px-4 pb-36 pt-12 text-sm text-ink-3 sm:px-6 md:pb-28">
             Box by Box · system design from one server to millions. Progress is saved in this browser.
           </footer>
           <MobileNav />

@@ -53,7 +53,7 @@ export function SiteHeader() {
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "rounded-lg px-3 py-2 text-sm font-bold transition-colors",
-                      active ? "bg-accent-soft text-accent" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+                      active ? "bg-accent-soft text-link" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
                     )}
                   >
                     {item.label}
@@ -95,7 +95,7 @@ export function MobileNav() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center gap-0.5 py-2 text-[0.68rem] font-bold",
-                  active ? "text-accent" : "text-ink-3 hover:text-ink",
+                  active ? "text-link" : "text-ink-3 hover:text-ink",
                 )}
               >
                 <Icon aria-hidden="true" className="size-5" />

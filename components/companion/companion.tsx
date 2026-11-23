@@ -23,7 +23,8 @@ import { BubbleAnnouncer, SpeechBubble } from "./speech-bubble";
 import { useCompanionBrain } from "./use-companion-brain";
 import { useCompanionPosition } from "./use-companion-position";
 
-const CAT_SIZE = { desktop: 84, compact: 60 } as const;
+/** Phones get the smallest cat that is still a comfortable touch target (WCAG 2.5.5 suggests 44px). */
+const CAT_SIZE = { desktop: 84, compact: 60, phone: 52 } as const;
 const PANEL_MAX_WIDTH = 304;
 const PET_DELAY_MS = 1200;
 const PET_GAP_MS = 15_000;
@@ -62,7 +63,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const narrow = useMediaQuery("(max-width: 640px)");
   const finePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
   const compact = coarse || narrow;
-  const size = compact ? CAT_SIZE.compact : CAT_SIZE.desktop;
+  const size = narrow ? CAT_SIZE.phone : compact ? CAT_SIZE.compact : CAT_SIZE.desktop;
   const physics = usePreferencesStore((s) => s.companion.physics);
   const lesson = useMemo(() => lessonFromPath(pathname), [pathname]);
 
@@ -117,7 +118,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
     : pos.phase === "walking"
       ? "walking"
       : (reactionMood ?? bubble?.mood ?? restingMood);
-  const animated = motionLevel === "normal";
+  const animated = motionLevel !== "reduced";
   const ambient = animated && pageVisible && resting;
 
   const toggleMenu = (focus: "first" | "last" = "first") => {

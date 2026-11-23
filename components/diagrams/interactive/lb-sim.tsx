@@ -185,7 +185,7 @@ function BalancerCard({ state, lbRef }: { state: LbState; lbRef: RefObject<HTMLD
   return (
     <div ref={lbRef} className="relative mx-auto flex w-full max-w-xs flex-col gap-1 rounded-xl border-2 border-accent bg-accent-soft px-3 py-2.5 text-center">
       <strong className="font-display text-base text-ink">Load balancer</strong>
-      <span className="text-[0.82rem] font-bold text-accent">{algorithm?.name}</span>
+      <span className="text-[0.82rem] font-bold text-link">{algorithm?.name}</span>
       <span className="flex items-center justify-center gap-1.5 font-mono text-[0.7rem] text-ink-2">
         <HeartPulse size={13} aria-hidden="true" />
         GET /health every {CHECK_MS / 1000} s

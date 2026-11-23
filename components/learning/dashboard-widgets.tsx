@@ -25,7 +25,7 @@ export function ContinueLearning() {
 
   return (
     <section aria-labelledby="continue-h" className="relative overflow-hidden rounded-3xl border border-line bg-surface p-6 shadow-[var(--shadow-lift)] sm:p-8">
-      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-link">
         {!hydrated ? "Your next lesson" : !started ? "Start here" : next ? "Continue learning" : "Course complete"}
       </p>
       <h2 id="continue-h" className="mt-2 font-display text-[clamp(1.6rem,3.6vw,2.3rem)] font-extrabold leading-tight tracking-[-0.02em] text-ink">
@@ -92,7 +92,7 @@ export function OverallProgressCard() {
             <li key={m.id}>
               <Link href={`/learn#${m.id}`} className="group block">
                 <span className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                  <span className="font-bold text-ink group-hover:text-accent">
+                  <span className="font-bold text-ink group-hover:text-link">
                     <span className="mr-1.5 font-mono text-xs text-ink-3">{m.number}</span>
                     {m.title}
                   </span>
@@ -106,7 +106,7 @@ export function OverallProgressCard() {
           );
         })}
       </ul>
-      <Link href="/progress" className="mt-auto pt-2 text-sm font-bold text-accent underline underline-offset-2">
+      <Link href="/progress" className="mt-auto pt-2 text-sm font-bold text-link underline underline-offset-2">
         Details and settings
       </Link>
     </section>
@@ -137,7 +137,7 @@ export function RoadmapModules() {
                   <ProgressRing value={p.fraction} size={34} label={`${m.title} progress`} />
                 </span>
               </div>
-              <h3 className="font-display text-xl font-bold leading-tight text-ink group-hover:text-accent">{m.title}</h3>
+              <h3 className="font-display text-xl font-bold leading-tight text-ink group-hover:text-link">{m.title}</h3>
               <p className="text-sm text-ink-2">{m.description}</p>
               <p className="mt-auto font-mono text-xs text-amber-ink">Stage: {m.stage}</p>
             </Link>
@@ -170,7 +170,7 @@ export function RecentlyStudied() {
         <ul className="mt-3 divide-y divide-line">
           {recent.map((l) => (
             <li key={l.slug}>
-              <Link href={`/learn/${l.slug}`} className="flex items-center justify-between gap-3 py-2.5 text-[0.95rem] hover:text-accent">
+              <Link href={`/learn/${l.slug}`} className="flex items-center justify-between gap-3 py-2.5 text-[0.95rem] hover:text-link">
                 <span className="min-w-0">
                   <span className="mr-1.5 font-mono text-xs text-ink-3">{l.number}</span>
                   {l.title}
@@ -200,7 +200,7 @@ export function BookmarkList({ empty = "Bookmark a lesson to keep it here." }: {
         <ul className="mt-3 divide-y divide-line">
           {items.map((l) => (
             <li key={l.slug}>
-              <Link href={`/learn/${l.slug}`} className="block py-2.5 text-[0.95rem] hover:text-accent">
+              <Link href={`/learn/${l.slug}`} className="block py-2.5 text-[0.95rem] hover:text-link">
                 <span className="mr-1.5 font-mono text-xs text-ink-3">{l.number}</span>
                 {l.title}
               </Link>

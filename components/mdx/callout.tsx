@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export type CalloutType = "idea" | "analogy" | "warning" | "interview";
 
 const styles: Record<CalloutType, { box: string; title: string; icon: LucideIcon; label: string }> = {
-  idea: { box: "bg-accent-soft border-accent/30", title: "text-accent", icon: Lightbulb, label: "Key idea" },
+  idea: { box: "bg-accent-soft border-accent/30", title: "text-link", icon: Lightbulb, label: "Key idea" },
   analogy: { box: "bg-amber-soft border-amber/35", title: "text-amber-ink", icon: Puzzle, label: "Analogy" },
   warning: { box: "bg-bad-soft border-bad/30", title: "text-bad", icon: TriangleAlert, label: "Watch out" },
   interview: { box: "bg-violet-soft border-violet/30", title: "text-violet", icon: MessagesSquare, label: "Interview tip" },

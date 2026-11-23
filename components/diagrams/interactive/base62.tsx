@@ -94,7 +94,7 @@ function ShortUrl({ code, reduced }: { code: string; reduced: boolean }) {
   return (
     <p className="font-mono text-lg text-ink-2 [overflow-wrap:anywhere]" aria-label={`Short URL sho.rt/${code}`}>
       sho.rt/
-      <span className="font-bold text-accent" aria-hidden="true">
+      <span className="font-bold text-link" aria-hidden="true">
         {code.split("").map((ch, i) => (
           <motion.span
             key={`${code.length - i}-${ch}`}
@@ -155,7 +155,7 @@ function DivisionTable({ n, reduced }: { n: number; reduced: boolean }) {
               <td className="px-2 py-1">{fmtInt(s.quotient)}</td>
               <td className="px-2 py-1">{s.remainder}</td>
               <td className="px-2 py-1 text-center">
-                <span className="rounded bg-accent-soft px-1.5 font-bold text-accent">{s.char}</span>
+                <span className="rounded bg-accent-soft px-1.5 font-bold text-link">{s.char}</span>
               </td>
               <td className="whitespace-nowrap px-2 py-1">
                 {s.remainder} × 62{sup(i)} = {fmtInt(s.remainder * 62 ** i)}
@@ -166,7 +166,7 @@ function DivisionTable({ n, reduced }: { n: number; reduced: boolean }) {
         <tfoot className="border-t-2 border-line-strong text-ink">
           <tr>
             <td colSpan={4} className="px-2 py-1.5 text-left font-sans text-[0.8rem]">
-              Read the chars bottom-up: <strong className="font-mono text-accent">{code}</strong>
+              Read the chars bottom-up: <strong className="font-mono text-link">{code}</strong>
             </td>
             <td className="whitespace-nowrap px-2 py-1.5 font-bold">sum = {fmtInt(n)}</td>
           </tr>
@@ -288,7 +288,7 @@ function NextIds({ n, style, onStyle, reduced }: { n: number; style: CodeStyle; 
               key={`${style}-${id}`}
               initial={reduced ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="font-bold text-accent"
+              className="font-bold text-link"
             >
               {style === "scrambled" ? scrambledCode(id) : encode(id)}
             </motion.code>

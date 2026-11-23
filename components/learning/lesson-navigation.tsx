@@ -48,7 +48,7 @@ export function LessonNavigation({ prev, next }: { prev?: Lesson; next?: Lesson 
         </Link>
       ) : (
         <Link href="/practice" className="flex flex-col gap-0.5 rounded-2xl border border-accent bg-accent-soft p-4 text-right">
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.1em] text-accent">Course complete</span>
+          <span className="font-mono text-[0.7rem] uppercase tracking-[0.1em] text-link">Course complete</span>
           <span className="font-display font-bold text-ink">Go to practice</span>
         </Link>
       )}

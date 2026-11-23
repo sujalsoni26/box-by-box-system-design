@@ -9,8 +9,8 @@ import {
   getWorld,
   nearestSide,
   normalizeFloorX,
-  PEEK_FRACTION,
   readAvoidRects,
+  readInteractiveRects,
   readFloorLine,
   readViewport,
   type Point,
@@ -61,7 +61,7 @@ function readLayout(): Layout {
  * - Motion drag (started only from the cat button) moves two motion values; frames never re-render React.
  * - On release she always falls to the floor under gravity (side walls bounce, the top is a ceiling only
  *   at the top of the page), bounces once or twice, slides to a stop, then walks along the floor if she
- *   covers marked UI. Phones walk to the nearest bottom corner and peek. rAF runs only in flight.
+ *   covers marked UI. Phones walk to the bottom corner with fewer controls under it, fully on screen. rAF runs only in flight.
  * - Reduced motion / physics off: a quick straight drop, no throw or bounce. Animations off: instant.
  * - The floor x is stored normalised with `floor: true`, restored onto the floor, re-placed on resize.
  */
@@ -134,21 +134,23 @@ export function useCompanionPosition(options: PositionOptions) {
       const o = optsRef.current;
       const dx = Math.abs(target.x - x.get());
       const dy = Math.abs(target.y - y.get());
-      if ((dx < 1 && dy < 1) || o.motionLevel === "off") {
+      if (dx < 1 && dy < 1) {
         x.set(target.x);
         y.set(target.y);
         return Promise.resolve(true);
       }
       const reduced = o.motionLevel === "reduced";
+      // "slow" (animation speed setting) doubles walk and drop times; reduced keeps one short, plain move.
+      const slow = o.motionLevel === "slow" ? 2 : 1;
       const speed = o.compact ? WALK_SPEED.compact : WALK_SPEED.desktop;
       const duration =
         kind === "drop"
           ? reduced
             ? 0.16
-            : clamp(Math.sqrt((2 * dy) / 2400), 0.12, 0.45)
+            : clamp(Math.sqrt((2 * dy) / 2400), 0.12, 0.45) * slow
           : reduced
             ? 0.2
-            : clamp(dx / speed, 0.25, 3);
+            : clamp(dx / speed, 0.25, 3) * slow;
       const token = tokenRef.current;
       go(kind === "drop" ? "dropping" : "walking");
       const ease = kind === "drop" ? ("easeIn" as const) : reduced ? ("easeOut" as const) : ("linear" as const);
@@ -173,6 +175,7 @@ export function useCompanionPosition(options: PositionOptions) {
       view: layoutRef.current.view,
       avoid: readAvoidRects(o.rootRef.current),
       compact: o.compact,
+      targets: o.compact ? readInteractiveRects(o.rootRef.current) : undefined,
     });
     if (!spot.moved && Math.abs(y.get() - w.floorY) < 1) {
       commitRest(x.get());
@@ -370,9 +373,8 @@ export function useCompanionPosition(options: PositionOptions) {
 
   const dragConstraints = useMemo(() => {
     const w = getWorld(layout.view, options.size, options.compact, layout.floorLine);
-    const left = options.compact ? -options.size * PEEK_FRACTION : w.minX;
-    const right = options.compact ? layout.view.w - options.size * (1 - PEEK_FRACTION) : w.maxX;
-    return { left, right, top: 4, bottom: w.floorY };
+    // Fully on screen at every width: phones no longer let the cat hang off the side edges.
+    return { left: w.minX, right: w.maxX, top: 4, bottom: w.floorY };
   }, [layout, options.size, options.compact]);
 
   /** Pointer down on the cat: stop any motion and let Motion take over if the pointer moves. */
@@ -409,7 +411,7 @@ export function useCompanionPosition(options: PositionOptions) {
 
   const onDrag = useCallback(
     (_: unknown, info: PanInfo) => {
-      if (optsRef.current.motionLevel !== "normal") return;
+      if (optsRef.current.motionLevel === "reduced") return;
       // Held by the scruff: the body swings against the direction of travel.
       tilt.set(clamp(info.velocity.x / 90, -14, 14));
     },
@@ -422,7 +424,8 @@ export function useCompanionPosition(options: PositionOptions) {
       tilt.set(0);
       refreshLayout();
       const o = optsRef.current;
-      if (o.physics && o.motionLevel === "normal") fly(info.velocity);
+      // Throwing is direct manipulation, so it stays real-time at "slow"; reduced motion just drops.
+      if (o.physics && o.motionLevel !== "reduced") fly(info.velocity);
       else dropToFloor();
     },
     [dropToFloor, fly, refreshLayout, tilt],

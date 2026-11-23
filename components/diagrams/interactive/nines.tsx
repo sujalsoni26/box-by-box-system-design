@@ -139,7 +139,7 @@ function NinesChart({ selected, onSelect, reduced }: { selected: number; onSelec
                 transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
               />
             ) : null}
-            <span className={cn("relative font-mono text-[0.85rem] font-bold tabular-nums", active ? "text-accent" : "text-ink")}>
+            <span className={cn("relative font-mono text-[0.85rem] font-bold tabular-nums", active ? "text-link" : "text-ink")}>
               {level.label}
             </span>
             <span className="relative h-3 overflow-hidden rounded-full bg-surface-3">
@@ -232,7 +232,7 @@ function ServiceBox({
         invalid ? "border-bad" : "border-accent",
       )}
     >
-      <label htmlFor={id} className="font-display text-sm font-bold text-accent">
+      <label htmlFor={id} className="font-display text-sm font-bold text-link">
         {service.name}
       </label>
       <input

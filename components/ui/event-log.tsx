@@ -6,7 +6,7 @@ export interface LogEntry {
   tone?: "neutral" | "good" | "bad" | "accent";
 }
 
-const toneClass = { neutral: "text-ink-2", good: "text-good", bad: "text-bad", accent: "text-accent" } as const;
+const toneClass = { neutral: "text-ink-2", good: "text-good", bad: "text-bad", accent: "text-link" } as const;
 
 /** Monospace event log, newest first. */
 export function EventLog({ entries, label = "Event log", className }: { entries: LogEntry[]; label?: string; className?: string }) {

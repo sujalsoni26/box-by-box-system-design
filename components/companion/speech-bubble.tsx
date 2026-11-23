@@ -120,7 +120,7 @@ export function SpeechBubble({ bubble, above, tailX, returnFocusRef, animated }:
             <dl className="mt-2 space-y-1.5">
               {bubble.items.map((item) => (
                 <div key={item.label} className="rounded-lg bg-surface-2 px-2.5 py-1.5">
-                  <dt className="font-mono text-[0.64rem] font-bold uppercase tracking-[0.12em] text-accent">{item.label}</dt>
+                  <dt className="font-mono text-[0.64rem] font-bold uppercase tracking-[0.12em] text-link">{item.label}</dt>
                   <dd className="text-[0.86rem]">{item.text}</dd>
                 </div>
               ))}

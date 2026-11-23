@@ -104,7 +104,7 @@ const LOAD = Object.fromEntries(
 ) as Record<Strategy, Record<ShardCount, number[]>>;
 
 const TONES = [
-  { dot: "bg-accent", fill: "fill-accent", text: "text-accent" },
+  { dot: "bg-accent", fill: "fill-accent", text: "text-link" },
   { dot: "bg-amber", fill: "fill-amber", text: "text-amber-ink" },
   { dot: "bg-good", fill: "fill-good", text: "text-good" },
   { dot: "bg-violet", fill: "fill-violet", text: "text-violet" },
@@ -334,7 +334,7 @@ function ShardRouter() {
           />
         </div>
         <p aria-live="polite" className="min-w-0 flex-1 basis-56">
-          <code className="rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.8rem] text-accent [overflow-wrap:anywhere]">
+          <code className="rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.8rem] text-link [overflow-wrap:anywhere]">
             {routeText(uid, n, strategy)}
           </code>
         </p>

@@ -403,7 +403,7 @@ function AtmPanel({
       </div>
       {waiting ? (
         <div className="flex flex-col gap-1">
-          <span className="font-mono text-[0.72rem] text-accent">
+          <span className="font-mono text-[0.72rem] text-link">
             waiting for {NAME[other(side)]} to confirm… (gives up after {CP_TIMEOUT_MS / 1000} s)
           </span>
           {reduced ? null : (

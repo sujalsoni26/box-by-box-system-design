@@ -13,7 +13,11 @@ export type CompanionMood =
   | "purring"
   | "playing";
 
-export type AnimationLevel = "normal" | "reduced" | "off";
+/**
+ * Site-wide animation speed (pages and companion). "slow" doubles animation and transition
+ * durations; "reduced" removes decorative motion.
+ */
+export type AnimationLevel = "normal" | "slow" | "reduced";
 
 export interface CompanionPosition {
   /** Normalised 0..1 of the usable horizontal range. */
@@ -49,7 +53,6 @@ export interface CompanionStats {
 
 export interface CompanionSettings {
   enabled: boolean;
-  animations: AnimationLevel;
   physics: boolean;
   studyTips: boolean;
   sound: boolean;
