@@ -27,7 +27,9 @@ function CourseProgress() {
   const p = overallProgress(hydrated ? completed : {});
   return (
     <Link href="/progress" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1 hover:bg-surface-2" title="Course progress">
-      <ProgressBar value={p.fraction} label="Course progress" valueText={`${p.done} of ${p.total} lessons complete`} size="sm" />
+      {/* md to lg: the inline nav leaves the bar only a few pixels, so show just the percentage there (the bar stays
+          available to screen readers). */}
+      <ProgressBar value={p.fraction} label="Course progress" valueText={`${p.done} of ${p.total} lessons complete`} size="sm" className="md:max-lg:sr-only" />
       <span className="w-[3.2rem] shrink-0 text-right font-mono text-xs font-semibold tabular-nums text-ink-2">{hydrated ? `${Math.round(p.fraction * 100)}%` : "–"}</span>
     </Link>
   );

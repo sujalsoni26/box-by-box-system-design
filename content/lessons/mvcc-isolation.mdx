@@ -6,6 +6,15 @@ Every PostgreSQL row version carries two hidden columns: `xmin`, the ID of the t
 
 A **snapshot** is the set of transactions that had committed when it was taken. A version is visible if its creator had committed and its deleter had not. Under Read Committed each statement takes a fresh snapshot; under Repeatable Read and Serializable the transaction takes one snapshot at its first statement and keeps it.
 
+For example, transaction 105 updates a balance from 500 to 300. Until it commits, the table holds both versions:
+
+| Row version | `xmin` | `xmax` | Snapshot taken before 105 commits | Snapshot taken after |
+| --- | --- | --- | --- | --- |
+| balance 500 | 90 | 105 | Visible: its deleter, 105, has not committed | Hidden |
+| balance 300 | 105 | none | Hidden: its creator, 105, has not committed | Visible |
+
+Each reader picks the version its snapshot allows, so neither waits for transaction 105.
+
 InnoDB takes a different route. Each row holds a 6-byte transaction ID and a 7-byte **roll pointer** into the undo log, where the previous version is kept, and a reader whose snapshot predates the row's last change follows roll pointers back until it finds a version it may see.
 
 | | PostgreSQL | InnoDB |

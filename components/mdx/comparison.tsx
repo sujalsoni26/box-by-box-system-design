@@ -8,7 +8,8 @@ export function Comparison({ children }: { children: ReactNode }) {
 export function ComparisonItem({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="min-w-0 rounded-xl border border-line bg-surface px-4 pb-1 pt-3.5 text-[0.97rem]" aria-label={title}>
-      <h4 className="mb-1.5 font-display text-[1.05rem] font-bold text-ink">{title}</h4>
+      {/* h3: comparisons sit directly under a lesson section (h2), so h4 skipped a level. */}
+      <h3 className="mb-1.5 font-display text-[1.05rem] font-bold text-ink">{title}</h3>
       <div className="[&>*:last-child]:mb-3 [&_p]:my-2 [&_ul]:my-2">{children}</div>
     </section>
   );

@@ -9,6 +9,7 @@ import { RangeField } from "@/components/ui/range-field";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { ControlRow, WidgetFrame, WidgetScroll } from "@/components/ui/widget-frame";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
+import { useSimSpeed } from "../sim-speed";
 import { mulberry32, useFrameLoop, useLoopGate } from "./_wa-shared";
 
 /* ------------------------------------------------------------------ model (times in seconds) */
@@ -167,6 +168,8 @@ function PollingVsWs() {
   const rootRef = useRef<HTMLDivElement>(null);
   const gate = useLoopGate(rootRef);
   const reduced = useReducedMotion();
+  // The frame loop already runs at the block's speed; this only keeps the "N× speed" note accurate.
+  const playback = Number((SPEED * useSimSpeed()).toFixed(2));
   const [interval, setPollEvery] = useState(5);
   const [seed, setSeed] = useState(7);
   const [extra, setExtra] = useState<number[]>([]);
@@ -213,7 +216,7 @@ function PollingVsWs() {
     ? `Polling every ${interval} s sent ${snap.sent.length} requests; ${snap.empty} came back empty, and messages waited ${wait} on average. ` +
       `The WebSocket made one Upgrade request and pushed each of the ${snap.arrived.length} messages the moment it arrived. ` +
       (interval <= 2 ? "Faster polling cuts the delay but floods the server with empty requests." : "Slower polling saves requests but makes users wait.")
-    : `Playing the ${WINDOW}-second window at ${SPEED}× speed. Press "Send a message now" and watch which lane delivers it first.`;
+    : `Playing the ${WINDOW}-second window at ${playback}× speed. Press "Send a message now" and watch which lane delivers it first.`;
 
   return (
     <WidgetFrame

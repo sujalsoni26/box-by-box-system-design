@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { onCompanionEvent } from "@/lib/companion-events";
+import { idleStep } from "@/lib/companion/idle";
 import { lessonFromPath } from "@/lib/companion/lesson-context";
+import { learnerEngaged } from "@/lib/companion/quiet";
 import {
   announceUnlocks,
   maybeGreet,
@@ -16,18 +18,36 @@ import { ensureFocusHydrated, syncFocusFromStorage, useCompanionStore, useFocusS
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 
+/** Meaningful input: keyboard, pointer (press and move), touch and wheel; scroll and the tab coming back are handled below. */
 const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
+/** How long the yawn shows on the way to sleep, and the stretch on waking, ms. */
+const YAWN_MS = 1300;
+const WAKE_STRETCH_MS = 850;
+
+interface BrainOptions {
+  pathname: string;
+  lessonSlug?: string;
+  /** May the idle lamp routine start now? (desktop, motion allowed, cat still and free). */
+  lampAllowed: () => boolean;
+  /** Motion allowed: the yawn and the wake-up stretch play (reduced motion goes straight between poses). */
+  animated: boolean;
+}
 
 /**
  * Local behaviour, no AI: listens to the app's companion events, tracks inactivity (sit after 45 s,
- * sleep after 2 min, wake on scroll / key / pointer), greets once per session, schedules lesson
- * tips, announces focus-timer phase changes and expires short reactions. All timers are one-shot.
+ * sometimes a lamp nap after 70 s on desktop, a yawn and sleep after 2 min, a stretch on waking), greets
+ * once per session, schedules lesson tips, announces focus-timer phase changes and expires short
+ * reactions. All timers are one-shot.
  */
-export function useCompanionBrain({ pathname, lessonSlug }: { pathname: string; lessonSlug?: string }) {
+export function useCompanionBrain({ pathname, lessonSlug, lampAllowed, animated }: BrainOptions) {
   const lessonRef = useRef(lessonSlug);
+  const lampAllowedRef = useRef(lampAllowed);
+  const animatedRef = useRef(animated);
   useEffect(() => {
     lessonRef.current = lessonSlug;
-  }, [lessonSlug]);
+    lampAllowedRef.current = lampAllowed;
+    animatedRef.current = animated;
+  });
 
   // App events → reactions; lesson tips wait a moment and only fire if the learner is still there.
   useEffect(() => {
@@ -64,65 +84,89 @@ export function useCompanionBrain({ pathname, lessonSlug }: { pathname: string; 
     s.dismissPlain();
   }, [pathname]);
 
-  // Inactivity: awake → sitting → asleep. Activity only stamps a time; one timeout re-arms itself.
+  // Inactivity: awake → sitting → (lamp, sometimes) → yawn → asleep; any meaningful activity wakes her.
+  // The rules live in lib/companion/idle.ts; here, activity only stamps a time and one timeout re-arms itself.
   useEffect(() => {
     let last = Date.now();
     let asleepSince = 0;
     let timer = 0;
+    /** The lamp gets one chance per idle stretch, so it stays occasional. */
+    let lampTried = false;
     const arm = (ms: number) => {
       window.clearTimeout(timer);
       timer = window.setTimeout(check, Math.max(250, ms));
     };
     const check = () => {
+      timer = 0;
       const s = useCompanionStore.getState();
-      if (s.napping) {
-        timer = 0; // napping on request: only the menu, a tap or a pet wakes her
-        return;
+      const decision = idleStep(
+        {
+          idleMs: Date.now() - last,
+          idleLevel: s.idleLevel,
+          napping: s.napping,
+          // Kept awake: the menu, a bubble waiting for an answer, a focus block, a modal dialog, a quiz or a text field in use.
+          hold:
+            s.menuOpen ||
+            Boolean(s.bubble?.actions?.length) ||
+            useFocusStore.getState().session?.phase === "focus" ||
+            learnerEngaged(),
+          // A routine (lamp, play, break play) owns her pose; the brain only wakes her on activity.
+          routine: Boolean(s.activity),
+          lampTried,
+        },
+        TIMING,
+      );
+      if (decision.tryLamp) {
+        lampTried = true;
+        if (!s.bubble && Math.random() < TIMING.lampChance && lampAllowedRef.current()) {
+          s.setIdleLevel(1);
+          s.startActivity("lamp", "idle");
+          arm(TIMING.settleMs);
+          return;
+        }
       }
-      const busy = s.menuOpen || Boolean(s.bubble?.actions?.length) || useFocusStore.getState().session?.phase === "focus";
-      const idle = Date.now() - last;
-      if (busy) {
-        if (s.idleLevel !== 0) s.setIdleLevel(0);
-        arm(TIMING.settleMs);
-        return;
-      }
-      if (idle >= TIMING.sleepMs) {
-        if (s.idleLevel !== 2) {
+      if (decision.level !== null) {
+        if (decision.fallAsleep) {
+          // Drifting off: a big yawn first (the reaction outranks the sleeping pose until it expires).
           s.dismissPlain();
-          s.setIdleLevel(2);
+          if (animatedRef.current) s.react("yawning", YAWN_MS);
           asleepSince = Date.now();
         }
-        timer = 0; // stays asleep until activity
-        return;
+        s.setIdleLevel(decision.level);
       }
-      if (idle >= TIMING.settleMs) {
-        s.setIdleLevel(1);
-        arm(TIMING.sleepMs - idle);
-        return;
-      }
-      arm(TIMING.settleMs - idle);
+      if (decision.nextMs !== null) arm(decision.nextMs);
     };
-    const onActivity = () => {
+    const onActivity = (e?: Event) => {
       const now = Date.now();
       last = now;
+      lampTried = false;
       const s = useCompanionStore.getState();
       if (s.napping) return;
+      // Asleep on her lamp, the mouse merely moving does not wake her (so the learner can reach her and carry her
+      // away asleep); keys, scrolling, touch, a press anywhere and coming back to the tab still do.
+      if (e?.type === "pointermove" && s.idleLevel === 2 && s.activity?.kind === "lamp") return;
       if (s.idleLevel === 2) {
         s.setIdleLevel(0);
-        s.react("happy", 900);
+        // On the lamp the routine plays its own wake-up (stretch, hop down); elsewhere a short stretch.
+        if (s.activity?.kind !== "lamp" && animatedRef.current) s.react("stretching", WAKE_STRETCH_MS);
         maybeWelcomeBack(now - asleepSince, now);
-        arm(TIMING.settleMs);
       } else if (s.idleLevel === 1) {
         s.setIdleLevel(0);
       }
       if (!timer) arm(TIMING.settleMs);
     };
+    // Coming back to the tab counts as activity: a returning learner finds her awake (or waking up).
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") onActivity();
+    };
     for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onActivity, { passive: true });
     window.addEventListener("scroll", onActivity, { passive: true, capture: true });
+    document.addEventListener("visibilitychange", onVisibility);
     arm(TIMING.settleMs);
     return () => {
       for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onActivity);
       window.removeEventListener("scroll", onActivity, { capture: true });
+      document.removeEventListener("visibilitychange", onVisibility);
       window.clearTimeout(timer);
     };
   }, []);

@@ -16,6 +16,7 @@ import { useInView } from "@/lib/hooks/use-in-view";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 
 /* ------------------------------------------------------------------ */
 /* Model                                                               */
@@ -233,6 +234,7 @@ function Trip({
   delay: number;
   oneWay?: boolean;
 }) {
+  const speed = useSimSpeed();
   const cls = { good: "fill-good", bad: "fill-bad", accent: "fill-accent", warn: "fill-warn" }[tone];
   return (
     <motion.circle
@@ -245,7 +247,7 @@ function Trip({
         cy: oneWay ? [path.y0, path.y1] : [path.y0, path.y1, path.y0],
         opacity: oneWay ? [1, 1, 0] : [1, 1, 1, 0],
       }}
-      transition={{ duration: oneWay ? 0.45 : 0.75, delay, ease: "easeInOut" }}
+      transition={{ duration: simDuration(oneWay ? 0.45 : 0.75, speed), delay: simDuration(delay, speed), ease: "easeInOut" }}
     />
   );
 }
@@ -337,7 +339,7 @@ function Slot({ entry, rank, s, reduced }: { entry: Entry; rank: number; s: Cach
       exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, x: 40, transition: { duration: 0.3 } }}
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
       className={cn(
-        "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg border px-2.5 py-1.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem_2.6rem]",
+        "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg border px-2.5 py-1.5 @sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem_2.6rem]",
         stale ? "border-warn bg-warn-soft" : hot ? "border-amber bg-amber-soft" : "border-line bg-surface",
       )}
     >
@@ -345,13 +347,16 @@ function Slot({ entry, rank, s, reduced }: { entry: Entry; rank: number; s: Cach
         {hot ? <Flame size={13} aria-label="hot key" /> : null}
         <span className="truncate">{entry.key}</span>
       </span>
-      <span className="flex min-w-0 items-center justify-end gap-1.5 text-[0.8rem] text-ink-2 sm:justify-start">
+      <span className="flex min-w-0 items-center justify-end gap-1.5 text-[0.8rem] text-ink-2 @sm:justify-start">
         <span className="truncate tabular-nums">{likes(entry.value)}</span>
         {stale ? <Chip tone="warn">stale</Chip> : null}
       </span>
       <span aria-hidden="true" className="block h-1.5 overflow-hidden rounded-full bg-surface-3">
         <span
-          className={cn("block h-full rounded-full transition-[width] duration-300 ease-linear", left < 6 ? "bg-bad" : "bg-accent")}
+          className={cn(
+            "block h-full rounded-full transition-[width] duration-[calc(300ms/var(--sim-speed,1))] ease-linear",
+            left < 6 ? "bg-bad" : "bg-accent",
+          )}
           style={{ width: `${(left / TTL_S) * 100}%` }}
         />
       </span>
@@ -374,7 +379,7 @@ function RedisSlots({ s, reduced }: { s: CacheState; reduced: boolean }) {
         </span>
         <span>most recently used on top</span>
       </div>
-      <ol aria-label="Redis contents, most recently used first" className="flex flex-col gap-1.5">
+      <ol aria-label="Redis contents, most recently used first" className="@container flex flex-col gap-1.5">
         <AnimatePresence initial={false}>
           {s.cache.map((e, i) => (
             <Slot key={e.key} entry={e} rank={i} s={s} reduced={reduced} />
@@ -404,23 +409,27 @@ function CacheAside() {
   const [s, dispatch] = useReducer(reducer, INITIAL);
   const [traffic, setTraffic] = useState(false);
   const active = inView && visible;
+  const speed = useSimSpeed();
 
-  // TTL clock: simulated time only moves while the widget is on screen.
+  // TTL clock: simulated time only moves while the widget is on screen. Each tick advances `tickStep`
+  // simulated seconds; the block's speed sets how often a tick comes.
   const tickStep = reduced ? 1 : 0.25;
+  const tickMs = simDuration(tickStep * 1000, speed);
   useEffect(() => {
     if (!active) return;
-    const id = window.setInterval(() => dispatch({ type: "tick", dt: tickStep }), tickStep * 1000);
+    const id = window.setInterval(() => dispatch({ type: "tick", dt: tickStep }), tickMs);
     return () => window.clearInterval(id);
-  }, [active, tickStep]);
+  }, [active, tickStep, tickMs]);
 
   // Simulated traffic: 45% of reads go to the celebrity post.
   const sendRandom = useEffectEvent(() => dispatch({ type: "get", key: pickKey(Math.random()) }));
   const trafficOn = traffic && active && !reduced;
+  const trafficMs = simDuration(TRAFFIC_MS, speed);
   useEffect(() => {
     if (!trafficOn) return;
-    const id = window.setInterval(() => sendRandom(), TRAFFIC_MS);
+    const id = window.setInterval(() => sendRandom(), trafficMs);
     return () => window.clearInterval(id);
-  }, [trafficOn]);
+  }, [trafficOn, trafficMs]);
 
   // Companion reactions, once each.
   const total = s.hits + s.misses;

@@ -44,6 +44,8 @@ Try indexes, caching, vertical scaling and replicas first. Each shard is usually
     end
 `} />
 
+In numbers: 30 million users on three machines. Replicated, each machine stores all 30 million and any of them can serve a read, but every write still goes to the one primary. Sharded, each stores about 10 million and takes the writes for its own users only. Real systems do both: three shards, each a primary with two replicas, is nine machines.
+
 <DeepDive title="Go deeper: consistent hashing in one picture">
 
 Imagine a ring of hash values from 0 to 2³². Each shard is placed at a few points on the ring, and each key goes **clockwise to the next shard** it meets. Adding a shard only takes over the keys between it and its neighbour, about **1/N** of the data, instead of reshuffling almost everything as `hash % N` does. Placing each shard at many points (**virtual nodes**) evens out the load. DynamoDB and Cassandra use variants of this.

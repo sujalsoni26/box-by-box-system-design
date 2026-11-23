@@ -1,12 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ChevronDown, TableOfContents } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LessonHeading } from "@/lib/lesson-headings";
 
-/** Section list for long lessons, highlighting the section being read. */
-export function OnThisPage({ headings }: { headings: LessonHeading[] }) {
+/**
+ * Section list for long lessons, highlighting the section being read. Collapsible: `open` and `onToggle`
+ * come from <LessonSidePanels>, which keeps it and the Notes panel from being open together.
+ */
+export function OnThisPage({ headings, open, onToggle }: { headings: LessonHeading[]; open: boolean; onToggle: () => void }) {
   const [active, setActive] = useState<string | null>(null);
+  const regionRef = useRef<HTMLDivElement>(null);
+  const id = useId();
+  const regionId = `${id}-toc`;
 
+  // Keeps tracking while collapsed, so the list is right the moment it opens.
   useEffect(() => {
     const els = headings.map((h) => document.getElementById(h.id)).filter((el): el is HTMLElement => Boolean(el));
     if (!els.length) return;
@@ -22,25 +30,57 @@ export function OnThisPage({ headings }: { headings: LessonHeading[] }) {
   }, [headings]);
 
   if (headings.length < 2) return null;
+
+  // Collapsed, the header still says where the reader is.
+  const current = open ? undefined : headings.find((h) => h.id === active)?.text;
+
+  const toggle = () => {
+    onToggle();
+    // The column scrolls on its own; bring the opened list into view when it lands below the fold.
+    if (!open) requestAnimationFrame(() => regionRef.current?.scrollIntoView({ block: "nearest" }));
+  };
+
   return (
     <nav aria-label="On this page" className="text-sm">
-      <p className="font-mono text-[0.68rem] uppercase tracking-[0.12em] text-ink-3">On this page</p>
-      <ul className="mt-3 space-y-0.5 border-l border-line">
-        {headings.map((h) => (
-          <li key={h.id}>
-            <a
-              href={`#${h.id}`}
-              aria-current={active === h.id ? "location" : undefined}
-              className={cn(
-                "-ml-px block border-l-2 py-1 pl-3 leading-snug transition-colors",
-                active === h.id ? "border-accent font-bold text-ink" : "border-transparent text-ink-3 hover:text-ink",
-              )}
-            >
-              {h.text}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <h2>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={regionId}
+          onClick={toggle}
+          data-testid="side-panel-toc-toggle"
+          className="group block w-full rounded-md py-1 text-left"
+        >
+          <span className="flex items-center gap-2 text-ink-3 transition-colors group-hover:text-ink">
+            <TableOfContents aria-hidden="true" className="size-3.5 shrink-0" />
+            <span className="font-mono text-[0.68rem] uppercase tracking-[0.12em]">On this page</span>
+            <ChevronDown aria-hidden="true" className={cn("ml-auto size-4 shrink-0 transition-transform", open && "rotate-180")} />
+          </span>
+          {current ? (
+            <span aria-hidden="true" className="mt-1 block truncate text-[0.8rem] text-ink-2">
+              {current}
+            </span>
+          ) : null}
+        </button>
+      </h2>
+      <div ref={regionRef} id={regionId} hidden={!open} data-testid="side-panel-toc" data-open={open ? "true" : "false"} className="mt-3">
+        <ul className="space-y-0.5 border-l border-line">
+          {headings.map((h) => (
+            <li key={h.id}>
+              <a
+                href={`#${h.id}`}
+                aria-current={active === h.id ? "location" : undefined}
+                className={cn(
+                  "-ml-px block border-l-2 py-1 pl-3 leading-snug transition-colors",
+                  active === h.id ? "border-accent font-bold text-ink" : "border-transparent text-ink-3 hover:text-ink",
+                )}
+              >
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
     </nav>
   );
 }

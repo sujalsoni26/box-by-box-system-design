@@ -50,7 +50,7 @@ Two details carry the guarantee. The `transactional.id` is stable across restart
 
 Inside Kafka, "exactly-once" means each input record's effect appears once in the output topics and state stores, even across failures. It says nothing about a payment API, an email or a row in PostgreSQL: a transaction can abort the Kafka side, not recall the email. Across arbitrary systems exactly-once *delivery* is impossible for the reason in [What makes a system distributed](/learn/distributed-fundamentals): the acknowledgement can be lost, so the sender never knows whether to send again. What you can have is exactly-once *effect*, if the sink cooperates:
 
-- **Idempotent writes.** Upsert by a natural key, a unique constraint on the event id, or a dedup table of seen ids. The second attempt changes nothing.
+- **Idempotent writes.** Upsert by a natural key, a unique constraint on the event id, or a dedup table of seen ids. The second attempt changes nothing: in PostgreSQL, inserting with `ON CONFLICT (event_id) DO NOTHING` turns the replayed payments 41 to 45 from the first diagram into a no-op.
 - **Offsets stored with the output.** Write the result and the consumed offset in the same database transaction, and on restart seek to the stored offset instead of trusting Kafka's; Kafka itself keeps its position in the same log as the data.
 - **Two-phase commit with the sink.** Pre-commit at a checkpoint, commit when every participant has, as Flink's Kafka sink does (next lesson). Costly, and rare outside stream processors.
 

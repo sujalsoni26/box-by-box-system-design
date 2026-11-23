@@ -2,8 +2,10 @@
 /**
  * Small hooks and formatters shared by the W-A diagrams (request-journey, dns-lookup, tcp-udp,
  * latency-scale, tail-latency, littles-law, lb-sim, scaling-compare, polling-vs-ws).
+ * The timing hooks run in simulation time: they follow the block's local speed control (0.5x, 1x, 1.5x).
  */
 import { useEffect, useEffectEvent, useState, type RefObject } from "react";
+import { simDuration, useSimSpeed } from "@/components/diagrams/sim-speed";
 import { useInView } from "@/lib/hooks/use-in-view";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 
@@ -14,9 +16,13 @@ export function useLoopGate(ref: RefObject<Element | null>): boolean {
   return inView && pageVisible;
 }
 
-/** requestAnimationFrame loop that runs while `running`. `onFrame` receives ms since the last frame (capped). */
+/**
+ * requestAnimationFrame loop that runs while `running`. `onFrame` receives simulated ms since the last
+ * frame: real ms (capped) times the block's speed.
+ */
 export function useFrameLoop(onFrame: (dtMs: number) => void, running: boolean, maxStepMs = 64): void {
-  const frame = useEffectEvent(onFrame);
+  const speed = useSimSpeed();
+  const frame = useEffectEvent((dtMs: number) => onFrame(dtMs * speed));
   useEffect(() => {
     if (!running) return;
     let id = 0;
@@ -31,21 +37,23 @@ export function useFrameLoop(onFrame: (dtMs: number) => void, running: boolean, 
   }, [running, maxStepMs]);
 }
 
-/** setInterval that only runs while `delayMs` is a number. */
+/** setInterval that only runs while `delayMs` is a number. `delayMs` is simulated time: 0.5x doubles the period. */
 export function useInterval(onTick: () => void, delayMs: number | null): void {
+  const speed = useSimSpeed();
   const tick = useEffectEvent(onTick);
+  const periodMs = delayMs === null ? null : simDuration(delayMs, speed);
   useEffect(() => {
-    if (delayMs === null) return;
-    const id = window.setInterval(() => tick(), delayMs);
+    if (periodMs === null) return;
+    const id = window.setInterval(() => tick(), periodMs);
     return () => window.clearInterval(id);
-  }, [delayMs]);
+  }, [periodMs]);
 }
 
 /* ------------------------------------------------------------------ step player */
 
 export interface StepPlayerOptions {
   count: number;
-  /** How long to stay on `index` before auto-advancing (travel animation + reading time). */
+  /** How long to stay on `index` before auto-advancing (travel animation + reading time), at 1x. */
   waitMs: (index: number) => number;
   /** False pauses auto-advance (off-screen or hidden tab). */
   active: boolean;
@@ -68,14 +76,18 @@ export interface StepPlayer {
   jump: (index: number, options: { play: boolean }) => void;
 }
 
-/** Back / Next / Play state for step-through diagrams. Auto-advance uses one timeout per step. */
+/**
+ * Back / Next / Play state for step-through diagrams. Auto-advance uses one timeout per step, scaled by
+ * the block's speed (a speed change restarts the current step's wait at the new speed).
+ */
 export function useStepPlayer({ count, waitMs, active, onStep }: StepPlayerOptions): StepPlayer {
+  const speed = useSimSpeed();
   const last = count - 1;
   const [nav, setNav] = useState({ index: last, forward: false, seq: 0 });
   const [playing, setPlaying] = useState(false);
   const index = Math.min(nav.index, last);
   const autoplaying = playing && index < last;
-  const wait = autoplaying ? waitMs(index) : 0;
+  const wait = autoplaying ? simDuration(waitMs(index), speed) : 0;
 
   const go = (to: number, forward: boolean) => {
     const target = Math.max(0, to);

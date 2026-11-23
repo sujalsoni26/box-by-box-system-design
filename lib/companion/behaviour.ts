@@ -1,0 +1,133 @@
+import type { CompanionMood } from "@/types/companion";
+
+/*
+ * The companion's behaviour as one small state model instead of competing booleans.
+ *
+ * Two layers, both explicit:
+ * 1. Body (owned by use-companion-position): where the cat is and how it moves. Exactly one phase at a
+ *    time, and only the listed transitions happen:
+ *
+ *      resting ─drag→ dragging ─release→ flying ─settle→ landing ─→ resting      (throw, physics on)
+ *                                    └→ dropping ─arrive→ landing ─→ resting     (physics off / reduced)
+ *      resting ─walk→ walking ─arrive→ resting
+ *      resting ─jump→ jumping ─arrive→ perched ─hop down→ jumping ─→ landing ─→ resting   (lamp)
+ *      any ─press→ resting (stops motion where it is), any ─resize→ resting (clamped on screen)
+ *
+ *    The cat always stays where it lands; nothing moves it back to a preset spot.
+ *
+ * 2. Mind (owned by the stores): what the resting cat is doing. Derived here, never stored, so two
+ *    flags can never disagree. Priority: body motion > short reaction > scripted routine > bubble pose >
+ *    nap / sleep > focus timer > settled > awake.
+ */
+
+export type BodyPhase = "resting" | "dragging" | "flying" | "dropping" | "landing" | "walking" | "jumping" | "perched";
+
+/**
+ * A step of a scripted routine (the lamp nap, break-time play). Routines set the step; the pose follows.
+ * lamp: approach (walk) → crouch → leap → land → settle → yawn → nap … stretch → hop down.
+ * play: crouch (before a pounce) → bat → rest, between chases.
+ */
+export type RoutineStep =
+  | "lamp-approach"
+  | "lamp-crouch"
+  | "lamp-land"
+  | "lamp-settle"
+  | "lamp-sit"
+  | "lamp-yawn"
+  | "lamp-nap"
+  | "lamp-stretch"
+  | "play-crouch"
+  | "play-bat"
+  | "play-rest"
+  | "play-cheer"
+  | null;
+
+export interface MindState {
+  phase: BodyPhase;
+  /** Rising (true) or falling (false) while flying; decides "falling" vs the carried pose. */
+  rising?: boolean;
+  reaction?: CompanionMood | null;
+  routine?: RoutineStep;
+  bubbleMood?: CompanionMood | null;
+  napping: boolean;
+  /** 0 awake, 1 settled, 2 asleep. */
+  idleLevel: 0 | 1 | 2;
+  focusPhase: "focus" | "break" | null;
+  /** Being carried (or dropped) asleep on her lamp: she sleeps through it. */
+  carriedAsleep?: boolean;
+}
+
+const ROUTINE_MOOD: Record<Exclude<RoutineStep, null>, CompanionMood> = {
+  "lamp-approach": "walking",
+  "lamp-crouch": "crouching",
+  "lamp-land": "landing",
+  "lamp-settle": "sitting",
+  "lamp-sit": "sitting",
+  "lamp-yawn": "yawning",
+  "lamp-nap": "sleeping",
+  "lamp-stretch": "stretching",
+  "play-crouch": "crouching",
+  "play-bat": "playing",
+  "play-rest": "sitting",
+  "play-cheer": "happy",
+};
+
+/** Poses drawn in side view (the cat moving or about to move in a direction); the rest face the viewer. */
+export const SIDE_MOODS: ReadonlySet<CompanionMood> = new Set<CompanionMood>(["walking", "crouching", "leaping"]);
+
+/** The single pose to show for the current state. */
+export function deriveMood(s: MindState): CompanionMood {
+  if (s.carriedAsleep && (s.phase === "dragging" || s.phase === "dropping")) return "sleeping";
+  switch (s.phase) {
+    case "dragging":
+      return "dragged";
+    case "flying":
+      return s.rising ? "jumping" : "falling";
+    case "dropping":
+      return "falling";
+    case "landing":
+      return "landing";
+    case "walking":
+      return "walking";
+    case "jumping":
+      // A jump she chose (lamp, pounce) is a side-view leap; being thrown upwards is "jumping" above.
+      return "leaping";
+    default:
+      break;
+  }
+  if (s.reaction) return s.reaction;
+  if (s.routine) {
+    // On the lamp the cat follows the idle clock: it sits, then falls asleep there.
+    if (s.routine === "lamp-sit" && s.idleLevel === 2) return "sleeping";
+    return ROUTINE_MOOD[s.routine];
+  }
+  if (s.bubbleMood) return s.bubbleMood;
+  if (s.napping || s.idleLevel === 2) return "sleeping";
+  if (s.focusPhase === "focus") return "studying";
+  if (s.focusPhase === "break" || s.idleLevel === 1) return "sitting";
+  return "idle";
+}
+
+/** Phases in which the body is still and the cat may start something on its own. */
+export function isStill(phase: BodyPhase): boolean {
+  return phase === "resting" || phase === "perched";
+}
+
+export interface QuietInput {
+  phase: BodyPhase;
+  menuOpen: boolean;
+  /** Any bubble is showing (plain or with buttons). */
+  bubble: boolean;
+  /** A routine (play, lamp) is running. */
+  routine: boolean;
+  focusRunning: boolean;
+  pageVisible: boolean;
+}
+
+/**
+ * May the companion start something unprompted (a topic meow, the lamp, a completion prompt)?
+ * One guard for all of them, so they never collide with each other, a drag, the menu or focus mode.
+ */
+export function canActOnItsOwn(q: QuietInput): boolean {
+  return q.pageVisible && isStill(q.phase) && !q.menuOpen && !q.bubble && !q.routine && !q.focusRunning;
+}

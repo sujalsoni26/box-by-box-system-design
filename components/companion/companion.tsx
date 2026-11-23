@@ -1,11 +1,13 @@
 "use client";
-import { Suspense, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { usePathname } from "next/navigation";
-import { animate, AnimatePresence, motion, useMotionValue, useSpring, type MotionValue } from "motion/react";
+import { AnimatePresence, motion, useMotionValue, useSpring, type MotionValue } from "motion/react";
 import { equippedAttr } from "@/lib/companion/accessories";
 import { petCache } from "@/lib/companion/actions";
+import { deriveMood, isStill, type RoutineStep } from "@/lib/companion/behaviour";
 import { lessonFromPath } from "@/lib/companion/lesson-context";
-import { LINES, pick } from "@/lib/companion/lines";
+import { line } from "@/lib/companion/lines";
+import { pageIsBusy } from "@/lib/companion/quiet";
 import type { Size } from "@/lib/companion/resting";
 import { companionBlip } from "@/lib/companion/sound";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
@@ -15,13 +17,16 @@ import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { clamp, cn } from "@/lib/utils";
 import { useCompanionStore, useFocusHydrated, useFocusStore } from "@/stores/companion-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
-import type { CompanionMood } from "@/types/companion";
 import { CompanionMenu } from "./companion-menu";
 import { FocusTimer } from "./focus-timer";
+import { Lamp, lampFits, useLampRoutine } from "./lamp";
 import { PixelCat } from "./pixel-cat";
+import { usePlay, YarnBall } from "./play";
 import { BubbleAnnouncer, SpeechBubble } from "./speech-bubble";
 import { useCompanionBrain } from "./use-companion-brain";
 import { useCompanionPosition } from "./use-companion-position";
+import { useCompletionPrompt, useTopicMeows } from "./use-companion-routines";
+import { useNewAccessoryCount } from "./wardrobe";
 
 /** Phones get the smallest cat that is still a comfortable touch target (WCAG 2.5.5 suggests 44px). */
 const CAT_SIZE = { desktop: 84, compact: 60, phone: 52 } as const;
@@ -54,6 +59,12 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const catRef = useRef<HTMLButtonElement>(null);
   const petTimer = useRef(0);
   const lastPet = useRef(0);
+  /** The press that stopped break play: its click must not also open the menu. */
+  const swallowClick = useRef(false);
+  /** The lamp routine's current step and landing hook (the position hook needs them before the routine exists). */
+  const lampStepRef = useRef<RoutineStep>(null);
+  const lampLandedRef = useRef<() => void>(() => {});
+  const asleepOnLamp = () => useCompanionStore.getState().activity?.kind === "lamp" && lampStepRef.current === "lamp-nap";
   const menuId = useId();
   const hintId = useId();
 
@@ -71,55 +82,103 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const bubble = useCompanionStore((s) => s.bubble);
   const reactionMood = useCompanionStore((s) => s.reaction?.mood);
   const idleLevel = useCompanionStore((s) => s.idleLevel);
-  const closeMenu = useCompanionStore((s) => s.closeMenu);
   const focusHydrated = useFocusHydrated();
   const focusPhase = useFocusStore((s) => s.session?.phase ?? null);
   const napping = useCompanionStore((s) => s.napping);
   const activity = useCompanionStore((s) => s.activity);
   const equipped = usePreferencesStore((s) => s.companion.equipped);
 
-  const pos = useCompanionPosition({
+  // Picking the cat up closes the menu and ends any routine (the drag owns the cat from then on), except when she
+  // is asleep on her lamp: then she is carried with it and sleeps on.
+  const onPickUp = useCallback(() => {
+    const s = useCompanionStore.getState();
+    s.closeMenu();
+    if (s.activity?.kind === "lamp" && lampStepRef.current === "lamp-nap") return;
+    if (s.activity?.kind === "break-play") s.stopBreakPlay(useFocusStore.getState().session?.startedAt ?? 0);
+    else if (s.activity) s.endActivity(s.activity.id);
+  }, []);
+  const lampCarry = useCallback(() => asleepOnLamp(), []);
+  const onLampDrop = useCallback(() => lampLandedRef.current(), []);
+  const pos = useCompanionPosition({ size, compact, physics, motionLevel, onPickUp, lampCarry, onLampDrop });
+  const animated = motionLevel !== "reduced";
+  const { getPhase } = pos;
+
+  // The lamp: desktop only, with room beside the cat, motion allowed. The idle one also needs a quiet, still companion.
+  const viewW = pos.view.w;
+  const lampAvailable = !compact && animated && lampFits(viewW, size);
+  const lampAllowed = useCallback(() => {
+    const s = useCompanionStore.getState();
+    return (
+      !compact &&
+      animated &&
+      lampFits(viewW, size) &&
+      isStill(getPhase()) &&
+      !s.napping &&
+      !s.menuOpen &&
+      !s.bubble &&
+      !s.activity &&
+      !useFocusStore.getState().session &&
+      !pageIsBusy()
+    );
+  }, [compact, animated, viewW, size, getPhase]);
+  useCompanionBrain({ pathname, lessonSlug: lesson?.slug, lampAllowed, animated });
+  useTopicMeows({ lesson, compact, getPhase });
+  useCompletionPrompt({ lesson, compact, getPhase });
+  const lampRoutine = useLampRoutine({
+    size,
+    groundY: pos.groundY,
+    viewW,
+    animated,
+    catX: () => pos.x.get(),
+    walkTo: pos.walkTo,
+    jumpTo: pos.jumpTo,
+    settle: pos.settle,
+    faceTo: pos.faceTo,
+    getPhase,
+  });
+  useEffect(() => {
+    lampStepRef.current = lampRoutine.step;
+    lampLandedRef.current = lampRoutine.landed;
+  });
+  // Yarn chase (menu) and break-time play (focus breaks).
+  const play = usePlay({
     size,
     compact,
-    physics,
-    motionLevel,
-    rootRef,
-    hold: menuOpen || Boolean(bubble?.actions?.length) || Boolean(activity),
-    onPickUp: closeMenu,
+    animated,
+    x: pos.x,
+    y: pos.y,
+    walkTo: pos.walkTo,
+    jumpTo: pos.jumpTo,
+    settle: pos.settle,
+    stopMotion: pos.stopMotion,
+    faceTo: pos.faceTo,
+    getPhase,
+    world: pos.world,
   });
-  useCompanionBrain({ pathname, lessonSlug: lesson?.slug });
   const anchors = useAnchors(pos.x, pos.y, size, pos.view);
-  const swing = useSpring(pos.tilt, { stiffness: 260, damping: 14 });
-
-  // After navigation the page underneath changed: check the cat is not covering the new layout.
-  const { ensureSafe } = pos;
-  useEffect(() => {
-    const id = window.setTimeout(ensureSafe, 700);
-    return () => window.clearTimeout(id);
-  }, [pathname, ensureSafe]);
+  const swing = useSpring(pos.tilt, { stiffness: 220, damping: 16 });
+  const newAccessories = useNewAccessoryCount();
 
   useEffect(() => {
     const timer = petTimer;
     return () => window.clearTimeout(timer.current);
   }, []);
 
-  const resting = pos.phase === "resting";
-  const airborne = pos.phase === "dragging" || pos.phase === "flying" || pos.phase === "dropping";
-  const restingMood: CompanionMood =
-    napping || idleLevel === 2
-      ? "sleeping"
-      : focusPhase === "focus"
-        ? "studying"
-        : focusPhase === "break" || idleLevel === 1
-          ? "sitting"
-          : "idle";
-  const mood: CompanionMood = airborne
-    ? "dragged"
-    : pos.phase === "walking"
-      ? "walking"
-      : (reactionMood ?? bubble?.mood ?? restingMood);
-  const animated = motionLevel !== "reduced";
-  const ambient = animated && pageVisible && resting;
+  const still = isStill(pos.phase);
+  const airborne = pos.phase === "dragging" || pos.phase === "flying" || pos.phase === "dropping" || pos.phase === "jumping";
+  // One derived pose (lib/companion/behaviour.ts) instead of a chain of flags that could disagree.
+  const mood = deriveMood({
+    phase: pos.phase,
+    rising: pos.rising,
+    reaction: reactionMood ?? null,
+    routine: lampRoutine.step ?? play.step,
+    bubbleMood: bubble?.mood ?? null,
+    napping,
+    idleLevel,
+    focusPhase: focusHydrated ? focusPhase : null,
+    carriedAsleep: pos.carrying,
+  });
+  const ambient = animated && pageVisible && still;
 
   const toggleMenu = (focus: "first" | "last" = "first") => {
     const s = useCompanionStore.getState();
@@ -132,10 +191,41 @@ function CompanionShell({ pathname }: { pathname: string }) {
     companionBlip("pop");
   };
 
+  /** Break play stops the moment she is pressed (or clicked from the keyboard), for the rest of this break. */
+  const stopBreakPlay = () => {
+    const s = useCompanionStore.getState();
+    if (s.activity?.kind !== "break-play") return false;
+    s.stopBreakPlay(useFocusStore.getState().session?.startedAt ?? 0);
+    s.say({ text: line("breakPlayStop"), mood: "sitting", ms: 2600, solicited: true });
+    return true;
+  };
+
+  const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+    if (stopBreakPlay()) swallowClick.current = true;
+    // Asleep on the lamp: holding her keeps her asleep (so she can be carried); a tap without a drag still wakes her.
+    const s = useCompanionStore.getState();
+    if (asleepOnLamp() && !s.napping) s.setNapping(true);
+    pos.onPointerDown(e);
+  };
+
   const onClick = () => {
+    const swallowed = swallowClick.current;
+    swallowClick.current = false;
     if (pos.consumeDrag()) return;
     pos.settleIfInterrupted();
+    if (swallowed) return;
+    // Keyboard (Enter / Space): no press came first.
+    if (stopBreakPlay()) {
+      pos.stopMotion();
+      pos.settle();
+      return;
+    }
     const s = useCompanionStore.getState();
+    // On the lamp: a tap wakes her (she stretches and hops down); the next tap opens the menu.
+    if (s.activity?.kind === "lamp") {
+      s.wakeLamp();
+      return;
+    }
     if (s.napping) {
       // A tap wakes a napping cat (the next tap opens the menu).
       s.setNapping(false);
@@ -168,66 +258,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
     }, PET_DELAY_MS);
   };
 
-  // Play: a yarn ball rolls along the floor, Cache walks after it and bats it (about 3 s).
-  const yarnX = useMotionValue(0);
-  const yarnRot = useMotionValue(0);
-  const yarnOpacity = useMotionValue(0);
   const yarnSize = compact ? 14 : 18;
-  const { walkTo, settle, x: catX } = pos;
-  const playId = activity?.kind === "play" ? activity.id : 0;
-  useEffect(() => {
-    if (!playId) return;
-    let cancelled = false;
-    const anims: Array<{ stop: () => void }> = [];
-    const timers: number[] = [];
-    const wait = (ms: number) => new Promise<void>((resolve) => timers.push(window.setTimeout(resolve, ms)));
-    const roll = (to: number, turns: number, duration: number) => {
-      if (!animated) {
-        yarnX.set(to);
-        return;
-      }
-      anims.push(animate(yarnX, to, { duration, ease: [0.2, 0.7, 0.3, 1] }));
-      anims.push(animate(yarnRot, yarnRot.get() + turns, { duration, ease: "easeOut" }));
-    };
-    const finish = () => {
-      yarnOpacity.set(0);
-      useCompanionStore.getState().endActivity(playId);
-    };
-    const run = async () => {
-      const viewW = document.documentElement.clientWidth || window.innerWidth;
-      const centre = catX.get() + size / 2;
-      const dir = centre < viewW / 2 ? 1 : -1;
-      const start = clamp(centre + dir * size * 0.45, 12, viewW - 12);
-      const end = clamp(start + dir * (compact ? 120 : 220), 16, viewW - 16);
-      yarnX.set(start);
-      yarnOpacity.set(1);
-      roll(end, dir * 540, 1.1);
-      await wait(animated ? 250 : 0);
-      if (cancelled) return;
-      const arrived = await walkTo(end - size / 2 - dir * size * 0.42);
-      if (cancelled) return;
-      if (!arrived) return finish();
-      useCompanionStore.getState().react("playing", 1000);
-      await wait(300);
-      if (cancelled) return;
-      roll(clamp(end + dir * 70, 16, viewW - 16), dir * 240, 0.6);
-      await wait(800);
-      if (cancelled) return;
-      const s = useCompanionStore.getState();
-      s.react("happy", 1400);
-      s.say({ text: pick(LINES.playDone), mood: "happy", ms: 2600, solicited: true });
-      finish();
-      settle();
-    };
-    void run();
-    return () => {
-      cancelled = true;
-      anims.forEach((a) => a.stop());
-      timers.forEach((t) => window.clearTimeout(t));
-      yarnOpacity.set(0);
-    };
-  }, [playId, animated, compact, size, walkTo, settle, catX, yarnX, yarnRot, yarnOpacity]);
-  const yarnY = pos.groundY;
 
   return (
     <section
@@ -235,10 +266,14 @@ function CompanionShell({ pathname }: { pathname: string }) {
       aria-label="Study companion"
       data-testid="companion"
       data-mood={mood}
-      data-resting={resting ? "true" : "false"}
+      data-phase={pos.phase}
+      data-activity={activity?.kind ?? ""}
+      data-resting={still ? "true" : "false"}
       data-accessories={equippedAttr(equipped)}
       className="fixed left-0 top-0 z-40 h-0 w-0"
     >
+      <Lamp lamp={lampRoutine.lamp} size={size} groundY={pos.groundY} animated={animated} catX={pos.x} catY={pos.y} />
+
       <motion.div
         className="absolute left-0 top-0"
         style={{ x: pos.x, y: pos.y, width: size, height: size }}
@@ -261,7 +296,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-controls={menuOpen ? menuId : undefined}
-          onPointerDown={pos.onPointerDown}
+          onPointerDown={onPointerDown}
           onPointerEnter={onPointerEnter}
           onPointerLeave={() => window.clearTimeout(petTimer.current)}
           onClick={onClick}
@@ -272,37 +307,33 @@ function CompanionShell({ pathname }: { pathname: string }) {
             airborne ? "cursor-grabbing" : "cursor-grab",
           )}
         >
-          <PixelCat mood={mood} motionLevel={motionLevel} ambient={ambient} gaze={finePointer} accessories={equipped} />
+          <PixelCat
+            mood={mood}
+            facing={pos.facing}
+            gait={pos.gait}
+            rising={pos.rising}
+            motionLevel={motionLevel}
+            ambient={ambient}
+            gaze={finePointer}
+            accessories={equipped}
+          />
         </motion.button>
+        {newAccessories > 0 ? (
+          // A small "something new in the wardrobe" dot; the menu shows the count.
+          <span
+            aria-hidden="true"
+            data-testid="companion-new-dot"
+            className="pointer-events-none absolute right-[14%] top-[8%] size-2.5 rounded-full border-2 border-surface bg-review"
+          />
+        ) : null}
         <span id={hintId} className="sr-only">
-          Opens a menu with explanations, hints, quick revision and a focus timer. Drag to move Cache.
+          Opens a menu with explanations, quick revision, a focus timer, play and the wardrobe. Drag to move Cache; she stays where
+          she lands.
+          {newAccessories > 0 ? ` ${newAccessories} new ${newAccessories === 1 ? "accessory" : "accessories"} in the wardrobe.` : ""}
         </span>
       </motion.div>
 
-      {playId ? (
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-0 top-0"
-          style={{ x: yarnX, y: yarnY, opacity: yarnOpacity }}
-        >
-          <motion.svg
-            viewBox="-12 -12 24 24"
-            width={yarnSize}
-            height={yarnSize}
-            style={{ rotate: yarnRot }}
-            className="block -translate-x-1/2 -translate-y-full overflow-visible"
-          >
-            <circle r={10.5} className="fill-violet stroke-ink/50" strokeWidth={1.4} />
-            <path
-              d="M -9 -4 Q 0 -1 9 -5 M -10 2 Q 0 5 10 1 M -5 -9 Q -1 0 -4 9 M 4 -9 Q 8 0 3 9"
-              className="fill-none stroke-violet-soft"
-              strokeWidth={1.3}
-              strokeLinecap="round"
-            />
-            <path d="M 9 6 Q 14 10 11 13" className="fill-none stroke-violet" strokeWidth={1.4} strokeLinecap="round" />
-          </motion.svg>
-        </motion.div>
-      ) : null}
+      {play.showYarn ? <YarnBall yarn={play.yarn} groundY={pos.groundY} size={yarnSize} /> : null}
 
       {focusHydrated && focusPhase ? (
         <motion.div className="absolute left-0 top-0" data-testid="companion-timer-anchor" style={{ x: anchors.chipX, y: anchors.chipY }}>
@@ -322,7 +353,15 @@ function CompanionShell({ pathname }: { pathname: string }) {
         >
           <AnimatePresence mode="wait" initial={false}>
             {menuOpen ? (
-              <CompanionMenu key="menu" id={menuId} lesson={lesson} above={anchors.above} animated={animated} anchorRef={catRef} />
+              <CompanionMenu
+                key="menu"
+                id={menuId}
+                lesson={lesson}
+                above={anchors.above}
+                animated={animated}
+                anchorRef={catRef}
+                lampAvailable={lampAvailable}
+              />
             ) : bubble ? (
               <SpeechBubble
                 key={bubble.id}

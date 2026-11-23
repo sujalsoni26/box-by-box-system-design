@@ -8,6 +8,7 @@ import type { Point } from "./resting";
  * - Side walls bounce fast throws (restitution). The top is a ceiling only at the top of the page
  *   (scrollY <= 0); otherwise she may fly up to `capY` above the viewport and fall back.
  * - Floor: one or two small bounces (bounces slower than `minBounce` stop), then floor friction.
+ * - Wherever she stops is where she stays (the caller never moves her back to a preset spot).
  */
 
 export interface GravityProfile {
@@ -30,31 +31,35 @@ export interface GravityProfile {
   maxFlightMs: number;
 }
 
+/*
+ * Tuned to feel a little floatier than a real throw: lower release cap and gravity, more air drag, so
+ * a flick reads as a lob and the fall is easy to follow (about 20-25% slower than before).
+ */
 export const GRAVITY: Record<"desktop" | "compact", GravityProfile> = {
   desktop: {
-    maxThrow: 2200,
-    gravity: 2400,
-    airDrag: 0.35,
-    wallRestitution: 0.45,
-    ceilingRestitution: 0.4,
-    floorRestitution: 0.32,
-    minBounce: 140,
-    floorFriction: 1600,
+    maxThrow: 1700,
+    gravity: 1850,
+    airDrag: 0.55,
+    wallRestitution: 0.4,
+    ceilingRestitution: 0.35,
+    floorRestitution: 0.28,
+    minBounce: 150,
+    floorFriction: 1400,
     stopSpeed: 10,
-    maxFlightMs: 5000,
+    maxFlightMs: 6000,
   },
   /** Phones: softer bounces, more friction. */
   compact: {
-    maxThrow: 1300,
-    gravity: 2200,
-    airDrag: 0.6,
-    wallRestitution: 0.25,
-    ceilingRestitution: 0.25,
-    floorRestitution: 0.22,
+    maxThrow: 1050,
+    gravity: 1700,
+    airDrag: 0.8,
+    wallRestitution: 0.22,
+    ceilingRestitution: 0.22,
+    floorRestitution: 0.2,
     minBounce: 160,
-    floorFriction: 2200,
+    floorFriction: 2000,
     stopSpeed: 12,
-    maxFlightMs: 4000,
+    maxFlightMs: 5000,
   },
 };
 

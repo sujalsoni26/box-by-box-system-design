@@ -1,14 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { persistenceAdapter, STORAGE_KEYS } from "@/lib/storage/adapter";
-import type {
-  AccessoryId,
-  AccessorySlot,
-  AnimationLevel,
-  CompanionPosition,
-  CompanionSettings,
-  CompanionStats,
-} from "@/types/companion";
+import type { AccessoryId, AccessorySlot, CompanionPosition, CompanionSettings, CompanionStats } from "@/types/companion";
 
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -16,19 +9,12 @@ export interface PreferencesState {
   theme: ThemePreference;
   /** Glossary terms the learner knows; their inline hints are no longer shown. */
   knownTerms: string[];
-  /**
-   * Site-wide animation speed for pages and the companion. `null` follows the system:
-   * reduced when the OS asks for reduced motion, otherwise normal.
-   */
-  animationSpeed: AnimationLevel | null;
   companion: CompanionSettings;
 }
 
 interface PreferencesActions {
   setTheme: (theme: ThemePreference) => void;
   setTermKnown: (term: string, known: boolean) => void;
-  /** Pass null to follow the system's reduced-motion setting again. */
-  setAnimationSpeed: (speed: AnimationLevel | null) => void;
   setCompanion: (patch: Partial<CompanionSettings>) => void;
   setCompanionPosition: (position: CompanionPosition | null) => void;
   resetCompanion: () => void;
@@ -36,6 +22,9 @@ interface PreferencesActions {
   /** Wear an accessory in its slot, or pass null to take the slot's accessory off. */
   equipAccessory: (slot: AccessorySlot, id: AccessoryId | null) => void;
   markAccessoriesAnnounced: (ids: AccessoryId[]) => void;
+  markAccessoriesSeen: (ids: AccessoryId[]) => void;
+  /** Cache asked "mark it as learned?" for this lesson; it will not ask again (no nagging). */
+  markCompletionAsked: (slug: string) => void;
 }
 
 export const defaultCompanionStats: CompanionStats = { feeds: 0, pets: 0, plays: 0, focusSessions: 0 };
@@ -49,34 +38,22 @@ export const defaultCompanionSettings: CompanionSettings = {
   stats: defaultCompanionStats,
   equipped: {},
   announced: [],
+  seenAccessories: [],
+  topicMeows: true,
+  completionAsked: {},
 };
-
-const ANIMATION_LEVELS: readonly AnimationLevel[] = ["normal", "slow", "reduced"];
-
-/**
- * Reads the saved speed. Before this setting existed, the companion had its own
- * "Animations: normal | reduced | off"; reduced and off map to "reduced", normal to "follow the system".
- */
-function migrateAnimationSpeed(p: Record<string, unknown>): AnimationLevel | null {
-  const saved = p.animationSpeed;
-  if (typeof saved === "string" && (ANIMATION_LEVELS as readonly string[]).includes(saved)) return saved as AnimationLevel;
-  const legacy = (p.companion as { animations?: unknown } | undefined)?.animations;
-  return legacy === "reduced" || legacy === "off" ? "reduced" : null;
-}
 
 export const usePreferencesStore = create<PreferencesState & PreferencesActions>()(
   persist(
     (set) => ({
       theme: "system",
       knownTerms: [],
-      animationSpeed: null,
       companion: defaultCompanionSettings,
       setTheme: (theme) => set({ theme }),
       setTermKnown: (term, known) =>
         set((s) => ({
           knownTerms: known ? Array.from(new Set([...s.knownTerms, term])) : s.knownTerms.filter((t) => t !== term),
         })),
-      setAnimationSpeed: (animationSpeed) => set({ animationSpeed }),
       setCompanion: (patch) => set((s) => ({ companion: { ...s.companion, ...patch } })),
       setCompanionPosition: (position) => set((s) => ({ companion: { ...s.companion, position } })),
       resetCompanion: () => set({ companion: defaultCompanionSettings }),
@@ -95,27 +72,42 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
         set((s) => ({
           companion: { ...s.companion, announced: Array.from(new Set([...s.companion.announced, ...ids])) },
         })),
+      markAccessoriesSeen: (ids) =>
+        set((s) => {
+          const seen = new Set(s.companion.seenAccessories);
+          if (ids.every((id) => seen.has(id))) return s;
+          return { companion: { ...s.companion, seenAccessories: Array.from(new Set([...seen, ...ids])) } };
+        }),
+      markCompletionAsked: (slug) =>
+        set((s) => ({ companion: { ...s.companion, completionAsked: { ...s.companion.completionAsked, [slug]: Date.now() } } })),
     }),
     {
       name: STORAGE_KEYS.preferences,
       version: 1,
       storage: createJSONStorage(() => persistenceAdapter),
       skipHydration: true,
-      partialize: (s) => ({ theme: s.theme, knownTerms: s.knownTerms, animationSpeed: s.animationSpeed, companion: s.companion }),
+      partialize: (s) => ({ theme: s.theme, knownTerms: s.knownTerms, companion: s.companion }),
+      // Older saves may carry fields that no longer exist (the site-wide `animationSpeed`, the companion's
+      // own `animations`); they are dropped. New fields get safe defaults, so existing saves keep working.
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<PreferencesState> & Record<string, unknown>;
+        const p = { ...((persisted ?? {}) as Partial<PreferencesState> & Record<string, unknown>) };
+        delete p.animationSpeed;
         const c = { ...(p.companion ?? {}) } as Partial<CompanionSettings> & { animations?: unknown };
         delete c.animations;
+        const announced = Array.isArray(c.announced) ? c.announced : [];
         return {
           ...current,
           ...p,
-          animationSpeed: migrateAnimationSpeed(p),
           companion: {
             ...defaultCompanionSettings,
             ...c,
             stats: { ...defaultCompanionStats, ...(c.stats ?? {}) },
             equipped: c.equipped ?? {},
-            announced: c.announced ?? [],
+            announced,
+            // Accessories announced before the wardrobe tracked "seen" are not shown as new again.
+            seenAccessories: Array.isArray(c.seenAccessories) ? c.seenAccessories : announced,
+            topicMeows: typeof c.topicMeows === "boolean" ? c.topicMeows : true,
+            completionAsked: c.completionAsked && typeof c.completionAsked === "object" ? c.completionAsked : {},
           },
         };
       },

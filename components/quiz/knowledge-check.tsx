@@ -166,7 +166,13 @@ export function KnowledgeCheck({ check, defaultOpen = false }: { check: Knowledg
                       <Flag aria-hidden="true" className="size-4 fill-current" /> Marked for review
                     </Link>
                   ) : (
-                    <Button size="sm" onClick={() => missed.forEach((slug) => setReview(slug, true))}>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        missed.forEach((slug) => setReview(slug, true));
+                        emitCompanionEvent({ type: "review-marked", slug: missed[0], marked: true });
+                      }}
+                    >
                       <Flag aria-hidden="true" className="size-4 text-review" />
                       {missed.length === 1 ? "Mark the lesson for review" : `Mark ${missed.length} lessons for review`}
                     </Button>

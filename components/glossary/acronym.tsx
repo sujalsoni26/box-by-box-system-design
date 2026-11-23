@@ -141,7 +141,14 @@ export function Acronym({ term, children }: AcronymProps) {
         aria-label={`${term} definition`}
         hidden={!open}
         onBlur={onBlurWithin}
-        className="fixed z-50 m-0 block w-max max-w-[min(20rem,calc(100vw-1.5rem))] animate-rise overflow-visible rounded-xl border border-line-strong bg-surface px-3.5 pb-2.5 pt-3 text-left font-sans text-[0.9rem] font-normal not-italic leading-snug text-ink shadow-[var(--shadow-lift)] [inset:auto]"
+        // The popup is a DOM child of the term, so it inherits text styles from wherever the term sits (a table
+        // header is nowrap, uppercase and letter-spaced; a cell is bold; a quote is italic). Reset every inherited
+        // typographic property, so the box wraps and reads the same in any position.
+        className={[
+          "fixed z-50 m-0 block w-max max-w-[min(20rem,calc(100vw-1.5rem))] animate-rise overflow-visible rounded-xl border border-line-strong bg-surface px-3.5 pb-2.5 pt-3 shadow-[var(--shadow-lift)] [inset:auto]",
+          "text-left font-sans text-[0.9rem] font-normal not-italic leading-snug text-ink",
+          "whitespace-normal normal-case tracking-normal [word-spacing:normal] [text-indent:0] [font-variant:normal] [hyphens:manual] [overflow-wrap:break-word] [word-break:normal] [text-wrap:wrap] [cursor:auto]",
+        ].join(" ")}
       >
         <span className="block font-mono text-[0.72rem] font-semibold tracking-[0.1em] text-link">{term}</span>
         <span id={fullId} className="block font-display text-[1.02rem] font-bold">

@@ -30,7 +30,13 @@ export interface AccessoryDef {
 }
 
 export const SLOTS: readonly AccessorySlot[] = ["head", "eyes", "neck", "body"];
-export const SLOT_LABEL: Record<AccessorySlot, string> = { head: "Head", eyes: "Eyes", neck: "Neck", body: "Body" };
+export const SLOT_LABEL: Record<AccessorySlot, string> = { head: "Head", eyes: "Eyes", neck: "Neck", body: "Body & costumes" };
+
+/**
+ * Full costumes live in the body slot (one outfit at a time) and also draw a mask on the head. Both are
+ * original designs: generic shapes and colours, no logos or character artwork.
+ */
+export const COSTUMES: ReadonlySet<AccessoryId> = new Set<AccessoryId>(["night-vigilante", "web-hero"]);
 
 export const ACCESSORIES: readonly AccessoryDef[] = [
   { id: "bell-collar", slot: "neck", name: "Bell collar", requirement: "Finish your first lesson", unit: "lesson", target: 1, value: (c) => c.lessonsDone },
@@ -44,6 +50,8 @@ export const ACCESSORIES: readonly AccessoryDef[] = [
   { id: "sunglasses", slot: "eyes", name: "Sunglasses", requirement: "Mark 10 flashcards as known", unit: "cards", target: 10, value: (c) => c.knownCards },
   { id: "striped-sweater", slot: "body", name: "Striped sweater", requirement: "Finish 20 lessons", unit: "lessons", target: 20, value: (c) => c.lessonsDone },
   { id: "hero-cape", slot: "body", name: "Hero cape", requirement: "Complete 3 modules", unit: "modules", target: 3, value: (c) => c.modulesDone },
+  { id: "night-vigilante", slot: "body", name: "Midnight vigilante", requirement: "Complete 5 focus sessions", unit: "focus sessions", target: 5, value: (c) => c.focusSessions },
+  { id: "web-hero", slot: "body", name: "Web hero", requirement: "Finish 10 lessons", unit: "lessons", target: 10, value: (c) => c.lessonsDone },
 ];
 
 const byId = new Map(ACCESSORIES.map((a) => [a.id, a]));

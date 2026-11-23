@@ -9,9 +9,10 @@ import {
   EyeOff,
   Fish,
   Heart,
+  LampFloor,
   Lightbulb,
-  ListTree,
-  MessageCircleQuestionMark,
+  MessageCircleOff,
+  MessageCircleHeart,
   Moon,
   Settings,
   Shirt,
@@ -23,8 +24,8 @@ import {
 import {
   explainSimply,
   feedCache,
-  giveHint,
   hideCompanion,
+  lampNap,
   meowAboutTopic,
   openWardrobe,
   petCache,
@@ -33,18 +34,21 @@ import {
   suggestNext,
   toggleFocus,
   toggleNap,
-  topicSummary,
+  toggleTopicMeows,
 } from "@/lib/companion/actions";
 import { cn } from "@/lib/utils";
 import { useCompanionStore, useFocusStore } from "@/stores/companion-store";
+import { usePreferencesStore } from "@/stores/preferences-store";
 import type { Lesson } from "@/types/curriculum";
 import { CompanionSettingsPanel } from "./companion-settings-panel";
-import { Wardrobe } from "./wardrobe";
+import { useNewAccessoryCount, Wardrobe } from "./wardrobe";
 
 interface MenuItem {
   id: string;
   label: string;
   hint?: string;
+  /** Highlighted hint (e.g. "2 new"). */
+  badge?: string;
   icon: LucideIcon;
   run: () => void;
   /** Opens a sub-view inside the menu instead of closing it. */
@@ -58,16 +62,22 @@ interface CompanionMenuProps {
   animated: boolean;
   /** The cat button: focus returns here, and clicks on it do not count as "outside". */
   anchorRef: RefObject<HTMLElement | null>;
+  /** "Lamp nap" is offered where the lamp routine can run (desktop-sized viewport, motion allowed). */
+  lampAvailable: boolean;
 }
 
 /** Compact, keyboard-navigable menu (role="menu"): arrows, Home/End, Escape, Tab closes. */
-export function CompanionMenu({ id, lesson, above, animated, anchorRef }: CompanionMenuProps) {
+export function CompanionMenu({ id, lesson, above, animated, anchorRef, lampAvailable }: CompanionMenuProps) {
   const view = useCompanionStore((s) => s.menuView);
   const initialFocus = useCompanionStore((s) => s.menuFocus);
   const closeMenu = useCompanionStore((s) => s.closeMenu);
   const setMenuView = useCompanionStore((s) => s.setMenuView);
   const focusRunning = useFocusStore((s) => s.session !== null);
+  const focusMinutes = useFocusStore((s) => s.focusMinutes);
   const napping = useCompanionStore((s) => s.napping);
+  const onLamp = useCompanionStore((s) => s.activity?.kind === "lamp");
+  const topicMeows = usePreferencesStore((s) => s.companion.topicMeows);
+  const newAccessories = useNewAccessoryCount();
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
@@ -75,25 +85,39 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
   const needs = lesson ? undefined : "needs a lesson";
   const items: MenuItem[] = [
     { id: "explain", label: "Explain simply", hint: needs, icon: Lightbulb, run: () => explainSimply(lesson) },
-    { id: "hint", label: "Give me a hint", hint: needs, icon: MessageCircleQuestionMark, run: () => giveHint(lesson) },
     { id: "revise", label: "Quick revision", hint: "recall", icon: Brain, run: quickRevision },
     {
       id: "focus",
       label: focusRunning ? "Stop focus timer" : "Focus timer",
-      hint: focusRunning ? "running" : "25 min",
+      hint: focusRunning ? "running" : `${focusMinutes} min`,
       icon: Timer,
       run: toggleFocus,
     },
-    { id: "summary", label: "Current topic summary", hint: needs, icon: ListTree, run: () => topicSummary(lesson) },
     { id: "next", label: "What should I learn next?", icon: Compass, run: () => suggestNext(lesson) },
     { id: "meow", label: "Meow about this topic", hint: lesson ? undefined : "general", icon: Cat, run: () => meowAboutTopic(lesson) },
+    {
+      id: "topic-meows",
+      label: topicMeows ? "Pause topic meows" : "Resume topic meows",
+      hint: topicMeows ? "on" : "paused",
+      icon: topicMeows ? MessageCircleOff : MessageCircleHeart,
+      run: toggleTopicMeows,
+    },
   ];
   const playItems: MenuItem[] = [
+    {
+      id: "wardrobe",
+      label: "Wardrobe",
+      hint: newAccessories ? undefined : "outfits",
+      badge: newAccessories ? `${newAccessories} new` : undefined,
+      icon: Shirt,
+      run: openWardrobe,
+      subview: true,
+    },
     { id: "feed", label: "Feed", icon: Fish, run: feedCache },
     { id: "pet", label: "Pet", icon: Heart, run: () => petCache(lesson) },
-    { id: "nap", label: napping ? "Wake up" : "Nap", icon: napping ? Sun : Moon, run: toggleNap },
+    { id: "nap", label: napping || onLamp ? "Wake up" : "Nap", icon: napping || onLamp ? Sun : Moon, run: toggleNap },
+    ...(lampAvailable && !onLamp ? [{ id: "lamp", label: "Lamp nap", hint: "cosy", icon: LampFloor, run: lampNap }] : []),
     { id: "play", label: "Play", hint: "yarn", icon: Volleyball, run: playWithCache },
-    { id: "wardrobe", label: "Wardrobe", icon: Shirt, run: openWardrobe, subview: true },
   ];
   const endItems: MenuItem[] = [
     { id: "hide", label: "Hide companion", icon: EyeOff, run: hideCompanion },
@@ -187,7 +211,11 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
       >
         <Icon aria-hidden="true" className="size-4 shrink-0 text-link" />
         <span className="min-w-0 flex-1">{item.label}</span>
-        {item.hint ? <span className="shrink-0 font-mono text-[0.66rem] font-medium text-ink-3">{item.hint}</span> : null}
+        {item.badge ? (
+          <span className="shrink-0 rounded-full bg-review-soft px-1.5 py-px font-mono text-[0.64rem] font-bold text-review">{item.badge}</span>
+        ) : item.hint ? (
+          <span className="shrink-0 font-mono text-[0.66rem] font-medium text-ink-3">{item.hint}</span>
+        ) : null}
       </button>
     );
   };

@@ -35,6 +35,8 @@ sequenceDiagram
     Note over S: Never called
 `} />
 
+Compare two-phase commit: Inventory would have prepared and kept the stock row locked while Payment talked to the card network, so other shoppers buying that item would wait for the decision. The saga commits the reservation at once and releases it when payment fails; the price is that, for a moment, other shoppers see two fewer units in stock.
+
 ## Choreography or orchestration
 
 Who decides what happens next? Two styles, and a given saga should use one.

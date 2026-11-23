@@ -4,6 +4,8 @@ In **leaderless replication** there is no primary. Any replica accepts writes, a
 
 **N** is how many replicas hold each key, **W** how many must acknowledge a write before the client is told it succeeded, and **R** how many must answer a read. The rule is **R + W > N**: any W writers and any R readers then share at least one node, so at least one replica you read from took the latest acknowledged write. Every value carries a version, and the coordinator returns the newest it sees.
 
+Count it out with N = 3 and W = R = 2. A write acknowledged by replicas 1 and 2 misses only replica 3, and every pair you could read (1 and 2, 1 and 3, 2 and 3) includes replica 1 or 2. Drop to W = R = 1 and the write may sit on replica 1 alone while the read asks only replica 3.
+
 <Mermaid caption="N = 3, W = 2, R = 2. Replica 3 is slow, but the read still meets a replica that has the new version." chart={`---
 config:
   sequence:

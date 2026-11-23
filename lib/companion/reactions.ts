@@ -6,7 +6,8 @@ import { useProgressStore } from "@/stores/progress-store";
 import { useCompanionStore, useFocusStore, type BubbleAction, type FocusEvent } from "@/stores/companion-store";
 import type { AccessoryId, CompanionEvent } from "@/types/companion";
 import { ACCESSORIES, getAccessory, rewardContext, unlockedIds } from "./accessories";
-import { fill, LINES, pick } from "./lines";
+import { fill, line, LINES } from "./lines";
+import { markFactShown } from "./topic-facts";
 import { companionBlip } from "./sound";
 import { TIMING } from "./timing";
 
@@ -48,6 +49,7 @@ export function canNudge(now: number, ignoreGap = false): boolean {
 
 let lastQuizBubbleAt = 0;
 let lastDiagramAt = 0;
+let lastReviewBubbleAt = 0;
 
 export function reactToEvent(event: CompanionEvent, now: number): void {
   const s = companion();
@@ -90,7 +92,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       companionBlip("happy");
       if (!canRespond()) return;
       const { done, total, fraction } = overallProgress(completed);
-      const praise = fill(pick(LINES.lessonDone), { done, total, pct: formatPercent(fraction) });
+      const praise = fill(line("lessonDone"), { done, total, left: total - done, pct: formatPercent(fraction) });
       s.say({ text: next ? `${praise} Next up: ${next.number} ${next.title}.` : praise, mood: "happy", solicited: true });
       return;
     }
@@ -102,7 +104,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       // Encourage after every miss (rate-limited); praise only some of the time.
       if (!event.correct || Math.random() < 0.4) {
         lastQuizBubbleAt = now;
-        s.say({ text: pick(event.correct ? LINES.correct : LINES.incorrect), ms: event.correct ? 2200 : 4200, solicited: true });
+        s.say({ text: line(event.correct ? "correct" : "incorrect"), ms: event.correct ? 2200 : 4200, solicited: true });
       }
       return;
     }
@@ -124,6 +126,15 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       lastDiagramAt = now;
       s.react(event.mood, 1600);
       if (event.message && canNudge(now)) s.say({ text: event.message, mood: event.mood, ms: 4500 });
+      return;
+    }
+
+    case "review-marked": {
+      s.react(event.marked ? "thinking" : "happy", 1200);
+      // A direct response to the learner, but not every time: flags often come in bursts.
+      if (!canRespond() || now - lastReviewBubbleAt < TIMING.reviewBubbleGapMs) return;
+      lastReviewBubbleAt = now;
+      s.say({ text: line(event.marked ? "reviewMarked" : "reviewCleared"), mood: event.marked ? "thinking" : "happy", ms: 2800, solicited: true });
       return;
     }
 
@@ -153,6 +164,8 @@ export function maybeLessonTip(slug: string, now: number): void {
   if (!text) return;
   tipsShown.add(slug);
   meowNext = !useMeow;
+  // The meow line is also a topic meow; do not repeat it later in this visit.
+  if (useMeow) markFactShown(slug, "meow");
   companion().say({ title: useMeow ? "Meow" : "Tip", text, mood: "happy" });
 }
 
@@ -233,20 +246,28 @@ function greetedThisSession(): boolean {
 /** Once per browser session: introduce Cache, or offer to continue where the learner left off. */
 export function maybeGreet(currentSlug: string | undefined, now: number): void {
   if (!canNudge(now, true) || greetedThisSession()) return;
-  const { completed, lastVisited } = useProgressStore.getState();
+  const { completed, lastVisited, review } = useProgressStore.getState();
   const s = companion();
   if (!Object.keys(completed).length && !lastVisited) {
     s.say({ text: LINES.greetNew, actions: [{ label: "Nice to meet you", primary: true }], mood: "happy" });
     return;
   }
+  // Topics marked for review get a gentle reminder in the greeting (with a shortcut to the list).
+  const toReview = Object.keys(review ?? {}).length;
+  const reviewText = toReview ? ` ${toReview === 1 ? line("reviewWaitingOne") : fill(line("reviewWaiting"), { n: toReview })}` : "";
+  const reviewAction: BubbleAction[] = toReview ? [{ label: "Review list", href: "/progress#review" }] : [];
   const next = nextIncompleteLesson(completed, lastVisited);
   if (!next || next.slug === currentSlug) {
-    s.say({ text: "Welcome back! Good to see you studying again.", mood: "happy" });
+    s.say({
+      text: `${line("greetStudying")}${reviewText}`,
+      actions: toReview ? [...reviewAction, { label: "Later", primary: true }] : undefined,
+      mood: "happy",
+    });
     return;
   }
   s.say({
-    text: `${LINES.greetBack} Next up: ${next.number} ${next.title}.`,
-    actions: [{ label: `Continue: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, { label: "Later" }],
+    text: `${line("greetBack")} Next up: ${next.number} ${next.title}.${reviewText}`,
+    actions: [{ label: `Continue: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, ...reviewAction, { label: "Later" }],
     mood: "happy",
   });
 }
@@ -254,7 +275,7 @@ export function maybeGreet(currentSlug: string | undefined, now: number): void {
 /** After a long nap: a quiet welcome back with a general tip. */
 export function maybeWelcomeBack(napMs: number, now: number): void {
   if (napMs < TIMING.longNapMs || !canNudge(now)) return;
-  companion().say({ title: "Welcome back", text: pick(LINES.homeTips), mood: "happy" });
+  companion().say({ title: "Welcome back", text: line("homeTips"), mood: "happy" });
 }
 
 /** Subtle notice when a focus block or break ends. */
@@ -267,7 +288,7 @@ export function reactToFocusEvent(event: FocusEvent, now: number): void {
     s.react("happy", 2200);
     s.say({
       title: "Focus block done",
-      text: LINES.focusDone,
+      text: line("focusDone"),
       actions: [
         { label: "Skip break", onSelect: () => useFocusStore.getState().skip(Date.now()) },
         { label: "OK", primary: true },
@@ -280,8 +301,8 @@ export function reactToFocusEvent(event: FocusEvent, now: number): void {
   s.react("happy", 1600);
   const { completed, lastVisited } = useProgressStore.getState();
   const next = nextIncompleteLesson(completed, lastVisited);
-  const actions: BubbleAction[] = [{ label: "Start 25 min", primary: true, onSelect: () => focus.start(Date.now()) }];
+  const actions: BubbleAction[] = [{ label: `Start ${focus.focusMinutes} min`, primary: true, onSelect: () => useFocusStore.getState().start(Date.now()) }];
   if (next) actions.push({ label: `Open ${next.title}`, href: `/learn/${next.slug}` });
   actions.push({ label: "Later" });
-  s.say({ title: "Break over", text: LINES.breakDone, actions, mood: "happy", solicited: true });
+  s.say({ title: "Break over", text: line("breakDone"), actions, mood: "happy", solicited: true });
 }

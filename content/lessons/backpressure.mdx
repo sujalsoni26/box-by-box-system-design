@@ -1,4 +1,6 @@
-If producers outpace consumers continuously, a queue only delays the crash: an **unbounded queue** grows until memory runs out. **Backpressure** lets the overloaded part signal upstream to slow down:
+If producers outpace consumers continuously, a queue only delays the crash: an **unbounded queue** grows until memory runs out. Say producers send 1,000 messages a second and consumers finish 800: the queue grows by 200 every second, 720,000 an hour, and no buffer size fixes that; only slowing the producers or adding consumer capacity does.
+
+**Backpressure** lets the overloaded part signal upstream to slow down:
 
 - Slow or block the producer (TCP flow control does this).
 - Bounded buffers with a maximum size.

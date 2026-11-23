@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useInView } from "@/lib/hooks/use-in-view";
 import { useResolvedTheme } from "@/lib/hooks/use-resolved-theme";
+import { DiagramFrame } from "./diagram-frame";
 
 interface MermaidProps {
   chart: string;
@@ -56,11 +57,15 @@ export function Mermaid({ chart, caption }: MermaidProps) {
   const inView = useInView(ref, "400px");
   const theme = useResolvedTheme();
   const reactId = useId();
-  const [svg, setSvg] = useState<{ theme: string; markup: string } | null>(null);
+  const [svg, setSvg] = useState<{ theme: string; chart: string; markup: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const renderedKey = svg ? `${svg.theme}\n${svg.chart}` : null;
 
   useEffect(() => {
-    if (!inView) return;
+    // Render once per theme, not on every return into view: mermaid.render() first removes any element with
+    // the render id, which is the live <svg>, and React would then keep the identical markup without
+    // re-inserting it, leaving an empty frame.
+    if (!inView || renderedKey === `${theme}\n${chart}`) return;
     let cancelled = false;
     (async () => {
       const { default: mermaid } = await import("mermaid");
@@ -69,34 +74,32 @@ export function Mermaid({ chart, caption }: MermaidProps) {
       mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "base", fontFamily: vars.fontFamily, themeVariables: vars });
       const id = `mmd-${reactId.replace(/[^a-zA-Z0-9]/g, "")}-${theme}`;
       const { svg: markup } = await mermaid.render(id, chart.trim());
-      if (!cancelled) setSvg({ theme, markup });
+      if (!cancelled) setSvg({ theme, chart, markup });
     })().catch((e: unknown) => {
       if (!cancelled) setError(e instanceof Error ? e.message : "Mermaid could not render this diagram.");
     });
     return () => {
       cancelled = true;
     };
-  }, [chart, theme, inView, reactId]);
+  }, [chart, theme, inView, reactId, renderedKey]);
 
   return (
-    <figure ref={ref} className="not-prose my-8" data-companion-avoid="">
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface p-4">
-        {error ? (
-          <pre className="whitespace-pre-wrap font-mono text-xs text-bad">{error}</pre>
-        ) : svg ? (
-          <div
-            role="img"
-            aria-label={caption ?? "Diagram"}
-            className="mermaid-render mx-auto flex min-w-[320px] justify-center"
-            dangerouslySetInnerHTML={{ __html: svg.markup }}
-          />
-        ) : (
-          <div role="status" className="grid h-48 place-items-center text-sm text-ink-3">
-            Drawing the diagram…
-          </div>
-        )}
-      </div>
-      {caption ? <figcaption className="mt-2 text-center text-sm italic text-ink-3">{caption}</figcaption> : null}
-    </figure>
+    // A wide chart that Mermaid scales down to the column (or that overflows it) can open in a lightbox.
+    <DiagramFrame ref={ref} caption={caption} expandedMarkup={!error && svg ? svg.markup : undefined}>
+      {error ? (
+        <pre className="whitespace-pre-wrap font-mono text-xs text-bad">{error}</pre>
+      ) : svg ? (
+        <div
+          role="img"
+          aria-label={caption ?? "Diagram"}
+          className="mermaid-render mx-auto flex min-w-[320px] justify-center"
+          dangerouslySetInnerHTML={{ __html: svg.markup }}
+        />
+      ) : (
+        <div role="status" className="grid h-48 place-items-center text-sm text-ink-3">
+          Drawing the diagram…
+        </div>
+      )}
+    </DiagramFrame>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { interactiveRegistry, type InteractiveName } from "./interactive-registry";
+import { ANIMATED_INTERACTIVES, interactiveRegistry, type InteractiveName } from "./interactive-registry";
+import { SimSpeedProvider } from "./sim-speed";
 import { useInView } from "@/lib/hooks/use-in-view";
 
 interface InteractiveDiagramProps {
@@ -35,7 +36,10 @@ export function InteractiveDiagram({ name, variant }: InteractiveDiagramProps) {
   return (
     <div ref={ref} data-companion-avoid="" data-interactive={name} className="min-h-[14rem]">
       {mounted ? (
-        <Component variant={variant} />
+        // Each block owns its playback speed; the provider scopes it to this block only.
+        <SimSpeedProvider animated={ANIMATED_INTERACTIVES.has(name)}>
+          <Component variant={variant} />
+        </SimSpeedProvider>
       ) : (
         <div className="my-8 grid h-56 place-items-center rounded-2xl border border-dashed border-line-strong bg-surface-2 text-sm text-ink-3">
           Simulation loads as you scroll here.

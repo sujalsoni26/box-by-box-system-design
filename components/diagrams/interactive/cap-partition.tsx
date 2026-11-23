@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer } from "react";
+import { useEffect, useEffectEvent, useReducer } from "react";
 import type { ComponentType } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Scissors, Cable, RotateCcw } from "lucide-react";
@@ -13,6 +13,7 @@ import { EventLog, type LogEntry } from "@/components/ui/event-log";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 
 /* ------------------------------------------------------------------ */
 /* Model                                                               */
@@ -279,12 +280,15 @@ function DataCenter({ side, s }: { side: Side; s: CapState }) {
 }
 
 function Movers({ s, reduced }: { s: CapState; reduced: boolean }) {
+  const speed = useSimSpeed();
   if (reduced) {
     return s.pending ? (
       <circle cx={s.pending.side === "mumbai" ? 166 : 194} cy={LINK_Y} r={6} className="dg-dot dg-dot--accent" />
     ) : null;
   }
   const f = s.flash;
+  // Travelling messages run at the block's speed; the waiting pulse and the payout label are cosmetic.
+  const travel = simDuration(0.45, speed);
   return (
     <>
       {s.pending ? (
@@ -294,7 +298,7 @@ function Movers({ s, reduced }: { s: CapState; reduced: boolean }) {
           className="dg-dot dg-dot--accent"
           initial={{ cx: BOX[s.pending.side].edge, cy: LINK_Y, opacity: 1 }}
           animate={{ cx: s.pending.side === "mumbai" ? 166 : 194, opacity: [1, 1, 0.35, 1] }}
-          transition={{ cx: { duration: 0.45, ease: "easeOut" }, opacity: { duration: 1, repeat: Infinity, delay: 0.45 } }}
+          transition={{ cx: { duration: travel, ease: "easeOut" }, opacity: { duration: 1, repeat: Infinity, delay: travel } }}
         />
       ) : null}
       <AnimatePresence>
@@ -306,7 +310,7 @@ function Movers({ s, reduced }: { s: CapState; reduced: boolean }) {
             initial={{ cx: BOX[f.from].edge, cy: LINK_Y, opacity: 1 }}
             animate={{ cx: BOX[other(f.from)].edge, opacity: [1, 1, 0] }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: "easeInOut" }}
+            transition={{ duration: simDuration(0.7, speed), ease: "easeInOut" }}
           />
         ) : null}
         {f?.kind === "reconcile"
@@ -317,7 +321,7 @@ function Movers({ s, reduced }: { s: CapState; reduced: boolean }) {
                 className="dg-dot dg-dot--good"
                 initial={{ cx: BOX[side].edge, cy: LINK_Y, opacity: 1 }}
                 animate={{ cx: BOX[other(side)].edge, opacity: [1, 1, 0] }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
+                transition={{ duration: simDuration(0.8, speed), ease: "easeInOut" }}
               />
             ))
           : null}
@@ -390,6 +394,9 @@ function AtmPanel({
   onRead: () => void;
 }) {
   const waiting = s.pending?.side === side ? s.pending : null;
+  // Same duration as the timeout timer. A speed change mid-wait does not restart the tween, so the bar
+  // and the timer both finish at the speed the wait started with.
+  const speed = useSimSpeed();
   return (
     <div role="group" aria-label={`${NAME[side]} ATM`} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-2.5">
       <p className="text-[0.85rem] font-bold text-ink">{NAME[side]} ATM</p>
@@ -413,7 +420,7 @@ function AtmPanel({
                 className="block h-full rounded-full bg-accent"
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: CP_TIMEOUT_MS / 1000, ease: "linear" }}
+                transition={{ duration: simDuration(CP_TIMEOUT_MS / 1000, speed), ease: "linear" }}
               />
             </span>
           )}
@@ -430,11 +437,15 @@ function AtmPanel({
 function CapPartition() {
   const reduced = useReducedMotion();
   const [s, dispatch] = useReducer(reducer, "CP", initialState);
+  const speed = useSimSpeed();
 
+  // The CP timeout runs in sim time. Its length is read when the wait starts (not a dependency), so
+  // a speed change mid-wait never restarts it and it stays in step with the progress bar.
+  const timeoutMs = useEffectEvent(() => simDuration(CP_TIMEOUT_MS, speed));
   useEffect(() => {
     if (!s.pending) return;
     const id = s.pending.id;
-    const t = window.setTimeout(() => dispatch({ type: "timeout", id }), CP_TIMEOUT_MS);
+    const t = window.setTimeout(() => dispatch({ type: "timeout", id }), timeoutMs());
     return () => window.clearTimeout(t);
   }, [s.pending]);
 

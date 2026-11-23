@@ -59,6 +59,18 @@ Clients branch on the class: 4xx means "fix the request, do not retry it as is";
 
 The HTTP specification (RFC 9110) defines **safe** methods, which must not change state (`GET`, `HEAD`, `OPTIONS`, `TRACE`), and **idempotent** methods, where repeating the request has the same effect as sending it once: the safe methods plus `PUT` and `DELETE`. `POST` is neither, and `PATCH` is not guaranteed to be.
 
+The two words answer different questions. *Safe*: does the request change server state at all? *Idempotent*: if the same request arrives twice, is the server left as it would be after one?
+
+| Method | Safe | Idempotent | Example |
+| --- | --- | --- | --- |
+| `GET` | Yes | Yes | `GET /users/42` only reads; repeat it freely |
+| `PUT` | No | Yes | `PUT /users/42` with the same body leaves the same profile, however often it is sent |
+| `DELETE` | No | Yes | A second `DELETE /users/42` may return 404 instead of 204, but the state is the same: user 42 is gone |
+| `PATCH` | No | Not guaranteed | Setting `{"name": "Asha"}` repeats harmlessly; a patch meaning "add 10 points" adds 20 on a retry |
+| `POST` | No | No | `POST /orders` sent twice creates two orders |
+
+<mark>Every safe method is idempotent, but idempotent does not mean safe</mark>: `PUT` and `DELETE` change state, they just change nothing more the second time. Idempotency is judged by the server's state, not by the response; and "safe" still allows side effects the client did not ask for, such as an access-log line.
+
 That decides how you shape an API:
 
 - Use `PUT /users/42/avatar` for "set it to this": a retry simply sets it again.

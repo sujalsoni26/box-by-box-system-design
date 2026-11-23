@@ -43,6 +43,8 @@ A stadium has one scoreboard, and everyone who looks up sees the same score the 
 
 **Serializability** says that running transactions concurrently gives the same result as running them one at a time in *some* order (Papadimitriou, 1979). It is the strongest isolation level in [ACID transactions](/learn/acid), and it says nothing about which order, or about real time. A database may place a transaction that started at 10:02 before one that committed at 10:01, provided no transaction can tell the difference. A read-only transaction served from a slightly old snapshot is serializable and not linearizable.
 
+Concretely: you transfer ₹500 and the app says "done". A balance check that starts a second later but reads a snapshot from before the transfer still shows the old balance. That is serializable, because the check fits into the serial order *before* the transfer, but it ignores the real-time fact that the transfer had already finished.
+
 Put the two together and you get **strict serializability**: the serial order must also respect real time, so a transaction that begins after another commits sees its effects. Spanner's paper calls this *external consistency* and treats it as linearizability applied to whole transactions. <mark>Linearizability is about single operations on one object in real time; serializability is about many operations on many objects in some order; strict serializability is both.</mark>
 
 ## The zoo on one map

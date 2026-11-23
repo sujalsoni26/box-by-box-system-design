@@ -1,6 +1,7 @@
 "use client";
 // Shared by W-C's simulations (backoff-jitter, circuit-breaker, token-bucket).
 import { useEffect, useEffectEvent, type RefObject } from "react";
+import { useSimSpeed } from "@/components/diagrams/sim-speed";
 import { useInView } from "@/lib/hooks/use-in-view";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 
@@ -14,10 +15,12 @@ export function useLoopActive(ref: RefObject<Element | null>): boolean {
 /**
  * Calls `onFrame(dt)` on every animation frame while `running` (or every `intervalMs` when given,
  * which reduced-motion mode uses for plain state updates). `dt` is in seconds and capped,
- * so returning to a paused tab never makes the simulation jump.
+ * so returning to a paused tab never makes the simulation jump. `dt` is simulation time: it is
+ * scaled by the block's local speed control (0.5x, 1x, 1.5x).
  */
 export function useFrameLoop(onFrame: (dt: number) => void, running: boolean, intervalMs = 0): void {
-  const tick = useEffectEvent(onFrame);
+  const speed = useSimSpeed();
+  const tick = useEffectEvent((dt: number) => onFrame(dt * speed));
   useEffect(() => {
     if (!running) return;
     let last = performance.now();
