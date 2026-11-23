@@ -10,6 +10,7 @@ import { Stat, StatGrid } from "@/components/ui/stat";
 import { ControlRow, WidgetFrame, WidgetScroll } from "@/components/ui/widget-frame";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 import { useInterval, useLoopGate, useStepPlayer } from "./_wa-shared";
 
 /* ------------------------------------------------------------------ model */
@@ -186,12 +187,13 @@ function DnsNode({ id, active, involved, status }: { id: NodeId; active: boolean
 }
 
 function DnsPacket({ step }: { step: DnsStep }) {
+  const speed = useSimSpeed();
   if (!step.edge || !step.trip) return null;
   const { a, b } = EDGES[step.edge];
   const [from, to] = step.trip === "back" ? [b, a] : [a, b];
   const xs = step.trip === "round" ? [from[0], to[0], from[0]] : [from[0], to[0]];
   const ys = step.trip === "round" ? [from[1], to[1], from[1]] : [from[1], to[1]];
-  const duration = tripSeconds(step.trip);
+  const duration = simDuration(tripSeconds(step.trip), speed);
   return (
     <motion.circle
       r={6}

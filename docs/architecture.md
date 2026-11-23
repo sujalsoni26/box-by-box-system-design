@@ -43,6 +43,12 @@ All persisted stores go through `lib/storage/adapter.ts` (`persistenceAdapter`).
 fallback. To move to authenticated server storage, implement the same `getItem/setItem/removeItem` interface (it may be async)
 against an API and export it as `persistenceAdapter`. UI code only talks to the stores.
 
+**Study notes** (`stores/notes-store.ts`, key `sdn-notes-v1`) keep one plain-text note per lesson. `notes` maps a lesson slug to
+`{ text, updatedAt }`, and `panelOpen` remembers whether the desktop Notes panel is expanded (collapsed by default). The editor in
+`components/learning/lesson-notes.tsx` saves about 400 ms after typing stops, and straight away on blur, close, or when the page is
+hidden. Saving empty text deletes the entry. Stored data is checked on load, so malformed JSON or entries are dropped instead of
+breaking hydration. Notes are kept in this browser only and are not synced.
+
 Stores use `skipHydration` and are rehydrated in `AppProviders` on the client. Components that show persisted data check
 `useHydrated()` first, so server HTML and the first client render always match (no hydration errors). The theme is applied
 before first paint by `ThemeScript`, which reads the same localStorage key.
@@ -55,6 +61,9 @@ before first paint by `ThemeScript`, which reads the same localStorage key.
   `app/globals.css`, so they follow the theme.
 - **Interactive** (`components/diagrams/interactive/*`): simulations, each code-split through `interactive-registry.tsx` and
   mounted only when scrolled near. Loops pause off-screen and in hidden tabs and respect reduced motion.
+  Blocks listed in `ANIMATED_INTERACTIVES` get a local 0.5x / 1x / 1.5x speed control (`components/diagrams/sim-speed.tsx`):
+  each block owns its speed (`SimSpeedProvider` in `InteractiveDiagram`), frame loops scale `dt`, timers and tweens use
+  `simDuration` / `useSimNow`, and CSS keyframes read `--sim-speed` set on the block. It never affects other blocks or the companion.
 
 ## Companion events
 
@@ -63,8 +72,9 @@ before first paint by `ThemeScript`, which reads the same localStorage key.
 
 ## Motion and accessibility
 
-`useMotionLevel()` combines the OS `prefers-reduced-motion` setting with the learner's Animations setting (Normal, Reduced
-or Off). The result sets `data-motion` on `<html>` (CSS animations stop) and Motion's `MotionConfig` (JS animations stop).
+Motion follows the operating system's `prefers-reduced-motion` only: CSS stops animations under that media query, Motion's
+`MotionConfig reducedMotion="user"` does the same for JS animations, and `useMotionLevel()` exposes it to components. There is
+no site-wide animation-speed setting (older saves that carried one are ignored); Try it blocks have their own local speed.
 
 Landmarks, a skip link, visible focus rings and keyboard shortcuts are built in:
 - `/` or Ctrl+K for search;

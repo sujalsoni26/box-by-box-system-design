@@ -12,6 +12,7 @@ import { Stat, StatGrid } from "@/components/ui/stat";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 
 /* ------------------------------------------------------------------ */
 /* Model                                                               */
@@ -262,6 +263,11 @@ function layout(n: number) {
 }
 
 function FlightDot({ f, cy, rowCy, onLand }: { f: Flight; cy: number; rowCy: number | null; onLand: () => void }) {
+  // Flight time and stagger run at the block's speed. A dot already in the air keeps its speed
+  // (Motion does not restart it), and still lands through onAnimationComplete.
+  const speed = useSimSpeed();
+  const flight = simDuration(FLIGHT_S, speed);
+  const delay = simDuration(f.delay, speed);
   const px = PRODUCER.x + PRODUCER.w;
   const bIn = BROKER.x;
   const bOut = BROKER.x + BROKER.w;
@@ -289,7 +295,7 @@ function FlightDot({ f, cy, rowCy, onLand }: { f: Flight; cy: number; rowCy: num
       strokeWidth={1.5}
       initial={{ cx: px, cy, opacity: 0 }}
       animate={{ cx, cy: cys, opacity: 1 }}
-      transition={{ duration: FLIGHT_S, delay: f.delay, ease: "linear", times, opacity: { duration: 0.1, delay: f.delay } }}
+      transition={{ duration: flight, delay, ease: "linear", times, opacity: { duration: 0.1, delay } }}
       onAnimationComplete={onLand}
     />
   );

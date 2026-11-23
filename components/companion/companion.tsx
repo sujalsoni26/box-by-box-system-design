@@ -1,11 +1,13 @@
 "use client";
-import { Suspense, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { usePathname } from "next/navigation";
 import { animate, AnimatePresence, motion, useMotionValue, useSpring, type MotionValue } from "motion/react";
 import { equippedAttr } from "@/lib/companion/accessories";
 import { petCache } from "@/lib/companion/actions";
+import { deriveMood, isStill } from "@/lib/companion/behaviour";
 import { lessonFromPath } from "@/lib/companion/lesson-context";
-import { LINES, pick } from "@/lib/companion/lines";
+import { line } from "@/lib/companion/lines";
+import { pageIsBusy } from "@/lib/companion/quiet";
 import type { Size } from "@/lib/companion/resting";
 import { companionBlip } from "@/lib/companion/sound";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
@@ -15,13 +17,15 @@ import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { clamp, cn } from "@/lib/utils";
 import { useCompanionStore, useFocusHydrated, useFocusStore } from "@/stores/companion-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
-import type { CompanionMood } from "@/types/companion";
 import { CompanionMenu } from "./companion-menu";
 import { FocusTimer } from "./focus-timer";
+import { Lamp, lampFits, useLampRoutine } from "./lamp";
 import { PixelCat } from "./pixel-cat";
 import { BubbleAnnouncer, SpeechBubble } from "./speech-bubble";
 import { useCompanionBrain } from "./use-companion-brain";
 import { useCompanionPosition } from "./use-companion-position";
+import { useCompletionPrompt, useTopicMeows } from "./use-companion-routines";
+import { useNewAccessoryCount } from "./wardrobe";
 
 /** Phones get the smallest cat that is still a comfortable touch target (WCAG 2.5.5 suggests 44px). */
 const CAT_SIZE = { desktop: 84, compact: 60, phone: 52 } as const;
@@ -71,55 +75,75 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const bubble = useCompanionStore((s) => s.bubble);
   const reactionMood = useCompanionStore((s) => s.reaction?.mood);
   const idleLevel = useCompanionStore((s) => s.idleLevel);
-  const closeMenu = useCompanionStore((s) => s.closeMenu);
   const focusHydrated = useFocusHydrated();
   const focusPhase = useFocusStore((s) => s.session?.phase ?? null);
   const napping = useCompanionStore((s) => s.napping);
   const activity = useCompanionStore((s) => s.activity);
   const equipped = usePreferencesStore((s) => s.companion.equipped);
 
-  const pos = useCompanionPosition({
-    size,
-    compact,
-    physics,
-    motionLevel,
-    rootRef,
-    hold: menuOpen || Boolean(bubble?.actions?.length) || Boolean(activity),
-    onPickUp: closeMenu,
-  });
-  useCompanionBrain({ pathname, lessonSlug: lesson?.slug });
-  const anchors = useAnchors(pos.x, pos.y, size, pos.view);
-  const swing = useSpring(pos.tilt, { stiffness: 260, damping: 14 });
+  // Picking the cat up closes the menu and ends any routine (the drag owns the cat from then on).
+  const onPickUp = useCallback(() => {
+    const s = useCompanionStore.getState();
+    s.closeMenu();
+    if (s.activity) s.endActivity(s.activity.id);
+  }, []);
+  const pos = useCompanionPosition({ size, compact, physics, motionLevel, onPickUp });
+  const animated = motionLevel !== "reduced";
+  const { getPhase } = pos;
 
-  // After navigation the page underneath changed: check the cat is not covering the new layout.
-  const { ensureSafe } = pos;
-  useEffect(() => {
-    const id = window.setTimeout(ensureSafe, 700);
-    return () => window.clearTimeout(id);
-  }, [pathname, ensureSafe]);
+  // The idle lamp: desktop only, with room beside the cat, motion allowed, and a quiet, still companion.
+  const viewW = pos.view.w;
+  const lampAllowed = useCallback(() => {
+    const s = useCompanionStore.getState();
+    return (
+      !compact &&
+      animated &&
+      lampFits(viewW, size) &&
+      isStill(getPhase()) &&
+      !s.napping &&
+      !s.menuOpen &&
+      !s.bubble &&
+      !s.activity &&
+      !useFocusStore.getState().session &&
+      !pageIsBusy()
+    );
+  }, [compact, animated, viewW, size, getPhase]);
+  useCompanionBrain({ pathname, lessonSlug: lesson?.slug, lampAllowed });
+  useTopicMeows({ lesson, compact, getPhase });
+  useCompletionPrompt({ lesson, compact, getPhase });
+  const lampRoutine = useLampRoutine({
+    size,
+    groundY: pos.groundY,
+    viewW,
+    catX: () => pos.x.get(),
+    walkTo: pos.walkTo,
+    jumpTo: pos.jumpTo,
+    settle: pos.settle,
+    getPhase,
+  });
+  const anchors = useAnchors(pos.x, pos.y, size, pos.view);
+  const swing = useSpring(pos.tilt, { stiffness: 220, damping: 16 });
+  const newAccessories = useNewAccessoryCount();
 
   useEffect(() => {
     const timer = petTimer;
     return () => window.clearTimeout(timer.current);
   }, []);
 
-  const resting = pos.phase === "resting";
-  const airborne = pos.phase === "dragging" || pos.phase === "flying" || pos.phase === "dropping";
-  const restingMood: CompanionMood =
-    napping || idleLevel === 2
-      ? "sleeping"
-      : focusPhase === "focus"
-        ? "studying"
-        : focusPhase === "break" || idleLevel === 1
-          ? "sitting"
-          : "idle";
-  const mood: CompanionMood = airborne
-    ? "dragged"
-    : pos.phase === "walking"
-      ? "walking"
-      : (reactionMood ?? bubble?.mood ?? restingMood);
-  const animated = motionLevel !== "reduced";
-  const ambient = animated && pageVisible && resting;
+  const still = isStill(pos.phase);
+  const airborne = pos.phase === "dragging" || pos.phase === "flying" || pos.phase === "dropping" || pos.phase === "jumping";
+  // One derived pose (lib/companion/behaviour.ts) instead of a chain of flags that could disagree.
+  const mood = deriveMood({
+    phase: pos.phase,
+    rising: pos.rising,
+    reaction: reactionMood ?? null,
+    routine: lampRoutine.step,
+    bubbleMood: bubble?.mood ?? null,
+    napping,
+    idleLevel,
+    focusPhase: focusHydrated ? focusPhase : null,
+  });
+  const ambient = animated && pageVisible && still;
 
   const toggleMenu = (focus: "first" | "last" = "first") => {
     const s = useCompanionStore.getState();
@@ -136,6 +160,8 @@ function CompanionShell({ pathname }: { pathname: string }) {
     if (pos.consumeDrag()) return;
     pos.settleIfInterrupted();
     const s = useCompanionStore.getState();
+    // On the lamp: the press itself wakes her (she stretches and hops down); the next tap opens the menu.
+    if (s.activity?.kind === "lamp") return;
     if (s.napping) {
       // A tap wakes a napping cat (the next tap opens the menu).
       s.setNapping(false);
@@ -215,7 +241,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
       if (cancelled) return;
       const s = useCompanionStore.getState();
       s.react("happy", 1400);
-      s.say({ text: pick(LINES.playDone), mood: "happy", ms: 2600, solicited: true });
+      s.say({ text: line("playDone"), mood: "happy", ms: 2600, solicited: true });
       finish();
       settle();
     };
@@ -235,10 +261,13 @@ function CompanionShell({ pathname }: { pathname: string }) {
       aria-label="Study companion"
       data-testid="companion"
       data-mood={mood}
-      data-resting={resting ? "true" : "false"}
+      data-phase={pos.phase}
+      data-resting={still ? "true" : "false"}
       data-accessories={equippedAttr(equipped)}
       className="fixed left-0 top-0 z-40 h-0 w-0"
     >
+      <Lamp lamp={lampRoutine.lamp} size={size} groundY={pos.groundY} animated={animated} />
+
       <motion.div
         className="absolute left-0 top-0"
         style={{ x: pos.x, y: pos.y, width: size, height: size }}
@@ -272,10 +301,20 @@ function CompanionShell({ pathname }: { pathname: string }) {
             airborne ? "cursor-grabbing" : "cursor-grab",
           )}
         >
-          <PixelCat mood={mood} motionLevel={motionLevel} ambient={ambient} gaze={finePointer} accessories={equipped} />
+          <PixelCat mood={mood} facing={pos.facing} motionLevel={motionLevel} ambient={ambient} gaze={finePointer} accessories={equipped} />
         </motion.button>
+        {newAccessories > 0 ? (
+          // A small "something new in the wardrobe" dot; the menu shows the count.
+          <span
+            aria-hidden="true"
+            data-testid="companion-new-dot"
+            className="pointer-events-none absolute right-[14%] top-[8%] size-2.5 rounded-full border-2 border-surface bg-review"
+          />
+        ) : null}
         <span id={hintId} className="sr-only">
-          Opens a menu with explanations, hints, quick revision and a focus timer. Drag to move Cache.
+          Opens a menu with explanations, hints, quick revision, a focus timer and the wardrobe. Drag to move Cache; she stays where
+          she lands.
+          {newAccessories > 0 ? ` ${newAccessories} new ${newAccessories === 1 ? "accessory" : "accessories"} in the wardrobe.` : ""}
         </span>
       </motion.div>
 

@@ -15,6 +15,7 @@ import { useInView } from "@/lib/hooks/use-in-view";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { useSimNow } from "../sim-speed";
 
 /* ------------------------------------------------------------------ */
 /* Model                                                               */
@@ -37,7 +38,7 @@ interface Comment {
   text: string;
   mine: boolean;
   postedAt: number;
-  /** When each replica applies it (ms, performance.now clock). */
+  /** When each replica applies it (ms on the block's sim clock: performance.now at 1x). */
   arrives: readonly [number, number];
 }
 
@@ -378,13 +379,15 @@ function ReplicationLag() {
   const visible = usePageVisible();
   const warned = useRef(false);
   const [s, dispatch] = useReducer(reducer, INITIAL);
+  // Every timestamp comes from the block's sim clock, so lag, sync waits and the read-your-writes window follow its speed.
+  const simNow = useSimNow();
 
   const waiting = isWaiting(s);
   const inFlight = s.comments.some((c) => c.arrives[0] > s.now || c.arrives[1] > s.now);
   const needsClock = inFlight || waiting || (s.ryw && s.now < s.rywUntil);
   const clockOn = needsClock && inView && visible;
 
-  const tick = useEffectEvent(() => dispatch({ type: "tick", now: performance.now() }));
+  const tick = useEffectEvent(() => dispatch({ type: "tick", now: simNow() }));
   useEffect(() => {
     if (!clockOn) return;
     if (reduced) {
@@ -401,7 +404,7 @@ function ReplicationLag() {
   }, [clockOn, reduced]);
 
   const refresh = () => {
-    const now = performance.now();
+    const now = simNow();
     const pick: ReplicaIndex = Math.random() < 0.5 ? 0 : 1;
     const toPrimary = s.ryw && now < s.rywUntil;
     const willBeStale =
@@ -425,7 +428,7 @@ function ReplicationLag() {
     >
       <div ref={rootRef} className="flex flex-col gap-4">
         <ControlRow>
-          <Button variant="primary" size="sm" onClick={() => dispatch({ type: "post", now: performance.now() })} disabled={waiting}>
+          <Button variant="primary" size="sm" onClick={() => dispatch({ type: "post", now: simNow() })} disabled={waiting}>
             {waiting && w ? `Waiting for replicas… ${secs(w.confirmAt - s.now)}` : "Post comment"}
           </Button>
           <Button variant="secondary" size="sm" onClick={refresh} disabled={waiting}>

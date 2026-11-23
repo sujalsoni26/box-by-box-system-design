@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { AnimationSpeedSetting } from "@/components/layout/animation-speed-setting";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -126,10 +125,6 @@ export function GeneralSettings() {
       <div className="flex flex-wrap items-center gap-3">
         <span className="w-28 text-sm font-bold text-ink-2">Theme</span>
         <SegmentedControl<ThemePreference> label="Theme" options={THEMES} value={hydrated ? theme : "system"} onChange={setTheme} />
-      </div>
-      <div className="flex flex-wrap items-start gap-3">
-        <span className="w-28 pt-2 text-sm font-bold text-ink-2">Animation speed</span>
-        <AnimationSpeedSetting />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="w-28 text-sm font-bold text-ink-2">Term hints</span>

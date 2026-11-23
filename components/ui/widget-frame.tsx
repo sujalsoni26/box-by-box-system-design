@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SimSpeedControl } from "@/components/diagrams/sim-speed";
 import { cn } from "@/lib/utils";
 
 interface WidgetFrameProps {
@@ -23,7 +24,11 @@ export function WidgetFrame({ title, hint, kicker = "Try it", children, note, cl
       )}
     >
       <header className="flex flex-col gap-0.5">
-        <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-link">{kicker}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-link">{kicker}</p>
+          {/* Local speed for animated blocks only (renders nothing elsewhere). */}
+          <SimSpeedControl />
+        </div>
         <h3 className="font-display text-lg font-bold leading-snug text-ink">{title}</h3>
         {hint ? <p className="text-[0.9rem] text-ink-2">{hint}</p> : null}
       </header>

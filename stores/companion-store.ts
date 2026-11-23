@@ -54,7 +54,8 @@ export type MenuView = "main" | "settings" | "wardrobe";
 /** A short scripted activity the companion component plays out (needs the cat's position). */
 export interface CompanionActivity {
   id: number;
-  kind: "play";
+  /** play: chase the yarn. lamp: the idle routine (walk to a lamp, hop up, nap, hop down). */
+  kind: "play" | "lamp";
 }
 
 interface CompanionRuntimeState {
@@ -65,7 +66,7 @@ interface CompanionRuntimeState {
   /** Which menu item receives focus when the menu opens. */
   menuFocus: "first" | "last";
   idleLevel: IdleLevel;
-  /** Bumped by "Reset position"; the live companion glides back to its home corner. */
+  /** Bumped by "Reset position" (an explicit choice); the live companion walks back to its home corner. */
   resetNonce: number;
   /** Last time an unsolicited bubble appeared (rate limit for tips and nudges). */
   lastNudgeAt: number;
@@ -146,7 +147,9 @@ export const useCompanionStore = create<CompanionRuntimeState & CompanionRuntime
     if (get().idleLevel !== idleLevel) set({ idleLevel });
   },
   setNapping: (napping) => set({ napping, idleLevel: napping ? 2 : 0, menuOpen: false }),
-  startActivity: (kind) => set({ activity: { id: nextId++, kind }, napping: false, idleLevel: 0 }),
+  // Play wakes the cat; the lamp routine starts from idleness and keeps the idle level (it wakes on activity).
+  startActivity: (kind) =>
+    set((s) => ({ activity: { id: nextId++, kind }, napping: false, idleLevel: kind === "lamp" ? s.idleLevel : 0 })),
   endActivity: (id) => {
     if (get().activity?.id === id) set({ activity: null });
   },
@@ -158,8 +161,18 @@ export const useCompanionStore = create<CompanionRuntimeState & CompanionRuntime
 
 /* ------------------------------------------------------------------ focus timer (persisted) */
 
-export const FOCUS_MS = 25 * 60_000;
+/** Default focus block; the learner can choose 5–120 minutes (persisted). */
+export const DEFAULT_FOCUS_MINUTES = 25;
+export const FOCUS_MINUTES_MIN = 5;
+export const FOCUS_MINUTES_MAX = 120;
 export const BREAK_MS = 5 * 60_000;
+
+/** Whole minutes within the allowed range (non-numbers fall back to the default). */
+export function clampFocusMinutes(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return DEFAULT_FOCUS_MINUTES;
+  return Math.min(FOCUS_MINUTES_MAX, Math.max(FOCUS_MINUTES_MIN, Math.round(n)));
+}
 
 export type FocusPhase = "focus" | "break";
 
@@ -167,6 +180,8 @@ export interface FocusSession {
   phase: FocusPhase;
   startedAt: number;
   endsAt: number;
+  /** Set while paused: when the pause began. Resuming pushes `endsAt` back by the paused time. */
+  pausedAt?: number | null;
 }
 
 export interface FocusEvent {
@@ -178,7 +193,9 @@ export interface FocusEvent {
 
 interface FocusState {
   session: FocusSession | null;
-  /** Completed 25-minute focus blocks, all time. */
+  /** Length of a focus block, minutes (5–120). */
+  focusMinutes: number;
+  /** Completed focus blocks, all time. */
   sessionsDone: number;
   /** Last phase change, for the companion's notification. Not persisted. */
   lastEvent: FocusEvent | null;
@@ -186,40 +203,62 @@ interface FocusState {
 
 interface FocusActions {
   start: (now: number) => void;
+  /** Cancel: ends the session without counting it. */
   stop: () => void;
+  pause: (now: number) => void;
+  resume: (now: number) => void;
   /** Focus → break now; break → finish now. */
   skip: (now: number) => void;
   /** Move to the next phase when the current one has run out. Idempotent; safe to call every second. */
   advance: (now: number) => void;
+  /** Applies to the next focus block (a running one keeps its length). */
+  setFocusMinutes: (minutes: number) => void;
+}
+
+/** Milliseconds left in the current phase (frozen while paused). */
+export function focusRemaining(session: FocusSession, now: number): number {
+  const at = session.pausedAt ?? now;
+  return Math.max(0, session.endsAt - at);
 }
 
 export const useFocusStore = create<FocusState & FocusActions>()(
   persist(
     (set, get) => ({
       session: null,
+      focusMinutes: DEFAULT_FOCUS_MINUTES,
       sessionsDone: 0,
       lastEvent: null,
-      start: (now) => set({ session: { phase: "focus", startedAt: now, endsAt: now + FOCUS_MS } }),
+      start: (now) => set((s) => ({ session: { phase: "focus", startedAt: now, endsAt: now + s.focusMinutes * 60_000, pausedAt: null } })),
       stop: () => set({ session: null }),
+      pause: (now) =>
+        set((s) => (s.session && !s.session.pausedAt ? { session: { ...s.session, pausedAt: now } } : s)),
+      resume: (now) =>
+        set((s) => {
+          const session = s.session;
+          if (!session?.pausedAt) return s;
+          return { session: { ...session, endsAt: session.endsAt + Math.max(0, now - session.pausedAt), pausedAt: null } };
+        }),
       skip: (now) =>
         set((s) => {
           if (!s.session) return s;
-          if (s.session.phase === "focus") return { session: { phase: "break", startedAt: now, endsAt: now + BREAK_MS } };
+          if (s.session.phase === "focus") return { session: { phase: "break", startedAt: now, endsAt: now + BREAK_MS, pausedAt: null } };
           return { session: null };
         }),
+      setFocusMinutes: (minutes) => set({ focusMinutes: clampFocusMinutes(minutes) }),
       advance: (now) => {
         const before = get().session;
-        if (before?.phase === "focus" && now >= before.endsAt) usePreferencesStore.getState().bumpCompanionStat("focusSessions");
+        if (!before || before.pausedAt) return;
+        if (before.phase === "focus" && now >= before.endsAt) usePreferencesStore.getState().bumpCompanionStat("focusSessions");
         set((s) => {
           const session = s.session;
-          if (!session || now < session.endsAt) return s;
+          if (!session || session.pausedAt || now < session.endsAt) return s;
           if (session.phase === "focus") {
             const breakEnds = session.endsAt + BREAK_MS;
             const lastEvent: FocusEvent = { id: nextId++, kind: "focus-done", at: session.endsAt };
             // Away for longer than focus + break: end quietly (the companion ignores stale events).
             if (now >= breakEnds) return { session: null, sessionsDone: s.sessionsDone + 1, lastEvent };
             return {
-              session: { phase: "break", startedAt: session.endsAt, endsAt: breakEnds },
+              session: { phase: "break", startedAt: session.endsAt, endsAt: breakEnds, pausedAt: null },
               sessionsDone: s.sessionsDone + 1,
               lastEvent,
             };
@@ -233,7 +272,12 @@ export const useFocusStore = create<FocusState & FocusActions>()(
       version: 1,
       storage: createJSONStorage(() => persistenceAdapter),
       skipHydration: true,
-      partialize: (s) => ({ session: s.session, sessionsDone: s.sessionsDone }),
+      partialize: (s) => ({ session: s.session, sessionsDone: s.sessionsDone, focusMinutes: s.focusMinutes }),
+      // Older saves have no focusMinutes (25 then) and no pausedAt; both get safe defaults.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<FocusState>;
+        return { ...current, ...p, focusMinutes: clampFocusMinutes(p.focusMinutes ?? DEFAULT_FOCUS_MINUTES) };
+      },
     },
   ),
 );

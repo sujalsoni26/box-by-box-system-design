@@ -4,7 +4,7 @@ import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 import { useCompanionStore, useFocusStore, type BubbleAction, type BubbleInput, type BubbleItem } from "@/stores/companion-store";
 import type { Lesson } from "@/types/curriculum";
-import { LINES, pick } from "./lines";
+import { fill, line, LINES } from "./lines";
 import { pickRevision, type RevisionSource } from "./lesson-context";
 import { companionBlip } from "./sound";
 
@@ -182,11 +182,29 @@ export function toggleFocus(): void {
   const say = useCompanionStore.getState().say;
   if (focus.session) {
     focus.stop();
-    say({ text: LINES.focusStop, mood: "happy", ms: 3000, solicited: true });
+    say({ text: line("focusStop"), mood: "happy", ms: 3000, solicited: true });
     return;
   }
   focus.start(Date.now());
-  say({ title: "Focus timer", text: LINES.focusStart, mood: "studying", ms: 4500, solicited: true });
+  say({ title: "Focus timer", text: fill(line("focusStart"), { min: focus.focusMinutes }), mood: "studying", ms: 4500, solicited: true });
+}
+
+export function pauseFocus(): void {
+  useFocusStore.getState().pause(Date.now());
+  useCompanionStore.getState().say({ text: line("focusPaused"), mood: "sitting", ms: 2400, solicited: true });
+}
+
+export function resumeFocus(): void {
+  useFocusStore.getState().resume(Date.now());
+  useCompanionStore.getState().say({ text: line("focusResumed"), mood: "studying", ms: 2400, solicited: true });
+}
+
+/** Pause or resume the occasional facts about the open lesson (persisted). */
+export function toggleTopicMeows(): void {
+  const prefs = usePreferencesStore.getState();
+  const on = !prefs.companion.topicMeows;
+  prefs.setCompanion({ topicMeows: on });
+  ask({ text: on ? LINES.topicResumed : LINES.topicPaused, ms: 3600, focus: false });
 }
 
 export function hideCompanion(): void {
@@ -199,7 +217,7 @@ export function hideCompanion(): void {
 
 /** The topic line in meow-speak on a lesson page; a generic cute line elsewhere. */
 export function meowLine(lesson?: Lesson): string {
-  return (lesson && catMeows[lesson.slug]) || pick(LINES.meowGeneric);
+  return (lesson && catMeows[lesson.slug]) || line("meowGeneric");
 }
 
 export function meowAboutTopic(lesson?: Lesson): void {
@@ -231,18 +249,24 @@ export function feedCache(): void {
     const c = useCompanionStore.getState();
     c.react("happy", 1600);
     companionBlip("happy");
-    c.say({ text: pick(LINES.nom), mood: "happy", ms: 3000, solicited: true });
+    c.say({ text: line("nom"), mood: "happy", ms: 3000, solicited: true });
   }, 2000);
 }
 
-/** Hearts and a purr. `speak` adds the topic meow (menu pet); hover-petting stays silent. */
+let petCount = 0;
+
+/** Hearts and a purr. `speak` adds a line (menu pet); hover-petting stays silent. */
 export function petCache(lesson?: Lesson, speak = true): void {
   wakeIfNapping();
   const s = useCompanionStore.getState();
   usePreferencesStore.getState().bumpCompanionStat("pets");
   s.react("purring", 1900);
   companionBlip("happy");
-  if (speak) s.say({ text: meowLine(lesson), mood: "purring", ms: 5000, solicited: true });
+  if (!speak) return;
+  // Mostly purrs; every third pet on a lesson page, the topic meow instead.
+  petCount += 1;
+  const text = lesson && catMeows[lesson.slug] && petCount % 3 === 0 ? catMeows[lesson.slug] : line("pet");
+  s.say({ text, mood: "purring", ms: 4200, solicited: true });
 }
 
 /** Nap until woken from the menu, by a tap or by a pet; ordinary scrolling does not wake her. */
@@ -251,12 +275,12 @@ export function toggleNap(): void {
   if (s.napping) {
     s.setNapping(false);
     s.react("happy", 900);
-    s.say({ text: LINES.wake, mood: "happy", ms: 2600, solicited: true });
+    s.say({ text: line("wake"), mood: "happy", ms: 2600, solicited: true });
     return;
   }
   s.dismiss();
   s.setNapping(true);
-  s.say({ text: LINES.napStart, mood: "sleeping", ms: 3000, solicited: true });
+  s.say({ text: line("napStart"), mood: "sleeping", ms: 3000, solicited: true });
 }
 
 /** A yarn ball rolls along the floor; the companion component plays the chase (needs her position). */

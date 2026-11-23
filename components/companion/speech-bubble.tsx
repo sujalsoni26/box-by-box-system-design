@@ -20,7 +20,7 @@ export function BubbleAnnouncer() {
 
 function announceText(b: Bubble): string {
   const parts = ["Cache says:"];
-  if (b.title) parts.push(`${b.title}.`);
+  if (b.title) parts.push(/[.!?]$/.test(b.title) ? b.title : `${b.title}.`);
   parts.push(b.text);
   if (b.detail) parts.push(`${b.detailLabel ? `${b.detailLabel}: ` : ""}${b.detail}`);
   if (b.items) for (const item of b.items) parts.push(`${item.label}: ${item.text}`);

@@ -15,7 +15,7 @@ import type { AccessoryId, AccessorySlot, AnimationLevel, CompanionMood } from "
 
 type Eyes = "open" | "wide" | "relaxed" | "down" | "up" | "happy" | "closed" | "confused";
 type Mouth = "w" | "smile" | "o" | "wavy" | "flat";
-type Paws = "sit" | "walk" | "tuck" | "dangle" | "chin" | "book" | "cheer" | "bat";
+type Paws = "sit" | "walk" | "tuck" | "dangle" | "chin" | "book" | "cheer" | "bat" | "spread" | "splay";
 type Tail = "up" | "high" | "curl" | "wrap" | "hang";
 type Extra = "book" | "glasses" | "thought" | "question" | "sparkles" | "zzz" | "blush" | "fish" | "hearts";
 
@@ -106,6 +106,69 @@ const POSES: Record<CompanionMood, Pose> = {
   eating: { ...BASE, head: { x: 0, y: 5, rotate: 0 }, earL: 4, earR: -4, tail: "curl", eyes: "happy", mouth: "o", extras: ["fish"] },
   purring: { ...BASE, head: { x: 0, y: 0, rotate: 7 }, earL: 6, earR: -6, earScale: 1.02, tail: "high", eyes: "happy", mouth: "w", extras: ["blush", "hearts"] },
   playing: { ...BASE, head: { x: 2, y: 1, rotate: 10 }, earL: 8, earR: -4, earScale: 1.04, tail: "high", eyes: "wide", mouth: "o", paws: "bat" },
+  // Transition poses: short in-between states, so the cat never snaps from "carried" to "sitting".
+  falling: {
+    ...BASE,
+    head: { x: 0, y: -2, rotate: 0 },
+    earL: -28,
+    earR: 28,
+    earScale: 0.84,
+    body: { scaleX: 0.96, scaleY: 1.05 },
+    tail: "up",
+    eyes: "wide",
+    mouth: "o",
+    paws: "spread",
+    shadow: { rx: 16, opacity: 0.05 },
+  },
+  landing: {
+    ...BASE,
+    head: { x: 0, y: 4, rotate: 0 },
+    earL: -10,
+    earR: 10,
+    earScale: 0.94,
+    body: { scaleX: 1.12, scaleY: 0.86 },
+    tail: "curl",
+    eyes: "relaxed",
+    paws: "splay",
+    shadow: { rx: 31, opacity: 0.17 },
+  },
+  crouching: {
+    ...BASE,
+    head: { x: 0, y: 6, rotate: 0 },
+    earL: -14,
+    earR: 14,
+    earScale: 0.92,
+    body: { scaleX: 1.08, scaleY: 0.88 },
+    tail: "high",
+    eyes: "wide",
+    paws: "splay",
+    shadow: { rx: 29, opacity: 0.15 },
+  },
+  jumping: {
+    ...BASE,
+    head: { x: 0, y: -3, rotate: 0 },
+    earL: -18,
+    earR: 18,
+    earScale: 0.9,
+    body: { scaleX: 0.92, scaleY: 1.1 },
+    tail: "high",
+    eyes: "wide",
+    paws: "dangle",
+    shadow: { rx: 14, opacity: 0.05 },
+  },
+  stretching: {
+    ...BASE,
+    head: { x: 0, y: 8, rotate: -6 },
+    earL: -8,
+    earR: 8,
+    earScale: 0.95,
+    body: { scaleX: 1.16, scaleY: 0.86 },
+    tail: "high",
+    eyes: "closed",
+    mouth: "o",
+    paws: "spread",
+    shadow: { rx: 33, opacity: 0.14 },
+  },
 };
 
 /** Every tail shares one command structure (M C C) so Motion can morph between them. */
@@ -141,6 +204,38 @@ const PAWS: Record<Paws, readonly [PawShape, PawShape]> = {
     { cx: 83, cy: 70, rx: 5, ry: 5.6, opacity: 1 },
   ],
   bat: [SIT_L, { cx: 82, cy: 95, rx: 5.6, ry: 4.8, opacity: 1 }],
+  spread: [
+    { cx: 38, cy: 100, rx: 5.6, ry: 4.6, opacity: 1 },
+    { cx: 82, cy: 100, rx: 5.6, ry: 4.6, opacity: 1 },
+  ],
+  splay: [
+    { cx: 47, cy: 104.5, rx: 7, ry: 4.2, opacity: 1 },
+    { cx: 73, cy: 104.5, rx: 7, ry: 4.2, opacity: 1 },
+  ],
+};
+
+/*
+ * Side view for walking: a long body on four legs that swing in a diagonal gait (near back leg with
+ * far front leg, then the other pair) and the tail up behind. Drawn facing right and mirrored for left;
+ * the round head stays turned towards the viewer, as cats in illustrations often do.
+ */
+const SIDE_BODY_D = "M 30 85 C 30 74 41 69.5 58 69.5 C 76 69.5 92 73 92 83.5 C 92 93.5 84 98 71 98 L 45 98 C 35 98 30 93.5 30 85 Z";
+const SIDE_TAIL_D = "M 32 82 C 21 80 16 70 18 60 C 19 55 23 53 25.5 56";
+const LEGS = [
+  { x: 39, far: true, phase: 0 },
+  { x: 73, far: true, phase: 1 },
+  { x: 47, far: false, phase: 1 },
+  { x: 81, far: false, phase: 0 },
+] as const;
+const legD = (x: number) =>
+  `M ${x - 3.4} 88 L ${x - 3.4} 104.6 Q ${x - 3.4} 108.2 ${x} 108.2 Q ${x + 3.4} 108.2 ${x + 3.4} 104.6 L ${x + 3.4} 88 Z`;
+/** One full stride, seconds. */
+const STEP_S = 0.5;
+const NECK_TONE: Partial<Record<AccessoryId, string>> = {
+  "bell-collar": "stroke-bad",
+  "bow-tie": "stroke-accent",
+  "gold-chain": "stroke-(--cat-gold)",
+  bandana: "stroke-bad",
 };
 
 const BODY_D = "M 41 104 C 35 104 33 96 34.5 87 C 36.5 75 45 63 60 63 C 75 63 83.5 75 85.5 87 C 87 96 85 104 79 104 Z";
@@ -182,7 +277,9 @@ export type EquippedAccessories = Partial<Record<AccessorySlot, AccessoryId>>;
 
 export interface PixelCatProps {
   mood?: CompanionMood;
-  /** "normal" poses with springs and plays idle beats; "reduced" and "off" snap between poses. */
+  /** Which way the cat walks (the side view is mirrored for "left"). */
+  facing?: "left" | "right";
+  /** "normal" poses with springs and plays idle beats; "reduced" (prefers-reduced-motion) snaps between poses. */
   motionLevel?: AnimationLevel;
   /** Allow occasional idle micro-motions (blink, tail flick, ear twitch, drifting z). */
   ambient?: boolean;
@@ -197,26 +294,32 @@ export interface PixelCatProps {
   className?: string;
 }
 
-function hopFor(mood: CompanionMood, animated: boolean, k = 1): { y: number | number[]; transition: Transition } {
+function hopFor(mood: CompanionMood, animated: boolean): { y: number | number[]; transition: Transition } {
   if (!animated) return { y: 0, transition: { duration: 0 } };
   switch (mood) {
     case "walking":
-      return { y: [0, -1.6, 0], transition: { y: { duration: 0.36 * k, repeat: Infinity, ease: "easeInOut" } } };
+      // Two small lifts per stride, in step with the legs.
+      return { y: [0, -1.4, 0], transition: { y: { duration: STEP_S / 2, repeat: Infinity, ease: "easeInOut" } } };
     case "celebrating":
-      return { y: [0, -12, 0, -4, 0], transition: { y: { duration: 0.9 * k, ease: "easeOut" } } };
+      return { y: [0, -12, 0, -4, 0], transition: { y: { duration: 0.9, ease: "easeOut" } } };
     case "happy":
-      return { y: [0, -5, 0], transition: { y: { duration: 0.45 * k, ease: "easeOut" } } };
+      return { y: [0, -5, 0], transition: { y: { duration: 0.45, ease: "easeOut" } } };
     case "eating":
-      return { y: [0, 1.6, 0], transition: { y: { duration: 0.32 * k, repeat: 4, ease: "easeInOut" } } };
+      return { y: [0, 1.6, 0], transition: { y: { duration: 0.32, repeat: 4, ease: "easeInOut" } } };
     case "playing":
-      return { y: [0, -3, 0], transition: { y: { duration: 0.3 * k, ease: "easeOut" } } };
+      return { y: [0, -3, 0], transition: { y: { duration: 0.3, ease: "easeOut" } } };
+    case "landing":
+      return { y: [0, 2, 0], transition: { y: { duration: 0.28, ease: "easeOut" } } };
+    case "stretching":
+      return { y: [0, 1.5, 0], transition: { y: { duration: 0.7, ease: "easeInOut" } } };
     default:
-      return { y: 0, transition: { y: { duration: 0.25 * k, ease: "easeOut" } } };
+      return { y: 0, transition: { y: { duration: 0.25, ease: "easeOut" } } };
   }
 }
 
 function PixelCatImpl({
   mood = "idle",
+  facing = "right",
   motionLevel = "normal",
   ambient = false,
   gaze = false,
@@ -227,8 +330,8 @@ function PixelCatImpl({
 }: PixelCatProps) {
   const pose = POSES[mood];
   const animated = motionLevel !== "reduced";
-  // Animation speed "slow" doubles every pose, beat and effect duration.
-  const k = motionLevel === "slow" ? 2 : 1;
+  const side = mood === "walking";
+  const dir = facing === "left" ? -1 : 1;
   const svgRef = useRef<SVGSVGElement>(null);
   const moodRef = useRef(mood);
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -257,14 +360,14 @@ function PixelCatImpl({
       beat += 1;
       const current = POSES[moodRef.current];
       if (current.extras.includes("zzz")) {
-        running.push(animate(zLift, [0, -6, 0], { duration: 2.4 * k, ease: "easeInOut" }));
+        running.push(animate(zLift, [0, -6, 0], { duration: 2.4, ease: "easeInOut" }));
       } else {
-        if (BLINKABLE.has(current.eyes)) running.push(animate(blink, [1, 0.1, 1], { duration: 0.24 * k, times: [0, 0.45, 1] }));
-        if (beat % 3 === 0) running.push(animate(tailFlick, [0, 9, -4, 0], { duration: 0.9 * k, ease: "easeInOut" }));
-        if (beat % 4 === 2) running.push(animate(earTwitch, [0, -11, 0], { duration: 0.34 * k, ease: "easeOut" }));
+        if (BLINKABLE.has(current.eyes)) running.push(animate(blink, [1, 0.1, 1], { duration: 0.24, times: [0, 0.45, 1] }));
+        if (beat % 3 === 0) running.push(animate(tailFlick, [0, 9, -4, 0], { duration: 0.9, ease: "easeInOut" }));
+        if (beat % 4 === 2) running.push(animate(earTwitch, [0, -11, 0], { duration: 0.34, ease: "easeOut" }));
       }
       if (running.length > 8) running.splice(0, running.length - 8);
-      timer = window.setTimeout(play, (3200 + Math.random() * 4800) * k);
+      timer = window.setTimeout(play, (3200 + Math.random() * 4800));
     };
     timer = window.setTimeout(play, 1800 + Math.random() * 2500);
     return () => {
@@ -275,7 +378,7 @@ function PixelCatImpl({
       earTwitch.set(0);
       zLift.set(0);
     };
-  }, [ambient, animated, k, blink, tailFlick, earTwitch, zLift]);
+  }, [ambient, animated, blink, tailFlick, earTwitch, zLift]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -296,7 +399,7 @@ function PixelCatImpl({
         if (next === target) return;
         target = next;
         anim?.stop();
-        anim = animate(gazeX, next * 1.7, { duration: 0.25 * k, ease: "easeOut" });
+        anim = animate(gazeX, next * 1.7, { duration: 0.25, ease: "easeOut" });
       });
     };
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -306,14 +409,18 @@ function PixelCatImpl({
       anim?.stop();
       gazeX.set(0);
     };
-  }, [ambient, animated, k, gaze, gazeX]);
+  }, [ambient, animated, gaze, gazeX]);
 
-  const spring: Transition = animated ? { type: "spring", stiffness: 300 / (k * k), damping: 24 / k, mass: 0.8 } : { duration: 0 };
-  const morph: Transition = animated ? { duration: 0.32 * k, ease: "easeOut" } : { duration: 0 };
-  const fade: Transition = animated ? { duration: 0.2 * k } : { duration: 0 };
+  const spring: Transition = animated ? { type: "spring", stiffness: 300, damping: 24, mass: 0.8 } : { duration: 0 };
+  const morph: Transition = animated ? { duration: 0.32, ease: "easeOut" } : { duration: 0 };
+  const fade: Transition = animated ? { duration: 0.2 } : { duration: 0 };
+  // Swapping between the front (sitting) and side (walking) bodies is a short cross-fade, never a cut.
+  const swap: Transition = animated ? { duration: 0.16, ease: "easeOut" } : { duration: 0 };
   const has = (e: Extra) => pose.extras.includes(e);
-  const hop = hopFor(mood, animated, k);
-  const walking = animated && mood === "walking";
+  const hop = hopFor(mood, animated);
+  // While walking the head leads, slightly ahead of the side body, and tips into the direction of travel.
+  const head = side ? { x: dir * 21, y: 3, rotate: dir * 5 } : pose.head;
+  const shadow = side ? { rx: 33, opacity: 0.13 } : pose.shadow;
 
   return (
     <svg
@@ -348,11 +455,22 @@ function PixelCatImpl({
         ry={3.6}
         className="fill-ink"
         initial={false}
-        animate={{ rx: pose.shadow.rx, opacity: pose.shadow.opacity }}
+        animate={{ rx: shadow.rx, opacity: shadow.opacity }}
         transition={spring}
       />
 
       <motion.g initial={false} animate={{ y: hop.y }} transition={hop.transition}>
+        {/* side view (walking), cross-faded with the front view */}
+        <AnimatePresence initial={false}>
+          {side ? (
+            <motion.g key="side" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={swap}>
+              <SideBody fur={fur} flip={dir === -1} animated={animated} wear={wear} clipId={`${clipId}-side`} />
+            </motion.g>
+          ) : null}
+        </AnimatePresence>
+
+        {/* front view: tail and body fade out while walking */}
+        <motion.g initial={false} animate={{ opacity: side ? 0 : 1 }} transition={swap}>
         {/* tail */}
         <motion.g style={{ rotate: tailFlick, ...pivot(80, 100) }}>
           <g filter={fur}>
@@ -402,6 +520,7 @@ function PixelCatImpl({
             {wear.neck ? <Neckwear id={wear.neck} /> : null}
           </g>
         </motion.g>
+        </motion.g>
 
         {/* book (studying) */}
         <AnimatePresence initial={false}>
@@ -436,7 +555,7 @@ function PixelCatImpl({
         </AnimatePresence>
 
         {/* head */}
-        <motion.g style={pivot(60, 66)} initial={false} animate={pose.head} transition={spring}>
+        <motion.g style={pivot(60, 66)} initial={false} animate={head} transition={spring}>
           <g filter={fur}>
             {/* ears sit behind the head shape */}
             <motion.g style={pivot(45, 31)} initial={false} animate={{ rotate: pose.earL, scaleY: pose.earScale }} transition={spring}>
@@ -521,22 +640,12 @@ function PixelCatImpl({
           </AnimatePresence>
         </motion.g>
 
-        {/* paws (front layer, so a paw can rest on the chin, hold the book or bat the yarn) */}
-        <g filter={fur}>
+        {/* paws (front layer, so a paw can rest on the chin, hold the book or bat the yarn); hidden while walking */}
+        <motion.g filter={fur} initial={false} animate={{ opacity: side ? 0 : 1 }} transition={swap}>
           {PAWS[pose.paws].map((paw, i) => (
-            <motion.ellipse
-              key={i}
-              className="fill-(--cat-cream) stroke-(--cat-line)"
-              strokeWidth={1.8}
-              initial={false}
-              animate={walking ? { ...paw, cy: [paw.cy, paw.cy - 2.2, paw.cy] } : paw}
-              // Only cy loops while walking; everything else uses the spring, so nothing keeps the frame loop alive.
-              transition={
-                walking ? { default: spring, cy: { duration: 0.36 * k, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 * k } } : spring
-              }
-            />
+            <motion.ellipse key={i} className="fill-(--cat-cream) stroke-(--cat-line)" strokeWidth={1.8} initial={false} animate={paw} transition={spring} />
           ))}
-        </g>
+        </motion.g>
       </motion.g>
 
       {/* overlays */}
@@ -562,7 +671,7 @@ function PixelCatImpl({
                   className="fill-bad"
                   initial={animated ? { opacity: 0, y: 4 } : false}
                   animate={animated ? { opacity: [0, 1, 1, 0], y: [4, 0, -4, -8] } : { opacity: 1 }}
-                  transition={animated ? { duration: 1.5 * k, delay: h.delay * k, ease: "easeOut" } : { duration: 0 }}
+                  transition={animated ? { duration: 1.5, delay: h.delay, ease: "easeOut" } : { duration: 0 }}
                 />
               </g>
             ))}
@@ -616,7 +725,7 @@ function PixelCatImpl({
                   className={s.tone}
                   initial={animated ? { scale: 0, rotate: -30 } : false}
                   animate={animated ? { scale: [0, s.scale * 1.15, s.scale], rotate: 0 } : { scale: s.scale }}
-                  transition={animated ? { duration: 0.55 * k, delay: s.delay * k, ease: "easeOut" } : { duration: 0 }}
+                  transition={animated ? { duration: 0.55, delay: s.delay, ease: "easeOut" } : { duration: 0 }}
                 />
               </g>
             ))}
@@ -624,6 +733,80 @@ function PixelCatImpl({
         ) : null}
       </AnimatePresence>
     </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ side view (walking) */
+
+interface SideBodyProps {
+  fur: string | undefined;
+  flip: boolean;
+  animated: boolean;
+  wear: EquippedAccessories;
+  clipId: string;
+}
+
+function SideBody({ fur, flip, animated, wear, clipId }: SideBodyProps) {
+  // Legs swing only while this layer exists (that is, while walking), so nothing loops at rest.
+  const swing = (phase: number, x: number) => ({
+    style: pivot(x, 89),
+    initial: false as const,
+    animate: animated ? { rotate: phase ? [-15, 15, -15] : [15, -15, 15] } : { rotate: 0 },
+    transition: animated ? { duration: STEP_S, repeat: Infinity, ease: "easeInOut" as const } : { duration: 0 },
+  });
+  const neckTone = wear.neck ? NECK_TONE[wear.neck] : undefined;
+  return (
+    <g transform={flip ? "translate(120 0) scale(-1 1)" : undefined}>
+      <defs>
+        <clipPath id={clipId}>
+          <path d={SIDE_BODY_D} />
+        </clipPath>
+      </defs>
+      <g filter={fur}>
+        {/* far legs and tail, behind the body */}
+        {LEGS.filter((l) => l.far).map((l) => (
+          <motion.path key={l.x} d={legD(l.x)} className="fill-(--cat-fur-dark) stroke-(--cat-line)" strokeWidth={1.8} {...swing(l.phase, l.x)} />
+        ))}
+        <motion.g
+          style={pivot(32, 82)}
+          initial={false}
+          animate={animated ? { rotate: [-5, 6, -5] } : { rotate: 0 }}
+          transition={animated ? { duration: STEP_S * 2, repeat: Infinity, ease: "easeInOut" } : { duration: 0 }}
+        >
+          <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-line)" strokeWidth={10.5} strokeLinecap="round" />
+          <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-fur)" strokeWidth={7} strokeLinecap="round" />
+        </motion.g>
+        <path d={SIDE_BODY_D} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={2.2} strokeLinejoin="round" />
+        {wear.body === "striped-sweater" ? (
+          <g clipPath={`url(#${clipId})`}>
+            <rect x={28} y={68} width={66} height={32} className="fill-accent" />
+            <rect x={28} y={78} width={66} height={3} className="fill-(--cat-cream)" />
+            <rect x={28} y={87} width={66} height={3} className="fill-(--cat-cream)" />
+          </g>
+        ) : (
+          <>
+            <ellipse cx={62} cy={93} rx={19} ry={4.6} className="fill-(--cat-cream)" />
+            <path d="M 50 72.5 Q 52 77 49 80 M 60 71.5 Q 62 76 59 79.5" className="fill-none stroke-(--cat-fur-dark)" strokeWidth={2.1} strokeLinecap="round" />
+          </>
+        )}
+        {wear.body === "hero-cape" ? (
+          <path
+            d="M 80 71 C 66 65.5 46 67 34 76 L 29 95 C 41 90.5 54 90 64 85.5 Z"
+            className="fill-bad stroke-(--cat-line)"
+            strokeWidth={1.4}
+            strokeLinejoin="round"
+          />
+        ) : null}
+        {neckTone ? <path d="M 80.5 71.5 Q 86 78.5 84 87" className={cn("fill-none", neckTone)} strokeWidth={3.2} strokeLinecap="round" /> : null}
+        {/* near legs, in front of the body */}
+        {LEGS.filter((l) => !l.far).map((l) => (
+          <motion.g key={l.x} {...swing(l.phase, l.x)}>
+            <path d={legD(l.x)} className="fill-(--cat-fur) stroke-(--cat-line)" strokeWidth={1.8} />
+            <ellipse cx={l.x} cy={106.4} rx={3.6} ry={1.8} className="fill-(--cat-cream)" />
+          </motion.g>
+        ))}
+      </g>
+    </g>
   );
 }
 

@@ -1,27 +1,55 @@
 # Cache, the study companion
 
-Cache is a small cat that lives in a corner of every page. It explains the current lesson in plain
-words, gives hints, asks Quick Revision questions from finished lessons, runs a focus timer and
-reacts (briefly) to progress. Everything runs locally: there is no AI and no network call.
+Cache is a small cat that lives on the floor of every page. It explains the current lesson in plain
+words, gives hints, asks Quick Revision questions from finished lessons, runs a focus timer, shares the
+odd fact from the lesson you are reading and reacts (briefly) to progress. Everything runs locally:
+there is no AI and no network call.
 
 ## Files
 
 | File | Role |
 |---|---|
-| `components/companion/companion.tsx` | `Companion` root (mounted once in the root layout). Gates on hydration and the On/Off setting, wires position, behaviour, bubble, menu and timer chip. |
-| `components/companion/pixel-cat.tsx` | `PixelCat`: the cat as vector SVG parts posed with Motion. Name kept for the component list; the art is smooth. |
-| `components/companion/use-companion-position.ts` | Drag (Motion), throw physics, safe-zone resting, persistence of the position, resize handling. |
-| `components/companion/use-companion-brain.ts` | Event bus listener, inactivity (sit, sleep, wake), greeting, lesson tips, focus-timer notices. |
-| `components/companion/companion-menu.tsx` | Keyboard-navigable `role="menu"` with the eight items and the inline settings view. |
+| `components/companion/companion.tsx` | `Companion` root (mounted once in the root layout). Gates on hydration and the On/Off setting; wires position, behaviour, routines, bubble, menu, lamp and timer chip. |
+| `lib/companion/behaviour.ts` | The state model: body phases and their transitions, `deriveMood()` (one pose from all state), `canActOnItsOwn()` (one guard for anything unprompted). |
+| `components/companion/pixel-cat.tsx` | `PixelCat`: the cat as vector SVG parts posed with Motion; front view plus a four-legged side view for walking. |
+| `components/companion/use-companion-position.ts` | The body state machine: drag (Motion), throw physics, landing, walking, jumping, perching, persistence of the position, resize handling. |
+| `components/companion/use-companion-brain.ts` | Event bus listener, inactivity (sit, lamp, sleep, wake), greeting, lesson tips, focus-timer notices. |
+| `components/companion/use-companion-routines.ts` | Topic meows and the end-of-lesson completion prompt (scheduling, observers, cleanup). |
+| `components/companion/lamp.tsx` | The idle lamp routine (`useLampRoutine`) and the lamp drawing. |
+| `components/companion/companion-menu.tsx` | Keyboard-navigable `role="menu"` with the inline wardrobe and settings views. |
 | `components/companion/speech-bubble.tsx` | Visible bubble plus `BubbleAnnouncer`, the single polite live region. |
-| `components/companion/focus-timer.tsx` | `FocusTimer` chip (25 min focus, 5 min break, stop and skip). |
-| `components/companion/wardrobe.tsx` | `Wardrobe`: accessory toggles (aria-pressed) with lock requirements and progress. |
-| `lib/companion/accessories.ts` | Accessory definitions, unlock rules and progress from stored data. |
+| `components/companion/focus-timer.tsx` | `FocusTimer` chip (focus block, 5 min break; pause/resume, skip, stop). |
+| `components/companion/focus-length.tsx` | Focus length control (5–120 min, persisted with the focus timer). |
+| `components/companion/wardrobe.tsx` | `Wardrobe`: preview, item states (locked, available, selected, wearing, new) and `useNewAccessoryCount`. |
 | `components/companion/companion-settings-panel.tsx` | `CompanionSettingsPanel` (dashboard, progress page, and inside the menu with `compact`). |
-| `stores/companion-store.ts` | Runtime store (bubble, reaction, menu, idle level, reset signal) and the persisted focus store (`STORAGE_KEYS.focus`). |
-| `lib/companion/*` | Pure logic: resting geometry, physics, lines, sound, menu actions, event reactions, timings. |
+| `stores/companion-store.ts` | Runtime store (bubble, reaction, menu, idle level, activity, reset signal) and the persisted focus store (`STORAGE_KEYS.focus`). |
+| `lib/companion/*` | Pure logic: geometry, physics, lines (with no-repeat picking), topic facts, quiet-moment checks, actions, reactions, timings. |
 
 Settings and the normalised position live in `stores/preferences-store.ts` (`companion`).
+
+## State model
+
+Two layers, each with exactly one current value (see `lib/companion/behaviour.ts`):
+
+1. **Body** (`use-companion-position.ts`, exposed as `data-phase` on the root):
+
+   ```
+   resting ─drag→ dragging ─release→ flying ─settle→ landing ─→ resting      (throw, physics on)
+                               └→ dropping ─arrive→ landing ─→ resting      (physics off / reduced motion)
+   resting ─walk→ walking ─arrive→ resting
+   resting ─jump→ jumping ─arrive→ perched ─hop down→ jumping ─→ landing ─→ resting   (lamp)
+   ```
+
+   A press stops any move where she is; a resize keeps her at the same relative floor position.
+   **She always stays where she lands**: nothing walks her back to a preset spot.
+
+2. **Mind** (stores): idle level, nap, focus phase, reaction, routine step, bubble mood. The pose is
+   derived from both layers by `deriveMood()`; it is never stored, so flags cannot disagree.
+   Precedence: body motion > short reaction > routine step > bubble mood > nap / asleep > focus > idle level.
+
+Everything unprompted (topic meows, the completion prompt, the lamp) first asks `canActOnItsOwn()` (body
+still, no menu, no bubble, no routine, no focus block, tab visible) and `pageIsBusy()` (typing, a dialog or
+popover, selected text, an open knowledge check on screen, or a Try it block used in the last 12 s).
 
 ## Poses
 
@@ -30,89 +58,101 @@ Settings and the normalised position live in `stores/preferences-store.ts` (`com
 | Mood | Look | When |
 |---|---|---|
 | `idle` | sitting upright, tail up, occasional blink / tail flick / ear twitch | default |
-| `sitting` | half-closed eyes, tail wrapped round the paws | 45 s without input, or during a focus break |
-| `walking` | paws step, tail high | gliding more than 48 px to a resting spot |
-| `sleeping` | curled loaf, head down, closed eyes, drifting z's | 2 min without input (wakes on scroll, key or pointer) |
+| `sitting` | half-closed eyes, tail wrapped round the paws | 45 s without input, a focus break, sitting on the lamp |
+| `walking` | side view on four legs (diagonal gait), head turned to the viewer, tail up; mirrored when walking left | any walk |
+| `sleeping` | curled loaf, head down, closed eyes, drifting z's | 2 min without input, a nap, asleep on the lamp |
 | `studying` | glasses and an open book | during a focus block; while explaining or summarising |
-| `thinking` | paw on chin, thought bubble | hints, revision questions, after a wrong answer |
-| `happy` | arc eyes, smile, blush, small hop | correct answer, lesson complete, petting (hover 1.2 s) |
+| `thinking` | paw on chin, thought bubble | hints, revision questions, after a wrong answer, marking for review |
+| `happy` | arc eyes, smile, blush, small hop | correct answer, lesson complete, petting |
 | `celebrating` | paws up, jump, sparkles | module or course complete, perfect quiz |
 | `confused` | head tilt, one ear down, question mark | diagram events that report confusion |
-| `dragged` | wide eyes, ears back, dangling paws, swings with drag speed | picked up, thrown or falling |
+| `dragged` | wide eyes, ears back, dangling paws, swings with drag speed | carried |
+| `falling` | ears back, legs out, bracing | dropping, or the falling half of a throw |
+| `jumping` | stretched body, legs reaching | rising half of a throw, a deliberate jump |
+| `landing` | short squash (280 ms), then back to the resting pose | touching down |
+| `crouching` | gathered low | just before jumping onto the lamp |
+| `stretching` | long stretch with a yawn | waking on the lamp |
 | `eating` | head down, chewing, fish at her paws | Feed |
 | `purring` | arc eyes, blush, floating hearts | Pet |
 | `playing` | wide eyes, paw out to bat | Play |
 
-Precedence: dragged/flying/falling > walking > short reaction > the open bubble's mood > asleep > focus > idle level.
-`data-resting` is `"true"` only when the cat stands still on the floor (not dragged, flying, dropping or walking).
+Poses blend with springs; the front and side views cross-fade (0.16 s), so nothing snaps.
 
 ## Behaviour
 
 - Events (`onCompanionEvent`): `lesson-complete` (praise with progress and the next lesson; module and
-  course completion celebrate with a link), `quiz-answer` (pose every time; a bubble at most every 20 s,
-  always encouraging after a miss), `quiz-finished` (score line), `diagram` (pose at most every 45 s,
-  message only as a tip), `lesson-opened` (the lesson's tip after 2.5 s, once per lesson per page load).
-- Tips and nudges (greeting once per browser session, lesson tips, diagram comments, welcome back after
-  a long nap) need Study tips on and share a 90 s budget. Replies to the learner's own actions are not tips.
-- During a focus block Cache only changes pose: no bubbles.
-- Bubbles without buttons auto-dismiss (3.5 to 12 s by length) and pause while hovered or focused; bubbles
-  with buttons stay until answered. Navigation closes the menu and plain bubbles.
+  course completion celebrate with a link), `quiz-answer` (pose every time; a bubble at most every 20 s),
+  `quiz-finished` (score line), `review-marked` (a short line at most once a minute), `diagram`,
+  `lesson-opened` (the lesson's tip after 2.5 s, once per lesson per page load).
+- Lines come from `lib/companion/lines.ts` through `pickFresh()`: within a category every line is used
+  before any repeats, and the last 24 lines said are remembered for the browser session.
+- Tips and nudges (greeting, lesson tips, topic meows, completion prompt, diagram comments, welcome back)
+  need Study tips on and share a 90 s budget. The greeting mentions topics marked for review.
+- During a focus block Cache only changes pose: no unprompted bubbles.
+
+### Topic meows
+
+On desktop, after about 80 s on a lesson and then every 3 to 4 minutes (at most three per visit), a short
+"Meow fact". Facts come only from the open lesson: sentences the author highlighted with `<mark>`, glossary
+terms the lesson defines, and its own building-block and trade-off lines (`lib/companion/topic-facts.ts`).
+A fact is not repeated in the same browser session. Pause or resume from the menu, from the fact bubble, or
+in settings (`companion.topicMeows`, persisted).
+
+### Completion prompt
+
+When the end of a lesson (`[data-lesson-end]`, the "Mark as learned" row) stays in view for 2.2 s and the
+learner has spent a plausible time on the page (a quarter of the lesson's minutes, 45 s to 4 min), Cache asks
+once whether to mark it learned. Only "Mark as learned" marks it. It never asks about a learned lesson and
+never asks twice about the same lesson (`companion.completionAsked`, persisted).
+
+### Idle lamp
+
+Desktop only (fine pointer, at least 700 px wide, motion allowed). After 70 s without input, with a 60%
+chance per idle stretch, a lamp fades in beside her: she walks over, crouches, jumps onto the shade and sits in
+its warm light; at 2 minutes she falls asleep there. Any activity wakes her: a stretch, a hop down beside the
+lamp, the lamp fades, and she stays where she landed. A drag, resize or press ends the routine cleanly at any step.
 
 ## Menu
 
 Click, tap, Enter or Space on the cat (ArrowDown/ArrowUp also open it). Arrow keys, Home and End move,
-Escape closes and returns focus to the cat, Tab leaves. Items: Explain simply (`lesson.explainSimply`),
-Give me a hint (`lesson.hint` plus the recall question, then the answer), Quick revision (a completed
-lesson's `recall`, else visited, else the first lessons; reveal, Knew it, Review lesson, Another), Focus
-timer (start or stop), Current topic summary (problem, what breaks, the fix, trade-off), What should I
-learn next? (`nextIncompleteLesson`, with a link), Meow about this topic, a "Play with Cache" group
-(Feed, Pet, Nap / Wake up, Play, Wardrobe), Hide companion, Companion settings. Off lesson pages
-the lesson items explain that they need a lesson and offer the next one.
+Escape closes and returns focus to the cat, Tab leaves. Items: Explain simply, Give me a hint, Quick revision,
+Focus timer (shows the chosen length), Current topic summary, What should I learn next?, Meow about this topic,
+Pause / Resume topic meows, a "Play with Cache" group (Wardrobe with a "N new" badge, Feed, Pet, Nap / Wake up,
+Play), Hide companion, Companion settings.
 
 ## Drag, gravity and the floor
 
 - Drag starts only from the cat button (`dragControls`, `touch-action: none` on the cat only), so page
   scrolling is never blocked. A click that ends a drag does not open the menu.
-- On release she always falls to the floor under constant gravity, even with no throw. The floor is
-  the bottom of the viewport, or the top of the fixed bottom tab bar (`nav[aria-label=Main]`) on phones.
-  Left and right edges are walls. The top is a ceiling only at the top of the page (`scrollY <= 0`);
-  otherwise she may fly up to 1.2 viewport heights above the screen and falls back. rAF runs only in flight.
+- On release she falls to the floor under constant gravity. The floor is the bottom of the viewport, or the
+  top of the fixed bottom tab bar (`nav[aria-label=Main]`) on phones. Side edges are walls; the top is a
+  ceiling only at the top of the page. rAF runs only in flight.
+- Where she lands, she stays: the floor x is stored normalised (`{ x, y: 1, floor: true }`) and restored at the
+  same relative spot after refresh, navigation and resize, always fully on screen. "Reset position" in
+  settings is the only thing that walks her back to the corner.
 
 | Constant (`lib/companion/physics.ts`) | Desktop | Phone |
 |---|---|---|
-| Max throw speed | 2200 px/s | 1300 px/s |
-| Gravity | 2400 px/s² | 2200 px/s² |
-| Air drag (horizontal) | 0.35 /s | 0.6 /s |
-| Wall / ceiling restitution | 0.45 / 0.4 | 0.25 / 0.25 |
-| Floor restitution, min bounce | 0.32, 140 px/s (two small bounces) | 0.22, 160 px/s (one) |
-| Floor friction, stop speed | 1600 px/s², 10 px/s | 2200 px/s², 12 px/s |
+| Max throw speed | 1700 px/s | 1050 px/s |
+| Gravity | 1850 px/s² | 1700 px/s² |
+| Air drag (horizontal) | 0.55 /s | 0.8 /s |
+| Wall / ceiling restitution | 0.4 / 0.35 | 0.22 / 0.22 |
+| Floor restitution, min bounce | 0.28, 150 px/s | 0.2, 160 px/s |
+| Floor friction, stop speed | 1400 px/s², 10 px/s | 2000 px/s², 12 px/s |
 
-- After landing, if she covers more than 6% of `[data-companion-avoid]` UI she walks along the floor
-  (walking pose, 240 px/s) to the nearest floor spot that is free, else one with clearly less overlap.
-  Candidates include the spots just clear of each avoided element, so gaps between columns are found.
-  Phones (coarse pointer or under 640 px; 60 px cat) walk to the nearest bottom corner and tuck 42% off-screen.
-- The same check runs after scroll stops, after navigation and after resize (not while the menu, a
-  bubble with buttons or a play activity is active).
-- Stored as `{ x: normalised floor x, y: 1, floor: true }` via `setCompanionPosition`; restored onto the
-  floor; re-placed on resize and rotation (toolbar-sized height changes just keep her on the floor).
-- Reduced motion or Physics off: a quick straight drop (0.16 to 0.45 s), no throw or bounce. Animations off: instant.
+- Reduced motion or Physics off: a quick straight drop, no throw or bounce.
+- Walking speed is 150 px/s (130 on phones). It never depends on any page or Try it speed setting.
 
-## Play with Cache
+## Focus timer
 
-- Feed: a fish appears, eating pose for 2 s, then happy with a "nom" line.
-- Pet (menu, or hovering a mouse over her for 1.2 s): hearts and a purr pose; from the menu she also
-  says the lesson's meow line (`catMeows[slug]`), or a generic cute line off lesson pages.
-- Nap / Wake up: she sleeps until woken from the menu, by a tap on her, or by a pet; scrolling and
-  typing do not wake a requested nap.
-- Play: a yarn ball rolls along the floor, she walks after it, bats it and settles (about 3 s).
-- Counters (`companion.stats`: feeds, pets, plays, focusSessions) persist in the preferences store.
-- Meow about this topic (menu) uses `catMeows[slug]`. When a lesson opens, desktop only and within the
-  90 s nudge budget, she alternates between the lesson's tip and its meow line.
+The block length is 5–120 minutes (25 by default), set in Companion settings and saved with the timer
+(`focusMinutes` in `sdn-focus-v1`); a running block keeps its length. A 5-minute break follows. The chip can
+pause and resume (paused time is added back to the end), skip and stop; all of it survives a refresh.
 
 ## Wardrobe
 
-One accessory per slot (head, eyes, neck, body), drawn as vector layers inside the head and body
-groups so they follow every pose and tilt. Unlocks come from stored data (`lib/companion/accessories.ts`):
+One accessory per slot (head, eyes, neck, body), drawn as vector layers that follow every pose (simplified
+versions on the walking side view). Unlocks come from stored data (`lib/companion/accessories.ts`):
 
 | Id | Slot | Unlock |
 |---|---|---|
@@ -128,41 +168,39 @@ groups so they follow every pose and tilt. Unlocks come from stored data (`lib/c
 | `striped-sweater` | body | 20 lessons |
 | `hero-cape` | body | 3 modules |
 
-New unlocks are announced once (`companion.announced`) with a celebration and a "Wear it" action.
-The Wardrobe is a menu sub-view and a section of `CompanionSettingsPanel`; `companion.equipped` persists.
+States: locked (dashed, lock icon, requirement and a progress bar; can still be previewed), available,
+selected (outlined, `aria-pressed`, shown on the preview cat), wearing (filled, check) and new (badge until the
+wardrobe is closed; `companion.seenAccessories`). Picking an item previews it; "Wear it" / "Take off" commits.
+Discoverability: a dot on the cat and a "N new" badge on the menu's Wardrobe item while unseen unlocks exist.
 
 ## Look
 
-Fur layers (tail, body, head, ears, paws, accessories) pass through an SVG mosaic filter: one sample per
-5×5 viewBox units, grown back with `feMorphology`, so blocks are about 3.5 px at the 84 px desktop size
-and stay hard-edged. Eyes, nose, mouth and whiskers stay crisp. The filter only re-runs while something animates.
+Fur layers pass through an SVG mosaic filter (one sample per 5×5 viewBox units), so blocks are about 3.5 px
+at the 84 px desktop size. Eyes, nose, mouth and whiskers stay crisp. The filter only re-runs while something animates.
 
-## Accessibility and performance
+## Motion, accessibility and performance
 
-- The root is a labelled region (`aria-label="Study companion"`). The cat is a real button with
-  `aria-haspopup="menu"`; the only live output is one polite `role="status"` region carrying bubble text.
-- No continuous animation at rest: idle micro-motions are one-shot animations every 3 to 8 s, only with
-  normal motion and a visible tab. The focus chip ticks once a second only while a session runs.
-- `PixelCat` is memoised; drag and panel positions use motion values, so frames do not re-render React.
-- Colours come from tokens (fur is `--amber`; lines and eyes are `color-mix` darkenings); a faint
-  `--ink` drop-shadow rim keeps the outline readable in dark mode.
+- Motion follows the operating system's `prefers-reduced-motion` only. There is no site-wide animation-speed
+  setting; animated Try it blocks have their own local 0.5x / 1x / 1.5x control, which never affects Cache.
+- The root is a labelled region; the cat is a real button with `aria-haspopup="menu"`; the only live output
+  is one polite `role="status"` region carrying bubble text.
+- No continuous animation at rest: idle micro-motions are one-shot animations every 3 to 8 s; legs loop only
+  while walking; the physics loop runs only in flight. The focus chip ticks once a second only while a session
+  runs unpaused. Every timer, observer and listener is cleaned up on unmount and route change.
 
 ## Test hooks
 
-- Root: `[data-testid="companion"]` with `data-mood` and `data-resting="true|false"` (wait for `"true"` after a drag).
-- Cat button: `[data-testid="companion-cat"]` (`aria-haspopup="menu"`, `aria-expanded`).
-- Menu: `[data-testid="companion-menu"]` (`role="menu"`); items `[data-testid="companion-menu-<id>"]` with ids
-  `explain`, `hint`, `revise`, `focus`, `summary`, `next`, `meow`, `feed`, `pet`, `nap`, `play`, `wardrobe`, `hide`,
-  `settings`; sub-views `[data-testid="companion-menu-settings"]` and `[data-testid="companion-menu-wardrobe-view"]`,
-  back button `[data-testid="companion-menu-back"]`.
-- Wardrobe: `[data-testid="accessory-<id>"]` buttons with `aria-pressed` (disabled while locked); the root has
-  `data-accessories="head:party-hat,neck:bell-collar"` (slot order head, eyes, neck, body).
-- Bubble: `[data-testid="companion-bubble"]`, close `[data-testid="companion-bubble-close"]`, actions `[data-bubble-action]`;
-  announced text in the root's `[role="status"]`.
-- Focus timer: `[data-testid="focus-timer"]` (`data-phase="focus|break"`), `[data-testid="focus-timer-skip"]`, `[data-testid="focus-timer-stop"]`.
-- Settings: `[data-testid="companion-settings"]`; toggles are `[role="group"][aria-label="Companion|Animations|Physics|Study tips|Sound"] button[aria-pressed]`;
-  `[data-testid="companion-reset-position"]`; when hidden, `[data-testid="companion-show"]`.
-- Stored position: `localStorage["sdn-preferences-v1"]` → `state.companion.position`; timer: `localStorage["sdn-focus-v1"]`.
+- Root: `[data-testid="companion"]` with `data-mood`, `data-phase` (body state) and `data-resting="true|false"`.
+- Cat button: `[data-testid="companion-cat"]`; new-unlock dot `[data-testid="companion-new-dot"]`.
+- Menu items `[data-testid="companion-menu-<id>"]` (`explain`, `hint`, `revise`, `focus`, `summary`, `next`,
+  `meow`, `topic-meows`, `wardrobe`, `feed`, `pet`, `nap`, `play`, `hide`, `settings`); sub-views
+  `[data-testid="companion-menu-settings"]`, `[data-testid="companion-menu-wardrobe-view"]`; back `[data-testid="companion-menu-back"]`.
+- Wardrobe: `[data-testid="accessory-<id>"]` with `data-state="locked|available|wearing"` and `aria-pressed` (selected);
+  `[data-testid="wardrobe-preview"]` (`data-preview`), `[data-testid="wardrobe-action"]`.
+- Lamp: `[data-testid="companion-lamp"]` with `data-lit`.
+- Focus timer: `[data-testid="focus-timer"]` (`data-phase`, `data-paused`), `focus-timer-pause`, `focus-timer-skip`,
+  `focus-timer-stop`; length `[data-testid="focus-length"] input`.
+- Bubble actions `[data-bubble-action]`; announced text in the root's `[role="status"]`.
 
 ## Future work (genuine AI, not implemented)
 

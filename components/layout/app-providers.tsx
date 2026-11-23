@@ -2,7 +2,7 @@
 import { useEffect, type ReactNode } from "react";
 import { MotionConfig } from "motion/react";
 import { STORAGE_KEYS } from "@/lib/storage/adapter";
-import { useMotionLevel } from "@/lib/hooks/use-motion-level";
+import { useNotesStore } from "@/stores/notes-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 
@@ -11,9 +11,11 @@ function useStoreHydration() {
   useEffect(() => {
     void useProgressStore.persist.rehydrate();
     void usePreferencesStore.persist.rehydrate();
+    void useNotesStore.persist.rehydrate();
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.progress) void useProgressStore.persist.rehydrate();
       if (e.key === STORAGE_KEYS.preferences) void usePreferencesStore.persist.rehydrate();
+      if (e.key === STORAGE_KEYS.notes) void useNotesStore.persist.rehydrate();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -38,13 +40,6 @@ function useThemeSync() {
 export function AppProviders({ children }: { children: ReactNode }) {
   useStoreHydration();
   useThemeSync();
-  const motionLevel = useMotionLevel();
-
-  // data-motion drives the CSS side (globals.css): "slow" doubles durations, "reduced" removes motion.
-  // Always set (also "normal") so an explicit choice overrides the OS media-query fallback.
-  useEffect(() => {
-    document.documentElement.setAttribute("data-motion", motionLevel);
-  }, [motionLevel]);
-
-  return <MotionConfig reducedMotion={motionLevel === "reduced" ? "always" : "never"}>{children}</MotionConfig>;
+  // Motion follows the operating system's reduced-motion preference (CSS does the same in globals.css).
+  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
 }

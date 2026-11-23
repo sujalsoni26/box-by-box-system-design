@@ -10,6 +10,7 @@ import type { LessonHeading } from "@/lib/lesson-headings";
 import type { Lesson } from "@/types/curriculum";
 import { BookmarkButton, CompletedChip, LessonVisitTracker, MarkCompleteButton, ReviewButton } from "./lesson-actions";
 import { LessonNavigation } from "./lesson-navigation";
+import { LessonNotesChip, LessonNotesPanel } from "./lesson-notes";
 import { LessonSidebar } from "./lesson-sidebar";
 import { OnThisPage, ReadingProgress } from "./on-this-page";
 import { RecallCard } from "./recall-card";
@@ -51,6 +52,8 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
               </span>
               <BookmarkButton slug={lesson.slug} title={lesson.title} />
               <ReviewButton slug={lesson.slug} title={lesson.title} />
+              {/* Below xl only; from xl the Notes panel sits in the right column. */}
+              <LessonNotesChip slug={lesson.slug} title={lesson.title} />
               <CompletedChip slug={lesson.slug} />
             </div>
           </header>
@@ -85,6 +88,7 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
 
         <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] overflow-y-auto py-10 xl:block" data-companion-avoid="">
           <OnThisPage headings={headings} />
+          <LessonNotesPanel slug={lesson.slug} title={lesson.title} />
         </aside>
       </div>
     </>

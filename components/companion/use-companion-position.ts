@@ -1,39 +1,22 @@
 "use client";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { animate, useDragControls, useMotionValue, type PanInfo } from "motion/react";
+import type { BodyPhase } from "@/lib/companion/behaviour";
 import { clampVelocity, GRAVITY, isSettled, stepFall, type Arena, type Body } from "@/lib/companion/physics";
-import {
-  dockX,
-  findFloorSpot,
-  floorXFrom,
-  getWorld,
-  nearestSide,
-  normalizeFloorX,
-  readAvoidRects,
-  readInteractiveRects,
-  readFloorLine,
-  readViewport,
-  type Point,
-  type Size,
-  type World,
-} from "@/lib/companion/resting";
+import { floorXFrom, getWorld, normalizeFloorX, readFloorLine, readViewport, type Point, type Size, type World } from "@/lib/companion/resting";
 import { clamp } from "@/lib/utils";
 import { useCompanionStore } from "@/stores/companion-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import type { AnimationLevel, CompanionPosition } from "@/types/companion";
 
-/** resting: on the floor, still. dropping: falling straight down (no physics). walking: along the floor. */
-export type MovePhase = "resting" | "dragging" | "flying" | "dropping" | "walking";
+export type { BodyPhase };
+export type Facing = "left" | "right";
 
 interface PositionOptions {
   size: number;
   compact: boolean;
   physics: boolean;
   motionLevel: AnimationLevel;
-  /** The companion root; its own elements are never treated as UI to avoid. */
-  rootRef: RefObject<HTMLElement | null>;
-  /** While true (menu open, bubble with buttons), the cat does not walk away on its own. */
-  hold: boolean;
   /** Called when the learner picks the cat up. */
   onPickUp?: () => void;
 }
@@ -44,12 +27,13 @@ export interface Layout {
   floorLine: number;
 }
 
-const SCROLL_SETTLE_MS = 450;
-const RESIZE_SETTLE_MS = 350;
-const FIRST_CHECK_MS = 900;
 /** Height changes smaller than this with the same width are browser toolbars, not a new layout. */
 const TOOLBAR_DELTA = 160;
-const WALK_SPEED = { desktop: 240, compact: 200 } as const;
+const WALK_SPEED = { desktop: 150, compact: 130 } as const;
+/** How long the landing squash shows before the cat settles into its resting pose. */
+const LAND_MS = 280;
+/** Gravity used for the plain drop (physics off), px/s², matching the desktop profile. */
+const DROP_GRAVITY = 1850;
 
 function readLayout(): Layout {
   const view = readViewport();
@@ -57,13 +41,16 @@ function readLayout(): Layout {
 }
 
 /**
- * Position, drag and gravity for the companion.
+ * Position, drag, gravity and moves for the companion. The body is a small state machine
+ * (see lib/companion/behaviour.ts): resting, dragging, flying, dropping, landing, walking, jumping, perched.
+ *
  * - Motion drag (started only from the cat button) moves two motion values; frames never re-render React.
- * - On release she always falls to the floor under gravity (side walls bounce, the top is a ceiling only
- *   at the top of the page), bounces once or twice, slides to a stop, then walks along the floor if she
- *   covers marked UI. Phones walk to the bottom corner with fewer controls under it, fully on screen. rAF runs only in flight.
- * - Reduced motion / physics off: a quick straight drop, no throw or bounce. Animations off: instant.
- * - The floor x is stored normalised with `floor: true`, restored onto the floor, re-placed on resize.
+ * - On release she falls under gravity (side walls bounce; the top is a ceiling only at the top of the page),
+ *   bounces once or twice, slides to a stop, shows a short landing squash, and then STAYS where she landed.
+ *   Nothing moves her back to a corner. rAF runs only while she is in the air.
+ * - Reduced motion or physics off: a quick straight drop to the floor below, then she stays there.
+ * - The floor x is stored normalised (`floor: true`), so after a refresh or resize she is restored at the
+ *   same relative spot, clamped fully on screen.
  */
 export function useCompanionPosition(options: PositionOptions) {
   const x = useMotionValue(0);
@@ -72,13 +59,16 @@ export function useCompanionPosition(options: PositionOptions) {
   const dragControls = useDragControls();
   const [initialLayout] = useState<Layout>(readLayout);
   const [layout, setLayout] = useState<Layout>(initialLayout);
-  const [phase, setPhase] = useState<MovePhase>("resting");
+  const [phase, setPhase] = useState<BodyPhase>("resting");
+  const [facing, setFacing] = useState<Facing>("left");
+  const [rising, setRising] = useState(false);
 
   const optsRef = useRef(options);
   const layoutRef = useRef<Layout>(initialLayout);
-  const phaseRef = useRef<MovePhase>("resting");
+  const phaseRef = useRef<BodyPhase>("resting");
   const restRef = useRef<CompanionPosition | null>(null);
   const rafRef = useRef(0);
+  const landTimer = useRef(0);
   const animsRef = useRef<Array<{ stop: () => void }>>([]);
   const tokenRef = useRef(0);
   const draggedRef = useRef(false);
@@ -89,7 +79,7 @@ export function useCompanionPosition(options: PositionOptions) {
     optsRef.current = options;
   });
 
-  const go = useCallback((next: MovePhase) => {
+  const go = useCallback((next: BodyPhase) => {
     phaseRef.current = next;
     setPhase(next);
   }, []);
@@ -112,88 +102,93 @@ export function useCompanionPosition(options: PositionOptions) {
   const stopMotion = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = 0;
+    window.clearTimeout(landTimer.current);
+    landTimer.current = 0;
     animsRef.current.forEach((a) => a.stop());
     animsRef.current = [];
     tokenRef.current += 1;
   }, []);
 
+  /** The cat is standing on the floor at `px`: remember it (normalised) and rest there. */
   const commitRest = useCallback(
     (px: number) => {
-      const n = normalizeFloorX(px, world());
+      const w = world();
+      const cx = clamp(px, w.minX, w.maxX);
+      x.set(cx);
+      y.set(w.floorY);
+      const n = normalizeFloorX(cx, w);
       restRef.current = n;
       usePreferencesStore.getState().setCompanionPosition(n);
       go("resting");
     },
-    [go, world],
+    [go, world, x, y],
   );
+
+  /** Touch down where she is: a short squash, then rest at exactly this x. */
+  const land = useCallback(() => {
+    const w = world();
+    const px = clamp(x.get(), w.minX, w.maxX);
+    x.set(px);
+    y.set(w.floorY);
+    if (optsRef.current.motionLevel === "reduced") {
+      commitRest(px);
+      return;
+    }
+    go("landing");
+    window.clearTimeout(landTimer.current);
+    landTimer.current = window.setTimeout(() => {
+      landTimer.current = 0;
+      if (phaseRef.current === "landing") commitRest(px);
+    }, LAND_MS);
+  }, [commitRest, go, world, x, y]);
+
+  const face = useCallback((dx: number) => {
+    if (Math.abs(dx) >= 1) setFacing(dx < 0 ? "left" : "right");
+  }, []);
 
   /** Tween to `target`. Resolves true when it arrived, false when something newer interrupted it. */
   const moveTo = useCallback(
     (target: Point, kind: "walk" | "drop"): Promise<boolean> => {
       stopMotion();
       const o = optsRef.current;
-      const dx = Math.abs(target.x - x.get());
+      const dx = target.x - x.get();
       const dy = Math.abs(target.y - y.get());
-      if (dx < 1 && dy < 1) {
+      if (Math.abs(dx) < 1 && dy < 1) {
         x.set(target.x);
         y.set(target.y);
         return Promise.resolve(true);
       }
       const reduced = o.motionLevel === "reduced";
-      // "slow" (animation speed setting) doubles walk and drop times; reduced keeps one short, plain move.
-      const slow = o.motionLevel === "slow" ? 2 : 1;
       const speed = o.compact ? WALK_SPEED.compact : WALK_SPEED.desktop;
       const duration =
         kind === "drop"
           ? reduced
             ? 0.16
-            : clamp(Math.sqrt((2 * dy) / 2400), 0.12, 0.45) * slow
+            : clamp(Math.sqrt((2 * dy) / DROP_GRAVITY), 0.14, 0.55)
           : reduced
             ? 0.2
-            : clamp(dx / speed, 0.25, 3) * slow;
+            : clamp(Math.abs(dx) / speed, 0.35, 4);
       const token = tokenRef.current;
+      if (kind === "walk") face(dx);
       go(kind === "drop" ? "dropping" : "walking");
-      const ease = kind === "drop" ? ("easeIn" as const) : reduced ? ("easeOut" as const) : ("linear" as const);
-      const ax = animate(x, target.x, { duration, ease: kind === "drop" ? "easeOut" : ease });
-      const ay = animate(y, target.y, { duration, ease });
+      const ax = animate(x, target.x, { duration, ease: kind === "drop" ? "easeOut" : reduced ? "easeOut" : [0.35, 0, 0.65, 1] });
+      const ay = animate(y, target.y, { duration, ease: kind === "drop" ? "easeIn" : "linear" });
       animsRef.current = [ax, ay];
       return Promise.all([ax.finished, ay.finished])
         .then(() => tokenRef.current === token)
         .catch(() => false);
     },
-    [go, stopMotion, x, y],
+    [face, go, stopMotion, x, y],
   );
 
-  /** Standing on the floor at x.get(): walk to a better floor spot if needed, then rest. */
-  const settleFromFloor = useCallback(() => {
-    const o = optsRef.current;
-    const w = world();
-    const spot = findFloorSpot({
-      fromX: x.get(),
-      world: w,
-      size: o.size,
-      view: layoutRef.current.view,
-      avoid: readAvoidRects(o.rootRef.current),
-      compact: o.compact,
-      targets: o.compact ? readInteractiveRects(o.rootRef.current) : undefined,
-    });
-    if (!spot.moved && Math.abs(y.get() - w.floorY) < 1) {
-      commitRest(x.get());
-      return;
-    }
-    void moveTo({ x: spot.x, y: w.floorY }, "walk").then((ok) => {
-      if (ok) commitRest(spot.x);
-    });
-  }, [commitRest, moveTo, world, x, y]);
-
-  /** Straight down to the floor (no physics), then settle. */
+  /** Straight down to the floor below (no physics), then land and stay. */
   const dropToFloor = useCallback(() => {
     const w = world();
     const target = { x: clamp(x.get(), w.minX, w.maxX), y: w.floorY };
     void moveTo(target, "drop").then((ok) => {
-      if (ok) settleFromFloor();
+      if (ok) land();
     });
-  }, [moveTo, settleFromFloor, world, x]);
+  }, [land, moveTo, world, x]);
 
   const fly = useCallback(
     (velocity: Point) => {
@@ -204,6 +199,9 @@ export function useCompanionPosition(options: PositionOptions) {
       const viewH = layoutRef.current.view.h;
       const v = clampVelocity(velocity, profile.maxThrow);
       let body: Body = { x: x.get(), y: y.get(), vx: v.x, vy: v.y, grounded: false };
+      let up = body.vy < 0;
+      setRising(up);
+      face(v.x);
       go("flying");
       const start = performance.now();
       let last = start;
@@ -220,20 +218,25 @@ export function useCompanionPosition(options: PositionOptions) {
         body = stepFall(body, dt, arena, profile);
         x.set(body.x);
         y.set(body.y);
+        // Re-render only when the arc turns over (rising -> falling), not every frame.
+        const nowUp = !body.grounded && body.vy < 0;
+        if (nowUp !== up) {
+          up = nowUp;
+          setRising(nowUp);
+        }
         if (isSettled(body, profile) || t - start > profile.maxFlightMs) {
           rafRef.current = 0;
-          y.set(w.floorY);
-          settleFromFloor();
+          land();
           return;
         }
         rafRef.current = requestAnimationFrame(step);
       };
       rafRef.current = requestAnimationFrame(step);
     },
-    [go, settleFromFloor, stopMotion, world, x, y],
+    [face, go, land, stopMotion, world, x, y],
   );
 
-  /** Walk along the floor to `targetX` (used by play). Resolves false if interrupted. */
+  /** Walk along the floor to `targetX` (play, lamp). Resolves false if interrupted. */
   const walkTo = useCallback(
     (targetX: number) => {
       const w = world();
@@ -246,29 +249,66 @@ export function useCompanionPosition(options: PositionOptions) {
     [commitRest, moveTo, world],
   );
 
-  /** Back to a proper resting spot (after play, or when interrupted). */
+  /**
+   * A deliberate jump along an arc to `target` (top-left of the cat). Lands on the floor (landing squash,
+   * then rest there) or on a perch above it ("perched"). Resolves false if interrupted.
+   */
+  const jumpTo = useCallback(
+    (target: Point): Promise<boolean> => {
+      stopMotion();
+      const o = optsRef.current;
+      const w = world();
+      const tx = clamp(target.x, w.minX, w.maxX);
+      const ty = Math.min(target.y, w.floorY);
+      const toFloor = ty >= w.floorY - 0.5;
+      const token = tokenRef.current;
+      const finish = () => {
+        if (toFloor) land();
+        else {
+          x.set(tx);
+          y.set(ty);
+          go("perched");
+        }
+      };
+      if (o.motionLevel === "reduced") {
+        x.set(tx);
+        y.set(ty);
+        finish();
+        return Promise.resolve(true);
+      }
+      const x0 = x.get();
+      const y0 = y.get();
+      face(tx - x0);
+      go("jumping");
+      const peak = Math.min(y0, ty) - Math.max(18, o.size * 0.45);
+      const duration = clamp(0.42 + Math.abs(tx - x0) / 900 + Math.abs(ty - y0) / 1400, 0.45, 0.8);
+      const ax = animate(x, tx, { duration, ease: "linear" });
+      const ay = animate(y, [y0, peak, ty], { duration, times: [0, 0.42, 1], ease: ["easeOut", "easeIn"] });
+      animsRef.current = [ax, ay];
+      return Promise.all([ax.finished, ay.finished])
+        .then(() => {
+          if (tokenRef.current !== token) return false;
+          finish();
+          return true;
+        })
+        .catch(() => false);
+    },
+    [face, go, land, stopMotion, world, x, y],
+  );
+
+  /** From wherever she is (mid-air after an interrupted move, or perched), get down to the floor and stay. */
   const settle = useCallback(() => {
     const w = world();
     if (Math.abs(y.get() - w.floorY) > 1) dropToFloor();
-    else settleFromFloor();
-  }, [dropToFloor, settleFromFloor, world, y]);
+    else commitRest(x.get());
+  }, [commitRest, dropToFloor, world, x, y]);
 
-  /** Step aside if the cat now covers marked UI (after scroll, resize or navigation). */
-  const ensureSafe = useCallback(() => {
-    const o = optsRef.current;
-    if (phaseRef.current !== "resting" || o.hold || useCompanionStore.getState().activity) return;
-    refreshLayout();
-    settle();
-  }, [refreshLayout, settle]);
-
-  /** Re-place the cat on the floor for the current viewport (resize, rotation, mode change). */
+  /** Re-place the cat on the floor for the current viewport (resize, rotation, mode change), same relative x. */
   const reproject = useCallback(() => {
     if (phaseRef.current === "dragging") return;
     stopMotion();
-    const o = optsRef.current;
     const w = world();
-    let px = floorXFrom(restRef.current, w);
-    if (o.compact) px = dockX(nearestSide({ x: px, y: w.floorY }, layoutRef.current.view, o.size), layoutRef.current.view, o.size, true);
+    const px = floorXFrom(restRef.current, w);
     x.set(px);
     y.set(w.floorY);
     go("resting");
@@ -279,14 +319,11 @@ export function useCompanionPosition(options: PositionOptions) {
     const stored = usePreferencesStore.getState().companion.position;
     restRef.current = stored ? { x: stored.x, y: 1, floor: true } : { x: 1, y: 1, floor: true };
     reproject();
-    const id = window.setTimeout(ensureSafe, FIRST_CHECK_MS);
-    return () => window.clearTimeout(id);
-  }, [ensureSafe, reproject]);
+  }, [reproject]);
 
-  // Viewport changes: re-place immediately, then look for UI to avoid once things settle.
+  // Viewport changes: keep the cat at the same relative spot on the (new) floor, fully on screen.
   useEffect(() => {
     let raf = 0;
-    let settleTimer = 0;
     const onResize = () => {
       if (raf) return;
       raf = requestAnimationFrame(() => {
@@ -294,14 +331,18 @@ export function useCompanionPosition(options: PositionOptions) {
         const prev = layoutRef.current;
         const next = refreshLayout();
         if (prev.view.w === next.view.w && prev.view.h === next.view.h && prev.floorLine === next.floorLine) return;
+        const p = phaseRef.current;
         if (prev.view.w === next.view.w && Math.abs(prev.view.h - next.view.h) < TOOLBAR_DELTA) {
           // Mobile toolbars showing or hiding: keep a resting cat standing on the (moved) floor.
-          if (phaseRef.current === "resting") y.set(world().floorY);
-        } else {
+          if (p === "resting" || p === "landing") y.set(world().floorY);
+        } else if (p === "resting" || p === "landing" || p === "perched") {
+          // A perched cat is put back on the floor (the routine that owns the perch ends on its own).
           reproject();
+        } else if (p !== "dragging") {
+          // Mid-move: stop and come down at the nearest valid spot instead of finishing a stale path.
+          stopMotion();
+          settle();
         }
-        window.clearTimeout(settleTimer);
-        settleTimer = window.setTimeout(ensureSafe, RESIZE_SETTLE_MS);
       });
     };
     window.addEventListener("resize", onResize);
@@ -312,11 +353,10 @@ export function useCompanionPosition(options: PositionOptions) {
       window.removeEventListener("orientationchange", onResize);
       window.visualViewport?.removeEventListener("resize", onResize);
       if (raf) cancelAnimationFrame(raf);
-      window.clearTimeout(settleTimer);
     };
-  }, [ensureSafe, refreshLayout, reproject, world, y]);
+  }, [refreshLayout, reproject, settle, stopMotion, world, y]);
 
-  // Size or phone/desktop mode changed (media queries): re-place.
+  // Size or phone/desktop mode changed (media queries): re-place at the same relative spot.
   const { size, compact } = options;
   const modeRef = useRef({ size, compact });
   useEffect(() => {
@@ -324,38 +364,22 @@ export function useCompanionPosition(options: PositionOptions) {
     modeRef.current = { size, compact };
     refreshLayout();
     reproject();
-    const id = window.setTimeout(ensureSafe, RESIZE_SETTLE_MS);
-    return () => window.clearTimeout(id);
-  }, [size, compact, refreshLayout, reproject, ensureSafe]);
+  }, [size, compact, refreshLayout, reproject]);
 
-  // Page scrolled under the cat: once scrolling stops, walk aside if she now covers marked UI.
-  useEffect(() => {
-    let timer = 0;
-    const onScroll = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(ensureSafe, SCROLL_SETTLE_MS);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.clearTimeout(timer);
-    };
-  }, [ensureSafe]);
-
-  // "Reset position": walk back to the bottom-right of the floor.
+  // "Reset position" (an explicit choice in Settings): walk back to the bottom-right of the floor.
   const resetNonce = useCompanionStore((s) => s.resetNonce);
   const seenNonce = useRef(resetNonce);
   useEffect(() => {
     if (resetNonce === seenNonce.current) return;
     seenNonce.current = resetNonce;
     refreshLayout();
-    const o = optsRef.current;
     const w = world();
-    const target = o.compact ? dockX("right", layoutRef.current.view, o.size, true) : w.maxX;
-    void moveTo({ x: target, y: w.floorY }, "walk").then((ok) => {
-      if (ok) settleFromFloor();
-    });
-  }, [resetNonce, moveTo, refreshLayout, settleFromFloor, world]);
+    if (Math.abs(y.get() - w.floorY) > 1) {
+      x.set(clamp(x.get(), w.minX, w.maxX));
+      y.set(w.floorY);
+    }
+    void walkTo(w.maxX);
+  }, [resetNonce, refreshLayout, walkTo, world, x, y]);
 
   useEffect(
     () => () => {
@@ -365,7 +389,7 @@ export function useCompanionPosition(options: PositionOptions) {
     [stopMotion],
   );
 
-  /** Viewport y of the line the cat stands on (for props like the yarn ball). */
+  /** Viewport y of the line the cat stands on (for props like the yarn ball and the lamp). */
   const groundY = useMemo(
     () => getWorld(layout.view, options.size, options.compact, layout.floorLine).floorY + options.size * 0.93,
     [layout, options.size, options.compact],
@@ -373,16 +397,18 @@ export function useCompanionPosition(options: PositionOptions) {
 
   const dragConstraints = useMemo(() => {
     const w = getWorld(layout.view, options.size, options.compact, layout.floorLine);
-    // Fully on screen at every width: phones no longer let the cat hang off the side edges.
+    // Fully on screen at every width: the cat is never cut off at an edge.
     return { left: w.minX, right: w.maxX, top: 4, bottom: w.floorY };
   }, [layout, options.size, options.compact]);
 
-  /** Pointer down on the cat: stop any motion and let Motion take over if the pointer moves. */
+  /** Pointer down on the cat: stop any move where she is and let Motion take over if the pointer moves. */
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       draggedRef.current = false;
-      interruptedRef.current = phaseRef.current !== "resting";
+      const p = phaseRef.current;
+      // Resting and perched are still; a press on a moving cat stops her (she settles if it was not a drag).
+      interruptedRef.current = p !== "resting" && p !== "perched";
       if (interruptedRef.current) {
         stopMotion();
         go("resting");
@@ -413,7 +439,7 @@ export function useCompanionPosition(options: PositionOptions) {
     (_: unknown, info: PanInfo) => {
       if (optsRef.current.motionLevel === "reduced") return;
       // Held by the scruff: the body swings against the direction of travel.
-      tilt.set(clamp(info.velocity.x / 90, -14, 14));
+      tilt.set(clamp(info.velocity.x / 110, -12, 12));
     },
     [tilt],
   );
@@ -424,7 +450,6 @@ export function useCompanionPosition(options: PositionOptions) {
       tilt.set(0);
       refreshLayout();
       const o = optsRef.current;
-      // Throwing is direct manipulation, so it stays real-time at "slow"; reduced motion just drops.
       if (o.physics && o.motionLevel !== "reduced") fly(info.velocity);
       else dropToFloor();
     },
@@ -438,12 +463,14 @@ export function useCompanionPosition(options: PositionOptions) {
     return dragged;
   }, []);
 
-  /** A press without a drag stopped a fall or a walk: finish settling from here. */
+  /** A press without a drag stopped a fall or a walk: come down from here and stay. */
   const settleIfInterrupted = useCallback(() => {
     if (!interruptedRef.current) return;
     interruptedRef.current = false;
     settle();
   }, [settle]);
+
+  const getPhase = useCallback(() => phaseRef.current, []);
 
   return {
     x,
@@ -453,6 +480,9 @@ export function useCompanionPosition(options: PositionOptions) {
     view: layout.view,
     groundY,
     phase,
+    facing,
+    rising,
+    getPhase,
     dragControls,
     dragConstraints,
     onPointerDown,
@@ -460,10 +490,10 @@ export function useCompanionPosition(options: PositionOptions) {
     onDrag,
     onDragEnd,
     consumeDrag,
-    ensureSafe,
     settle,
     settleIfInterrupted,
     walkTo,
+    jumpTo,
     stopMotion,
     world,
   };

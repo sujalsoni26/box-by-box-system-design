@@ -10,6 +10,7 @@ import { WidgetFrame } from "@/components/ui/widget-frame";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimNow, useSimSpeed } from "../sim-speed";
 import { useLoopGate } from "./_wa-shared";
 import {
   LB_COST,
@@ -307,14 +308,22 @@ function ScalingCompare() {
   const vm = verticalMetrics(vertical, load);
   const hm = horizontalMetrics(nodes, load);
   const flowing = gate && !reduced;
+  // Resize, boot and health-check times run on the block's sim clock, so they follow its speed control.
+  const speed = useSimSpeed();
+  const now = useSimNow();
 
-  // Finish resizes, boots and health-check removals when they fall due.
+  // Finish resizes, boots and health-check removals when they fall due. A speed change re-arms the
+  // timer for the remaining sim time; settling at `due` or later means a timer that fires a hair early
+  // (setTimeout rounds) still completes the step instead of leaving it stuck.
   const due = nextDue(state);
   useEffect(() => {
     if (due === null) return;
-    const id = window.setTimeout(() => dispatch({ type: "settle", now: Date.now() }), Math.max(0, due - Date.now()));
+    const id = window.setTimeout(
+      () => dispatch({ type: "settle", now: Math.max(due, now()) }),
+      Math.max(0, simDuration(due - now(), speed)),
+    );
     return () => window.clearTimeout(id);
-  }, [due]);
+  }, [due, speed, now]);
 
   const ceilingHit = vm.atCeiling && vertical.status === "up" && vm.dropped > 0;
   const announced = useRef(false);
@@ -361,14 +370,14 @@ function ScalingCompare() {
               <Button
                 size="sm"
                 variant="primary"
-                onClick={() => dispatch({ type: "resize", now: Date.now() })}
+                onClick={() => dispatch({ type: "resize", now: now() })}
                 disabled={!next || vertical.status !== "up"}
               >
                 <CircleArrowUp size={16} aria-hidden="true" />
                 {next ? `Upgrade to ${next.cores} cores` : "No bigger machine"}
               </Button>
               {vertical.status === "down" ? (
-                <Button size="sm" variant="success" onClick={() => dispatch({ type: "restart-vertical", now: Date.now() })}>
+                <Button size="sm" variant="success" onClick={() => dispatch({ type: "restart-vertical", now: now() })}>
                   <RotateCcw size={16} aria-hidden="true" />
                   Restart it
                 </Button>
@@ -392,7 +401,7 @@ function ScalingCompare() {
               ]}
             />
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="primary" onClick={() => dispatch({ type: "add-node", now: Date.now() })} disabled={nodes.length >= MAX_NODES}>
+              <Button size="sm" variant="primary" onClick={() => dispatch({ type: "add-node", now: now() })} disabled={nodes.length >= MAX_NODES}>
                 <Plus size={16} aria-hidden="true" />
                 Add server
               </Button>
@@ -400,7 +409,7 @@ function ScalingCompare() {
                 <Minus size={16} aria-hidden="true" />
                 Remove
               </Button>
-              <Button size="sm" variant="danger" onClick={() => dispatch({ type: "kill-node", now: Date.now() })} disabled={upCount === 0}>
+              <Button size="sm" variant="danger" onClick={() => dispatch({ type: "kill-node", now: now() })} disabled={upCount === 0}>
                 <Power size={16} aria-hidden="true" />
                 Kill a server
               </Button>

@@ -10,6 +10,7 @@ import { Chip } from "@/components/ui/chip";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 import { useLoopActive } from "./_wc-frame-loop";
 import { AMOUNT, flowReducer, initialFlow, type FlowState, type NoteTone, type Outcome, type Row } from "./_idempotency-flow";
 
@@ -45,6 +46,10 @@ const NOTE_TONE: Record<NoteTone, string> = {
 };
 
 function Arrow({ row, reduced }: { row: Extract<Row, { kind: "msg" }>; reduced: boolean }) {
+  // The message travelling along the arrow runs at the block's speed, like the step timer.
+  const speed = useSimSpeed();
+  const draw = simDuration(0.45, speed);
+  const land = simDuration(0.4, speed);
   const out = row.dir === "out";
   const color = row.lost ? "bg-bad" : out ? "bg-accent" : "bg-good";
   const head = row.lost ? "" : out ? "border-l-accent" : "border-r-good";
@@ -55,14 +60,14 @@ function Arrow({ row, reduced }: { row: Extract<Row, { kind: "msg" }>; reduced: 
         style={{ transformOrigin: out ? "left center" : "right center" }}
         initial={reduced ? false : { scaleX: 0 }}
         animate={{ scaleX: 1 }}
-        transition={{ duration: 0.45, ease: "easeOut" }}
+        transition={{ duration: draw, ease: "easeOut" }}
       />
       {row.lost ? (
         <motion.span
           className="absolute left-1/2 top-1/2 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-bad text-accent-ink"
           initial={reduced ? false : { scale: 0 }}
           animate={{ scale: 1 }}
-          transition={{ delay: reduced ? 0 : 0.4, duration: 0.2 }}
+          transition={{ delay: reduced ? 0 : land, duration: 0.2 }}
         >
           <X aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={3} />
         </motion.span>
@@ -75,7 +80,7 @@ function Arrow({ row, reduced }: { row: Extract<Row, { kind: "msg" }>; reduced: 
           )}
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: reduced ? 0 : 0.4, duration: 0.1 }}
+          transition={{ delay: reduced ? 0 : land, duration: 0.1 }}
         />
       )}
     </div>
@@ -288,13 +293,15 @@ export default function Idempotency() {
   const [useKey, setUseKey] = useState(false);
   const [autoRetry, setAutoRetry] = useState(true);
 
-  // Play the scripted exchange one step at a time; it pauses off-screen.
+  // Play the scripted exchange one step at a time; it pauses off-screen. The block's speed sets the
+  // step time (a speed change restarts the current step's wait at the new speed).
   const run = state.run;
+  const stepMs = simDuration(STEP_MS, useSimSpeed());
   useEffect(() => {
     if (!run || !active) return;
-    const id = window.setTimeout(() => dispatch({ type: "step" }), STEP_MS);
+    const id = window.setTimeout(() => dispatch({ type: "step" }), stepMs);
     return () => window.clearTimeout(id);
-  }, [run, active]);
+  }, [run, active, stepMs]);
 
   useOutcomeCompanion(state.outcome);
 

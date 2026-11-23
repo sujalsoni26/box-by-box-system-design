@@ -1,7 +1,6 @@
 "use client";
 import { useId, useState, type ReactNode } from "react";
 import { Eye, LocateFixed } from "lucide-react";
-import { AnimationSpeedSetting } from "@/components/layout/animation-speed-setting";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { playBlip } from "@/lib/companion/sound";
@@ -9,6 +8,7 @@ import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useCompanionStore } from "@/stores/companion-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
+import { FocusLength } from "./focus-length";
 import { Wardrobe } from "./wardrobe";
 
 type OnOff = "on" | "off";
@@ -38,9 +38,10 @@ interface CompanionSettingsPanelProps {
 }
 
 /**
- * Companion settings: on/off, animation speed (site-wide), physics, study tips, sound and reset position.
- * Everything persists through the preferences store. With the companion off, only a small
- * "Show companion" control (and the site-wide animation speed) remains.
+ * Companion settings: on/off, physics, study tips, topic meows, focus length, sound and reset position.
+ * Everything persists (preferences store; focus length with the focus timer). With the companion off,
+ * only a small "Show companion" control remains. There is no animation-speed setting: Cache follows the
+ * system's reduced-motion preference, and Try it blocks have their own local speed.
  */
 export function CompanionSettingsPanel({ compact = false, className }: CompanionSettingsPanelProps) {
   const hydrated = useHydrated();
@@ -64,13 +65,6 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
     );
   }
 
-  // The same site-wide setting as on the Progress page: it drives page and companion animations alike.
-  const animationsRow = (
-    <Row title="Animation speed" description="Normal, slow, or reduced motion for the whole site, Cache included." compact={compact}>
-      <AnimationSpeedSetting compact />
-    </Row>
-  );
-
   if (!settings.enabled) {
     return (
       <section aria-labelledby={headingId} className={frame} data-testid="companion-settings">
@@ -84,7 +78,6 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
             Show companion
           </Button>
         </div>
-        <div className="border-t border-line">{animationsRow}</div>
       </section>
     );
   }
@@ -104,10 +97,9 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
             size={size}
           />
         </Row>
-        {animationsRow}
         <Row
           title="Physics"
-          description="Throw Cache and it glides, bounces softly and settles. Off: it just slides to a safe spot."
+          description="Throw Cache: she flies, falls, lands and stays where she lands. Off: she drops straight down where you let go."
           compact={compact}
         >
           <SegmentedControl<OnOff>
@@ -131,6 +123,22 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
             size={size}
           />
         </Row>
+        <Row
+          title="Topic meows"
+          description="Now and then, a short fact from the lesson you are reading. Never during focus blocks or quizzes."
+          compact={compact}
+        >
+          <SegmentedControl<OnOff>
+            label="Topic meows"
+            options={ON_OFF}
+            value={onOff(settings.topicMeows)}
+            onChange={(v) => setCompanion({ topicMeows: v === "on" })}
+            size={size}
+          />
+        </Row>
+        <Row title="Focus length" description="How long one focus block lasts. A 5-minute break follows." compact={compact}>
+          <FocusLength compact={compact} />
+        </Row>
         <Row title="Sound" description="Tiny, quiet blips. Off by default." compact={compact}>
           <SegmentedControl<OnOff>
             label="Sound"
@@ -143,7 +151,7 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
             size={size}
           />
         </Row>
-        <Row title="Position" description="Lost Cache behind something? Send it back to its corner." compact={compact}>
+        <Row title="Position" description="Cache stays wherever you put her. Lost her behind something? Send her back to the corner." compact={compact}>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -167,7 +175,7 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
         <div className="border-t border-line py-3">
           <h4 className="font-bold text-ink">Wardrobe</h4>
           <p className="mb-2.5 text-[0.82rem] leading-snug text-ink-3">
-            Accessories unlock as you learn, focus and play with Cache. One per slot; tap to wear or take off.
+            Accessories unlock as you learn, focus and play with Cache. Pick one to preview it, then wear it; one per slot.
           </p>
           <Wardrobe />
         </div>

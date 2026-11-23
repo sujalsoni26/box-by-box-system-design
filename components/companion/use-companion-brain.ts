@@ -18,16 +18,26 @@ import { useProgressStore } from "@/stores/progress-store";
 
 const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
 
+interface BrainOptions {
+  pathname: string;
+  lessonSlug?: string;
+  /** May the idle lamp routine start now? (desktop, motion allowed, cat still and free). */
+  lampAllowed: () => boolean;
+}
+
 /**
  * Local behaviour, no AI: listens to the app's companion events, tracks inactivity (sit after 45 s,
- * sleep after 2 min, wake on scroll / key / pointer), greets once per session, schedules lesson
- * tips, announces focus-timer phase changes and expires short reactions. All timers are one-shot.
+ * sometimes a lamp nap after 70 s on desktop, sleep after 2 min, wake on scroll / key / pointer), greets
+ * once per session, schedules lesson tips, announces focus-timer phase changes and expires short
+ * reactions. All timers are one-shot.
  */
-export function useCompanionBrain({ pathname, lessonSlug }: { pathname: string; lessonSlug?: string }) {
+export function useCompanionBrain({ pathname, lessonSlug, lampAllowed }: BrainOptions) {
   const lessonRef = useRef(lessonSlug);
+  const lampAllowedRef = useRef(lampAllowed);
   useEffect(() => {
     lessonRef.current = lessonSlug;
-  }, [lessonSlug]);
+    lampAllowedRef.current = lampAllowed;
+  });
 
   // App events → reactions; lesson tips wait a moment and only fire if the learner is still there.
   useEffect(() => {
@@ -69,6 +79,8 @@ export function useCompanionBrain({ pathname, lessonSlug }: { pathname: string; 
     let last = Date.now();
     let asleepSince = 0;
     let timer = 0;
+    /** The lamp gets one chance per idle stretch, so it stays occasional. */
+    let lampTried = false;
     const arm = (ms: number) => {
       window.clearTimeout(timer);
       timer = window.setTimeout(check, Math.max(250, ms));
@@ -97,7 +109,11 @@ export function useCompanionBrain({ pathname, lessonSlug }: { pathname: string; 
       }
       if (idle >= TIMING.settleMs) {
         s.setIdleLevel(1);
-        arm(TIMING.sleepMs - idle);
+        if (idle >= TIMING.lampMs && !lampTried) {
+          lampTried = true;
+          if (!s.activity && !s.bubble && Math.random() < TIMING.lampChance && lampAllowedRef.current()) s.startActivity("lamp");
+        }
+        arm((lampTried ? TIMING.sleepMs : TIMING.lampMs) - idle);
         return;
       }
       arm(TIMING.settleMs - idle);
@@ -105,11 +121,13 @@ export function useCompanionBrain({ pathname, lessonSlug }: { pathname: string; 
     const onActivity = () => {
       const now = Date.now();
       last = now;
+      lampTried = false;
       const s = useCompanionStore.getState();
       if (s.napping) return;
       if (s.idleLevel === 2) {
         s.setIdleLevel(0);
-        s.react("happy", 900);
+        // On the lamp the routine plays its own wake-up (stretch, hop down); elsewhere a quick happy hop.
+        if (s.activity?.kind !== "lamp") s.react("happy", 900);
         maybeWelcomeBack(now - asleepSince, now);
         arm(TIMING.settleMs);
       } else if (s.idleLevel === 1) {

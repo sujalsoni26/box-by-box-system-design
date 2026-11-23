@@ -11,6 +11,7 @@ import { useInView } from "@/lib/hooks/use-in-view";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { useSimSpeed } from "../sim-speed";
 
 /* ------------------------------------------------------------------ */
 /* Model: the same assumptions as the lesson                           */
@@ -248,6 +249,7 @@ function IndexScan() {
   const rootRef = useRef<HTMLDivElement>(null);
   const inView = useInView(rootRef);
   const visible = usePageVisible();
+  const speed = useSimSpeed();
   const announced = useRef(false);
 
   const [exp, setExp] = useState(Math.log10(5e8));
@@ -256,10 +258,11 @@ function IndexScan() {
   const plan = planFor(n);
 
   const running = race.status === "running";
+  // `elapsed` is animation time at 1x: the block's speed scales each frame's step.
   const frame = useEffectEvent((dt: number) => {
     setRace((r) => {
       if (r.status !== "running") return r;
-      const elapsed = Math.min(r.plan.total, r.elapsed + dt);
+      const elapsed = Math.min(r.plan.total, r.elapsed + dt * speed);
       return { status: elapsed >= r.plan.total ? "done" : "running", elapsed, plan: r.plan };
     });
   });
@@ -364,7 +367,7 @@ function IndexScan() {
           <Lane name="B-tree index" sub="O(log n): one page per level" progress={idxProgress} tone="good" result={idxResult} racing={shown !== null} />
           {shown ? (
             <p className="font-mono text-[0.72rem] tabular-nums text-ink-3">
-              real time elapsed: {fmtSec(realElapsed)} · animation slowed {fmt(INDEX_ANIM_MS / (p.tIdx * 1000))}×
+              real time elapsed: {fmtSec(realElapsed)} · animation slowed {fmt(INDEX_ANIM_MS / speed / (p.tIdx * 1000))}×
             </p>
           ) : null}
         </div>

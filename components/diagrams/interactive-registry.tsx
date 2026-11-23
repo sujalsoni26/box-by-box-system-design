@@ -55,4 +55,30 @@ export const interactiveRegistry = {
 
 export type InteractiveName = keyof typeof interactiveRegistry;
 
+/**
+ * Try it blocks whose motion plays out over time (packets travelling, queues draining, timers running).
+ * Only these show the local 0.5x | 1x | 1.5x speed control; blocks that just transition between states
+ * on a click (calculators, flashcards, sliders) do not need one.
+ */
+export const ANIMATED_INTERACTIVES: ReadonlySet<InteractiveName> = new Set<InteractiveName>([
+  "request-journey",
+  "dns-lookup",
+  "tcp-udp",
+  "tail-latency",
+  "littles-law",
+  "lb-sim",
+  "scaling-compare",
+  "polling-vs-ws",
+  "index-scan",
+  "replication-lag",
+  "cap-partition",
+  "cache-aside",
+  "queue-leveling",
+  "pubsub-fanout",
+  "backoff-jitter",
+  "circuit-breaker",
+  "token-bucket",
+  "idempotency",
+]);
+
 export const interactiveNames = Object.keys(interactiveRegistry) as InteractiveName[];

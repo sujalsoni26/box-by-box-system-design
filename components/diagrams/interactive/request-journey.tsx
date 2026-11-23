@@ -10,6 +10,7 @@ import { Stat, StatGrid } from "@/components/ui/stat";
 import { ControlRow, WidgetFrame, WidgetScroll } from "@/components/ui/widget-frame";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
 import { clamp, cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 import { useLoopGate, useStepPlayer } from "./_wa-shared";
 
 /* ------------------------------------------------------------------ model */
@@ -295,6 +296,7 @@ function RequestJourney() {
   const rootRef = useRef<HTMLDivElement>(null);
   const gate = useLoopGate(rootRef);
   const reduced = useReducedMotion();
+  const speed = useSimSpeed();
   const [scenario, setScenario] = useState<Scenario>("cold");
 
   const steps = stepsFor(scenario);
@@ -308,7 +310,8 @@ function RequestJourney() {
   const step = steps[index];
   const now = times[index].end;
   const animate = player.forward && !reduced;
-  const travel = animate ? travelSeconds(step.ms) : 0;
+  // The player's step wait is scaled the same way (inside useStepPlayer).
+  const travel = animate ? simDuration(travelSeconds(step.ms), speed) : 0;
 
   const done = steps.slice(0, index + 1);
   const roundTrips = done.filter((s) => s.to === "client").length;

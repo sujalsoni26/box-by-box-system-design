@@ -40,4 +40,5 @@ export const STORAGE_KEYS = {
   progress: "sdn-progress-v1",
   preferences: "sdn-preferences-v1",
   focus: "sdn-focus-v1",
+  notes: "sdn-notes-v1",
 } as const;

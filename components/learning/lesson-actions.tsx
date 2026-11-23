@@ -3,8 +3,9 @@ import { useEffect } from "react";
 import { motion } from "motion/react";
 import { Bookmark, BookmarkCheck, Check, Flag } from "lucide-react";
 import { emitCompanionEvent } from "@/lib/companion-events";
-import { getModule, moduleProgress, overallProgress } from "@/lib/curriculum";
+import { getModule, moduleProgress } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { completeLesson } from "@/lib/learning/complete-lesson";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
 import type { Lesson } from "@/types/curriculum";
@@ -52,8 +53,11 @@ export function BookmarkButton({ slug, title }: { slug: string; title: string })
 export function ReviewButton({ slug, title, size = "chip" }: { slug: string; title: string; size?: "chip" | "button" }) {
   const hydrated = useHydrated();
   const marked = useProgressStore((s) => Boolean(s.review[slug]));
-  const toggle = useProgressStore((s) => s.toggleReview);
   const on = hydrated && marked;
+  const toggle = (id: string) => {
+    useProgressStore.getState().toggleReview(id);
+    emitCompanionEvent({ type: "review-marked", slug: id, marked: Boolean(useProgressStore.getState().review[id]) });
+  };
   return (
     <button
       type="button"
@@ -99,24 +103,14 @@ export function MarkCompleteButton({ lesson }: { lesson: Lesson }) {
   const moduleDone = moduleProgress(lesson.moduleId, completed).done;
 
   const toggle = () => {
-    const next = !done;
-    const before = useProgressStore.getState().completed;
-    const moduleWasDone = moduleProgress(lesson.moduleId, before).fraction === 1;
-    const courseWasDone = overallProgress(before).fraction === 1;
-    setCompleted(lesson.slug, next);
-    if (!next) return;
-    const after = useProgressStore.getState().completed;
-    emitCompanionEvent({
-      type: "lesson-complete",
-      slug: lesson.slug,
-      moduleCompleted: !moduleWasDone && moduleProgress(lesson.moduleId, after).fraction === 1,
-      courseCompleted: !courseWasDone && overallProgress(after).fraction === 1,
-    });
+    if (done) setCompleted(lesson.slug, false);
+    else completeLesson(lesson.slug);
   };
 
   const isDone = hydrated && done;
   return (
-    <div className="mt-10 flex flex-wrap items-center gap-4" data-companion-avoid="">
+    // data-lesson-end: the companion watches this to ask (once) whether to mark the lesson learned.
+    <div className="mt-10 flex flex-wrap items-center gap-4" data-companion-avoid="" data-lesson-end="">
       <motion.button
         type="button"
         onClick={toggle}

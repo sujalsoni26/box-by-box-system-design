@@ -12,6 +12,8 @@ import {
   Lightbulb,
   ListTree,
   MessageCircleQuestionMark,
+  MessageCircleOff,
+  MessageCircleHeart,
   Moon,
   Settings,
   Shirt,
@@ -33,18 +35,22 @@ import {
   suggestNext,
   toggleFocus,
   toggleNap,
+  toggleTopicMeows,
   topicSummary,
 } from "@/lib/companion/actions";
 import { cn } from "@/lib/utils";
 import { useCompanionStore, useFocusStore } from "@/stores/companion-store";
+import { usePreferencesStore } from "@/stores/preferences-store";
 import type { Lesson } from "@/types/curriculum";
 import { CompanionSettingsPanel } from "./companion-settings-panel";
-import { Wardrobe } from "./wardrobe";
+import { useNewAccessoryCount, Wardrobe } from "./wardrobe";
 
 interface MenuItem {
   id: string;
   label: string;
   hint?: string;
+  /** Highlighted hint (e.g. "2 new"). */
+  badge?: string;
   icon: LucideIcon;
   run: () => void;
   /** Opens a sub-view inside the menu instead of closing it. */
@@ -67,7 +73,10 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
   const closeMenu = useCompanionStore((s) => s.closeMenu);
   const setMenuView = useCompanionStore((s) => s.setMenuView);
   const focusRunning = useFocusStore((s) => s.session !== null);
+  const focusMinutes = useFocusStore((s) => s.focusMinutes);
   const napping = useCompanionStore((s) => s.napping);
+  const topicMeows = usePreferencesStore((s) => s.companion.topicMeows);
+  const newAccessories = useNewAccessoryCount();
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
@@ -80,20 +89,35 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
     {
       id: "focus",
       label: focusRunning ? "Stop focus timer" : "Focus timer",
-      hint: focusRunning ? "running" : "25 min",
+      hint: focusRunning ? "running" : `${focusMinutes} min`,
       icon: Timer,
       run: toggleFocus,
     },
     { id: "summary", label: "Current topic summary", hint: needs, icon: ListTree, run: () => topicSummary(lesson) },
     { id: "next", label: "What should I learn next?", icon: Compass, run: () => suggestNext(lesson) },
     { id: "meow", label: "Meow about this topic", hint: lesson ? undefined : "general", icon: Cat, run: () => meowAboutTopic(lesson) },
+    {
+      id: "topic-meows",
+      label: topicMeows ? "Pause topic meows" : "Resume topic meows",
+      hint: topicMeows ? "on" : "paused",
+      icon: topicMeows ? MessageCircleOff : MessageCircleHeart,
+      run: toggleTopicMeows,
+    },
   ];
   const playItems: MenuItem[] = [
+    {
+      id: "wardrobe",
+      label: "Wardrobe",
+      hint: newAccessories ? undefined : "outfits",
+      badge: newAccessories ? `${newAccessories} new` : undefined,
+      icon: Shirt,
+      run: openWardrobe,
+      subview: true,
+    },
     { id: "feed", label: "Feed", icon: Fish, run: feedCache },
     { id: "pet", label: "Pet", icon: Heart, run: () => petCache(lesson) },
     { id: "nap", label: napping ? "Wake up" : "Nap", icon: napping ? Sun : Moon, run: toggleNap },
     { id: "play", label: "Play", hint: "yarn", icon: Volleyball, run: playWithCache },
-    { id: "wardrobe", label: "Wardrobe", icon: Shirt, run: openWardrobe, subview: true },
   ];
   const endItems: MenuItem[] = [
     { id: "hide", label: "Hide companion", icon: EyeOff, run: hideCompanion },
@@ -187,7 +211,11 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef }: Compan
       >
         <Icon aria-hidden="true" className="size-4 shrink-0 text-link" />
         <span className="min-w-0 flex-1">{item.label}</span>
-        {item.hint ? <span className="shrink-0 font-mono text-[0.66rem] font-medium text-ink-3">{item.hint}</span> : null}
+        {item.badge ? (
+          <span className="shrink-0 rounded-full bg-review-soft px-1.5 py-px font-mono text-[0.64rem] font-bold text-review">{item.badge}</span>
+        ) : item.hint ? (
+          <span className="shrink-0 font-mono text-[0.66rem] font-medium text-ink-3">{item.hint}</span>
+        ) : null}
       </button>
     );
   };

@@ -11,13 +11,23 @@ export type CompanionMood =
   | "dragged"
   | "eating"
   | "purring"
-  | "playing";
+  | "playing"
+  /** Thrown or dropped: legs out, bracing for the floor. */
+  | "falling"
+  /** A short squash on touching down, then back to the resting pose. */
+  | "landing"
+  /** Gathering for a jump (lamp). */
+  | "crouching"
+  /** In the air on purpose: a jump, or rising after a throw. */
+  | "jumping"
+  /** Waking from a nap: a long stretch and a yawn. */
+  | "stretching";
 
 /**
- * Site-wide animation speed (pages and companion). "slow" doubles animation and transition
- * durations; "reduced" removes decorative motion.
+ * Motion level from the operating system's prefers-reduced-motion. There is no site-wide speed
+ * setting; animated Try it blocks have their own local speed control (components/diagrams/sim-speed.tsx).
  */
-export type AnimationLevel = "normal" | "slow" | "reduced";
+export type AnimationLevel = "normal" | "reduced";
 
 export interface CompanionPosition {
   /** Normalised 0..1 of the usable horizontal range. */
@@ -62,6 +72,12 @@ export interface CompanionSettings {
   equipped: Partial<Record<AccessorySlot, AccessoryId>>;
   /** Accessories whose unlock has already been announced. */
   announced: AccessoryId[];
+  /** Unlocked accessories the learner has looked at in the wardrobe (the rest show as "New"). */
+  seenAccessories: AccessoryId[];
+  /** Occasional facts about the open lesson ("topic meows"); the learner can pause them. */
+  topicMeows: boolean;
+  /** Lessons where Cache already asked "mark it as learned?": slug -> when. It never asks twice. */
+  completionAsked: Record<string, number>;
 }
 
 /** Events any part of the app can emit; the companion decides whether and how to react. */
@@ -70,4 +86,5 @@ export type CompanionEvent =
   | { type: "quiz-answer"; correct: boolean }
   | { type: "quiz-finished"; score: number; total: number }
   | { type: "diagram"; mood: "happy" | "thinking" | "confused"; message?: string }
-  | { type: "lesson-opened"; slug: string };
+  | { type: "lesson-opened"; slug: string }
+  | { type: "review-marked"; slug: string; marked: boolean };

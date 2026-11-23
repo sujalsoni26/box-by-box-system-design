@@ -125,10 +125,9 @@
 
   --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Durations scale with the animation-speed setting (--motion-scale: 1 normal, 2 slow). */
-  --animate-rise: rise calc(0.5s * var(--motion-scale)) var(--ease-out-soft) both;
-  --animate-pop: pop calc(0.4s * var(--motion-scale)) var(--ease-out-soft);
-  --animate-march: march calc(1.1s * var(--motion-scale)) linear infinite;
+  --animate-rise: rise 0.5s var(--ease-out-soft) both;
+  --animate-pop: pop 0.4s var(--ease-out-soft);
+  --animate-march: march 1.1s linear infinite;
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(10px); }
@@ -203,7 +202,9 @@
   .dg-line--accent { stroke: var(--accent); }
   .dg-line--bad { stroke: var(--bad); }
   .dg-line--good { stroke: var(--good); }
-  .dg-flow { stroke-dasharray: 7 6; animation: var(--animate-march); }
+  /* Marching flow lines. Inside an animated Try it block they follow its local speed: --sim-speed is set on
+     the block, so the duration has to be computed here, on the element, not in a :root variable. */
+  .dg-flow { stroke-dasharray: 7 6; animation: march calc(1.1s / var(--sim-speed, 1)) linear infinite; }
   .dg-ah { fill: var(--line-strong); }
   .dg-ah--accent { fill: var(--accent); }
   .dg-ah--bad { fill: var(--bad); }
@@ -233,36 +234,15 @@
   }
 }
 
-/* ---------------- Animation speed ----------------
-   <html data-motion="normal|slow|reduced"> is set before first paint by ThemeScript and kept in sync
-   by AppProviders: an explicit choice in Settings wins, otherwise prefers-reduced-motion decides. */
-:root {
-  --motion-scale: 1;
-}
-html[data-motion="slow"] {
-  --motion-scale: 2;
-}
-/* Slow: every Tailwind transition runs twice as long (duration-* sets --tw-duration; plain
-   transition-* utilities fall back to --default-transition-duration). Keyframe animations above
-   scale through --motion-scale. */
-html[data-motion="slow"] *, html[data-motion="slow"] *::before, html[data-motion="slow"] *::after {
-  transition-duration: calc(var(--tw-duration, var(--default-transition-duration, 150ms)) * 2) !important;
-}
-html[data-motion="slow"] .animate-pulse {
-  animation-duration: 4s;
-}
-html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  scroll-behavior: auto !important;
-}
-/* Without JavaScript nothing sets data-motion: fall back to the OS setting. */
+/* ---------------- Reduced motion ----------------
+   Follows the operating system only; there is no site-wide speed setting. Animated Try it blocks
+   have a local speed control that sets --sim-speed on their own subtree (sim-speed.tsx). */
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-motion]) *, html:not([data-motion]) *::before, html:not([data-motion]) *::after {
+  *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
 }
+

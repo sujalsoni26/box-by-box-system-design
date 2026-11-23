@@ -16,6 +16,7 @@ import { useInView } from "@/lib/hooks/use-in-view";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { emitCompanionEvent } from "@/lib/companion-events";
 import { cn } from "@/lib/utils";
+import { simDuration, useSimSpeed } from "../sim-speed";
 
 /* ------------------------------------------------------------------ */
 /* Model                                                               */
@@ -271,7 +272,11 @@ function MemoryBar({ used }: { used: number }) {
         className="block h-2 overflow-hidden rounded-full bg-surface-3"
       >
         <span
-          className={cn("block h-full rounded-full transition-[width] duration-100 ease-linear", pct > 0.75 ? "bg-bad" : pct > 0.25 ? "bg-warn" : "bg-good")}
+          className={cn(
+            // Eases over one simulation tick, which the block's speed stretches or shortens.
+            "block h-full rounded-full transition-[width] duration-[calc(100ms/var(--sim-speed,1))] ease-linear",
+            pct > 0.75 ? "bg-bad" : pct > 0.25 ? "bg-warn" : "bg-good",
+          )}
           style={{ width: `${pct * 100}%` }}
         />
       </span>
@@ -291,7 +296,10 @@ function WorkerCard({ index, w }: { index: number; w: Worker }) {
         </span>
       </div>
       <span aria-hidden="true" className="block h-1 overflow-hidden rounded-full bg-surface-3">
-        <span className={cn("block h-full transition-[width] duration-100 ease-linear", poison ? "bg-bad" : "bg-good")} style={{ width: `${p * 100}%` }} />
+        <span
+          className={cn("block h-full transition-[width] duration-[calc(100ms/var(--sim-speed,1))] ease-linear", poison ? "bg-bad" : "bg-good")}
+          style={{ width: `${p * 100}%` }}
+        />
       </span>
     </div>
   );
@@ -346,11 +354,13 @@ function QueueLeveling() {
   const running = !paused && s.crashed === null && inView && visible;
   const crashSeen = useRef(false);
 
+  // One DT step per tick; the block's speed sets how often a tick comes (0.5x = every 200 ms).
+  const tickMs = simDuration(DT * 1000, useSimSpeed());
   useEffect(() => {
     if (!running) return;
-    const id = window.setInterval(() => dispatch({ type: "tick", steps: 1 }), DT * 1000);
+    const id = window.setInterval(() => dispatch({ type: "tick", steps: 1 }), tickMs);
     return () => window.clearInterval(id);
-  }, [running]);
+  }, [running, tickMs]);
 
   useEffect(() => {
     if (s.crashed !== null && !crashSeen.current) {

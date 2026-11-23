@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "validate:content": "node scripts/validate-content.mjs",
     "validate:practice": "node scripts/validate-practice.mjs",
-    "check": "npm run typecheck && npm run lint && npm run validate:content && npm run validate:practice"
+    "test": "node --test scripts/tests/",
+    "check": "npm run typecheck && npm run lint && npm run validate:content && npm run validate:practice && npm test"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
