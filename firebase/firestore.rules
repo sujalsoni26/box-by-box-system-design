@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Box by Box: each signed-in learner's saved progress. Publish in the Firebase console
+// (Firestore Database → Rules), then click Publish. See docs/accounts.md.
+//
+// users/{uid}/stores/{store} = { json: string, rev: int, updatedAt: timestamp }
+//   store ∈ progress | preferences | notes | focus
+//   json is the store exactly as the browser saves it; rev increases by one with every save.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/stores/{store} {
+      // Only the account itself, and only once its email is verified (Google accounts always are).
+      function isOwner() {
+        return request.auth != null
+          && request.auth.uid == uid
+          && request.auth.token.email_verified == true;
+      }
+
+      function knownStore() {
+        return store in ['progress', 'preferences', 'notes', 'focus'];
+      }
+
+      // Largest record accepted per store, in characters (mirrors MAX_UPLOAD_CHARS in lib/cloud/merge.ts).
+      function maxChars() {
+        return store == 'notes' ? 900000
+          : store == 'progress' ? 300000
+          : store == 'preferences' ? 60000
+          : 4000;
+      }
+
+      // Exactly these three fields, stamped with the server's clock.
+      function wellFormed() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['json', 'rev', 'updatedAt'])
+          && d.keys().hasAll(['json', 'rev', 'updatedAt'])
+          && d.json is string
+          && d.json.size() <= maxChars()
+          && d.rev is int
+          && d.updatedAt == request.time;
+      }
+
+      allow get: if isOwner() && knownStore();
+      allow list: if isOwner();
+
+      // First save of a store: revision 1.
+      allow create: if isOwner() && knownStore() && wellFormed()
+        && request.resource.data.rev == 1;
+
+      // Later saves: exactly the next revision (two devices can never overwrite each other's changes unseen),
+      // and at most one save per store every 2 seconds (rate limit).
+      allow update: if isOwner() && knownStore() && wellFormed()
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.time > resource.data.updatedAt + duration.value(2, 's');
+
+      // Account deletion removes the learner's records.
+      allow delete: if isOwner() && knownStore();
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

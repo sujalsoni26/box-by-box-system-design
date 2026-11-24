@@ -33,8 +33,32 @@ export const localStorageAdapter: PersistenceAdapter = {
   },
 };
 
-/** The adapter the app uses. Swap this export to move persistence to a server. */
-export const persistenceAdapter: PersistenceAdapter = localStorageAdapter;
+type WriteListener = (key: string) => void;
+const writeListeners = new Set<WriteListener>();
+
+/**
+ * Be told whenever the app saves (or removes) a store. Cloud sync uses this to upload changes for a signed-in
+ * learner; it writes back through `localStorageAdapter` directly, which does not notify.
+ */
+export function onPersistWrite(listener: WriteListener): () => void {
+  writeListeners.add(listener);
+  return () => {
+    writeListeners.delete(listener);
+  };
+}
+
+/** The adapter the app uses: browser storage, with change notifications for cloud sync. */
+export const persistenceAdapter: PersistenceAdapter = {
+  getItem: (name) => localStorageAdapter.getItem(name),
+  setItem(name, value) {
+    localStorageAdapter.setItem(name, value);
+    writeListeners.forEach((fn) => fn(name));
+  },
+  removeItem(name) {
+    localStorageAdapter.removeItem(name);
+    writeListeners.forEach((fn) => fn(name));
+  },
+};
 
 export const STORAGE_KEYS = {
   progress: "sdn-progress-v1",

@@ -6,6 +6,7 @@ import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { AccountButton } from "@/components/account/account-button";
 import { isActive, navItems } from "./nav-items";
 import { SearchDialog } from "./search-dialog";
 import { ThemeToggle } from "./theme-toggle";
@@ -71,6 +72,7 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center gap-1">
           <SearchDialog />
           <ThemeToggle />
+          <AccountButton />
         </div>
       </div>
     </header>
