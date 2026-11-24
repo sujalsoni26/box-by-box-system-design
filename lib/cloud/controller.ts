@@ -24,6 +24,7 @@ import {
   afterFailure,
   ATTEMPTS_KEY,
   authMessage,
+  BASE_PASSWORD_RULES,
   cooldownRemaining,
   countsAsFailure,
   isEmail,
@@ -31,7 +32,9 @@ import {
   NO_ATTEMPTS,
   parseAttempts,
   passwordProblems,
+  rulesFromPolicy,
   type AuthAction,
+  type PasswordRules,
 } from "./guards";
 import { SYNC_KEYS, type SyncKey } from "./merge";
 import { createSyncEngine, type SyncEngine } from "./sync-engine";
@@ -217,13 +220,28 @@ const VERIFY_SENT_KEY = "sdn-auth-verify-sent";
 const RESET_SENT_KEY = "sdn-auth-reset-sent";
 const sentAt = (k: string) => Number(storage.getItem(k)) || 0;
 
-export function signUpWithEmail(email: string, password: string): Promise<ActionResult> {
-  if (!isEmail(email)) return Promise.resolve({ ok: false, message: "Enter a valid email address." });
-  const problems = passwordProblems(password);
-  if (problems.length) return Promise.resolve({ ok: false, message: `Your password needs ${problems.join(", ")}.` });
+let rulesLoad: Promise<PasswordRules> | null = null;
+
+/** The rules a new password must meet: the site's minimum plus the project's password policy (fetched once). */
+export function loadPasswordRules(): Promise<PasswordRules> {
+  if (!cloudEnabled) return Promise.resolve(BASE_PASSWORD_RULES);
+  rulesLoad ??= connect()
+    .then(({ a, auth }) => a.validatePassword(auth, ""))
+    .then((status) => rulesFromPolicy(status.passwordPolicy))
+    .catch(() => {
+      rulesLoad = null; // try again next time; the server still enforces the policy
+      return BASE_PASSWORD_RULES;
+    });
+  return rulesLoad;
+}
+
+export async function signUpWithEmail(email: string, password: string): Promise<ActionResult> {
+  if (!isEmail(email)) return { ok: false, message: "Enter a valid email address." };
+  const problems = passwordProblems(password, await loadPasswordRules());
+  if (problems.length) return { ok: false, message: `Your password needs ${problems.join(", ")}.` };
   return attempt("sign-up", async ({ a, auth }) => {
-    const policy = await a.validatePassword(auth, password).catch(() => null);
-    if (policy && !policy.isValid) throw Object.assign(new Error("policy"), { code: "auth/password-does-not-meet-requirements" });
+    const status = await a.validatePassword(auth, password).catch(() => null);
+    if (status && !status.isValid) throw Object.assign(new Error("policy"), { code: "auth/password-does-not-meet-requirements" });
     const cred = await a.createUserWithEmailAndPassword(auth, email.trim(), password);
     await a.sendEmailVerification(cred.user, { url: continueUrl() });
     storage.setItem(VERIFY_SENT_KEY, String(Date.now()));

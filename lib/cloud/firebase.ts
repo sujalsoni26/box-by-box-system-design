@@ -9,7 +9,7 @@
 import type { FirebaseApp } from "firebase/app";
 import type { Auth } from "firebase/auth";
 import type { Firestore } from "firebase/firestore";
-import { appCheckDebug, appCheckSiteKey, cloudConfig } from "./config";
+import { appCheckDebug, appCheckSiteKey, authDomainFor, cloudConfig } from "./config";
 import { SYNC_KEYS, type SyncKey } from "./merge";
 import { BackendError, type CloudBackend, type RemoteDoc } from "./sync-engine";
 
@@ -29,7 +29,7 @@ export function loadFirebase(): Promise<FirebaseKit> {
   if (!kit) {
     kit = (async () => {
       const [appMod, a, f] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
-      const app = appMod.getApps()[0] ?? appMod.initializeApp(config);
+      const app = appMod.getApps()[0] ?? appMod.initializeApp({ ...config, authDomain: authDomainFor(window.location, config.authDomain) });
       if (appCheckSiteKey) {
         // App Check: requests carry a token proving they come from this site (enforced in the console).
         const ac = await import("firebase/app-check");

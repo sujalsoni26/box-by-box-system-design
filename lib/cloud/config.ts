@@ -24,6 +24,20 @@ export const cloudConfig: CloudConfig | null = apiKey && authDomain && projectId
 /** True when accounts and sync are offered. */
 export const cloudEnabled = cloudConfig !== null;
 
+/** "off" makes every site load Firebase's sign-in pages from the configured auth domain (no proxy). */
+const authProxy = process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROXY !== "off";
+
+/**
+ * Where Firebase's sign-in pages (the Google pop-up and the pages behind the email links) load from. A deployed
+ * site serves them from its own domain at /__/auth (next.config.ts forwards those requests to Firebase), so
+ * networks that block firebaseapp.com still allow sign-in, and Google's screen names this site. On localhost the
+ * configured domain is used, so local development needs no extra setup.
+ */
+export function authDomainFor(location: { hostname: string; host: string }, configured: string, proxy = authProxy): string {
+  const local = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === "[::1]";
+  return proxy && !local ? location.host : configured;
+}
+
 /** reCAPTCHA v3 site key for Firebase App Check (optional but recommended). */
 export const appCheckSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || null;
 

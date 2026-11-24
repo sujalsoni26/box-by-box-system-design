@@ -10,6 +10,7 @@ const meta = await appModule("lib/cloud/account-meta.ts");
 const expiry = await appModule("lib/cloud/expiry.ts");
 const guards = await appModule("lib/cloud/guards.ts");
 const engineMod = await appModule("lib/cloud/sync-engine.ts");
+const config = await appModule("lib/cloud/config.ts");
 const { BackendError, createSyncEngine } = engineMod;
 
 const env = (state, version = 1) => JSON.stringify({ state, version });
@@ -119,11 +120,34 @@ test("validation and messages: strong passwords, no account probing", () => {
   for (const bad of ["", "a@b", "a b@c.de", "@x.io", `${"a".repeat(250)}@x.io`]) assert.ok(!guards.isEmail(bad), bad);
   assert.deepEqual(guards.passwordProblems("Abcdefg1"), []);
   assert.ok(guards.passwordProblems("abcdefgh").length >= 2);
+  // The project's policy adds to the site's minimum (here: 10 characters and a symbol from its list)...
+  const strict = guards.rulesFromPolicy({
+    enforcementState: "ENFORCE",
+    allowedNonAlphanumericCharacters: "!@#",
+    customStrengthOptions: { minPasswordLength: 10, containsNonAlphanumericCharacter: true },
+  });
+  assert.deepEqual(guards.passwordProblems("Abcdefgh12", strict), ["a symbol"]);
+  assert.deepEqual(guards.passwordProblems("Abcdefg1!", strict), ["at least 10 characters"]);
+  assert.deepEqual(guards.passwordProblems("Abcdefgh1?", strict), ["a symbol"]); // "?" is not in the policy's list
+  assert.deepEqual(guards.passwordProblems("Abcdefgh1!", strict), []);
+  assert.ok(guards.passwordChecks("", strict).some((c) => /symbol/i.test(c.label)));
+  // ...but never lowers it, and a policy that isn't enforced changes nothing.
+  assert.deepEqual(guards.rulesFromPolicy({ enforcementState: "ENFORCE", customStrengthOptions: { minPasswordLength: 6 } }), guards.BASE_PASSWORD_RULES);
+  assert.deepEqual(guards.rulesFromPolicy({ enforcementState: "OFF", customStrengthOptions: { containsNonAlphanumericCharacter: true } }), guards.BASE_PASSWORD_RULES);
   // Wrong password and unknown email read the same, so nobody can tell which emails have accounts.
   assert.equal(guards.authMessage("auth/user-not-found", "sign-in"), guards.authMessage("auth/wrong-password", "sign-in"));
   assert.equal(guards.authMessage("auth/invalid-credential", "sign-in"), guards.authMessage("auth/user-not-found", "sign-in"));
   assert.equal(guards.authMessage("auth/popup-closed-by-user", "google"), "silent");
   assert.ok(guards.countsAsFailure("auth/invalid-credential") && !guards.countsAsFailure("auth/network-request-failed"));
+});
+
+test("sign-in pages load from the site's own domain when deployed, from Firebase's on localhost", () => {
+  const fb = "demo.firebaseapp.com";
+  assert.equal(config.authDomainFor({ hostname: "box-by-box.netlify.app", host: "box-by-box.netlify.app" }, fb), "box-by-box.netlify.app");
+  assert.equal(config.authDomainFor({ hostname: "preview.example.org", host: "preview.example.org:8443" }, fb), "preview.example.org:8443");
+  for (const hostname of ["localhost", "127.0.0.1", "[::1]"]) assert.equal(config.authDomainFor({ hostname, host: `${hostname}:3000` }, fb), fb);
+  // NEXT_PUBLIC_FIREBASE_AUTH_PROXY=off: always Firebase's domain.
+  assert.equal(config.authDomainFor({ hostname: "box-by-box.netlify.app", host: "box-by-box.netlify.app" }, fb, false), fb);
 });
 
 /* ------------------------------------------------------------------ sync engine, two devices, one fake cloud */

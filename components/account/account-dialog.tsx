@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   checkVerified,
   deleteAccount,
+  loadPasswordRules,
   resendVerification,
   sendPasswordReset,
   signInLockSeconds,
@@ -12,9 +13,10 @@ import {
   signInWithGoogle,
   signOutAccount,
   signUpWithEmail,
+  warmUp,
   type ActionResult,
 } from "@/lib/cloud/controller";
-import { PASSWORD_MIN, passwordProblems } from "@/lib/cloud/guards";
+import { BASE_PASSWORD_RULES, passwordChecks, passwordProblems, type PasswordRules } from "@/lib/cloud/guards";
 import { cn } from "@/lib/utils";
 import { useAccountStore, type AccountView } from "@/stores/account-store";
 import { SyncStatusLine } from "./sync-status";
@@ -40,7 +42,12 @@ export function AccountDialog() {
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (view && !d.open) d.showModal();
+    if (view && !d.open) {
+      d.showModal();
+      // Load Firebase now (whichever button opened the dialog), so the Google button can open its pop-up while the
+      // click is still being handled; strict browsers (Safari, mobile) block pop-ups opened after a download.
+      warmUp();
+    }
     if (!view && d.open) d.close();
   }, [view]);
 
@@ -276,6 +283,21 @@ function SignIn() {
   );
 }
 
+/** The project's password rules (the site's minimum until they load), so the list matches what Firebase enforces. */
+function usePasswordRules(): PasswordRules {
+  const [rules, setRules] = useState(BASE_PASSWORD_RULES);
+  useEffect(() => {
+    let live = true;
+    void loadPasswordRules().then((r) => {
+      if (live) setRules(r);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return rules;
+}
+
 function SignUp() {
   const open = useAccountStore((s) => s.openDialog);
   const [email, setEmail] = useState("");
@@ -283,12 +305,9 @@ function SignUp() {
   const { busy, error, note, run, setError } = useAction();
   const [lock, refreshLock] = useLock();
   const rulesId = useId();
-  const missing = passwordProblems(password);
-  const rules = [
-    { label: `At least ${PASSWORD_MIN} characters`, ok: password.length >= PASSWORD_MIN },
-    { label: "Upper and lower case letters", ok: /[a-z]/.test(password) && /[A-Z]/.test(password) },
-    { label: "A number", ok: /[0-9]/.test(password) },
-  ];
+  const policy = usePasswordRules();
+  const missing = passwordProblems(password, policy);
+  const rules = passwordChecks(password, policy);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

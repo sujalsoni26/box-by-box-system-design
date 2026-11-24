@@ -68,14 +68,56 @@ export function isEmail(value: string): boolean {
   return v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 }
 
+/** What a new password must contain: this site's minimum, plus anything the Firebase project's policy adds. */
+export interface PasswordRules {
+  minLength: number;
+  maxLength: number;
+  symbol: boolean;
+  /** Characters that count as symbols (the policy's list); empty means any character that isn't A–Z, a–z or 0–9. */
+  symbols: string;
+}
+
+/** The site's minimum: 8+ characters with upper and lower case letters and a number. */
+export const BASE_PASSWORD_RULES: PasswordRules = { minLength: PASSWORD_MIN, maxLength: PASSWORD_MAX, symbol: false, symbols: "" };
+
+/** The parts of Firebase's `PasswordPolicy` that matter here. */
+export interface PolicyLike {
+  enforcementState?: string;
+  allowedNonAlphanumericCharacters?: string;
+  customStrengthOptions?: { minPasswordLength?: number; maxPasswordLength?: number; containsNonAlphanumericCharacter?: boolean };
+}
+
+/** Combine the site's minimum with the project's password policy (when enforced). Never weaker than the minimum. */
+export function rulesFromPolicy(policy: PolicyLike | null | undefined): PasswordRules {
+  if (!policy || policy.enforcementState !== "ENFORCE") return BASE_PASSWORD_RULES;
+  const o = policy.customStrengthOptions ?? {};
+  return {
+    minLength: Math.max(PASSWORD_MIN, o.minPasswordLength ?? 0),
+    maxLength: Math.min(PASSWORD_MAX, o.maxPasswordLength ?? PASSWORD_MAX),
+    symbol: o.containsNonAlphanumericCharacter === true,
+    symbols: policy.allowedNonAlphanumericCharacters ?? "",
+  };
+}
+
+const hasSymbol = (pw: string, symbols: string) => [...pw].some((c) => (symbols ? symbols.includes(c) : /[^A-Za-z0-9]/.test(c)));
+
+/** Each rule with whether the password meets it, in the order the sign-up form lists them. */
+export function passwordChecks(pw: string, rules: PasswordRules = BASE_PASSWORD_RULES): { label: string; need: string; ok: boolean }[] {
+  const checks = [
+    { label: `At least ${rules.minLength} characters`, need: `at least ${rules.minLength} characters`, ok: pw.length >= rules.minLength },
+    { label: "Upper and lower case letters", need: "upper and lower case letters", ok: /[a-z]/.test(pw) && /[A-Z]/.test(pw) },
+    { label: "A number", need: "a number", ok: /[0-9]/.test(pw) },
+  ];
+  if (rules.symbol) checks.push({ label: "A symbol, such as ! @ # $", need: "a symbol", ok: hasSymbol(pw, rules.symbols) });
+  return checks;
+}
+
 /** Requirements a new password does not meet yet (empty when it is acceptable). */
-export function passwordProblems(pw: string): string[] {
-  const out: string[] = [];
-  if (pw.length < PASSWORD_MIN) out.push(`at least ${PASSWORD_MIN} characters`);
-  if (pw.length > PASSWORD_MAX) out.push(`at most ${PASSWORD_MAX} characters`);
-  if (!/[a-z]/.test(pw)) out.push("a lowercase letter");
-  if (!/[A-Z]/.test(pw)) out.push("an uppercase letter");
-  if (!/[0-9]/.test(pw)) out.push("a number");
+export function passwordProblems(pw: string, rules: PasswordRules = BASE_PASSWORD_RULES): string[] {
+  const out = passwordChecks(pw, rules)
+    .filter((c) => !c.ok)
+    .map((c) => c.need);
+  if (pw.length > rules.maxLength) out.push(`at most ${rules.maxLength} characters`);
   return out;
 }
 
@@ -105,7 +147,7 @@ export function authMessage(code: string, action: AuthAction): string | "silent"
       return "Couldn't create the account with that email. If you already have one, sign in (or reset your password).";
     case "auth/weak-password":
     case "auth/password-does-not-meet-requirements":
-      return "Choose a stronger password: at least 8 characters with upper and lower case letters and a number.";
+      return "Choose a stronger password that meets every rule listed under the password box.";
     case "auth/too-many-requests":
       return "Too many attempts. Wait a few minutes, then try again.";
     case "auth/popup-blocked":

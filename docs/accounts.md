@@ -47,7 +47,7 @@ Defence in depth; the server side is what actually enforces it.
 | App Check (reCAPTCHA v3) | Once enforced, the database only answers requests that come from this site, not from scripts using the public config. |
 | API key restrictions | The browser key only works from the site's domains and only for the Firebase APIs it needs. |
 | Client (`lib/cloud/guards.ts`) | After 3 failed attempts this browser waits 15 s, 30 s, 60 s … up to 15 minutes; verification and reset emails at most once a minute; messages never reveal whether an email has an account; password strength checked before sending. |
-| Headers (`next.config.ts`) | `X-Frame-Options: DENY` (no clickjacking of the sign-in form), `nosniff`, a strict referrer policy, HSTS and a restrictive permissions policy. |
+| Headers (`next.config.ts`) | `X-Frame-Options: DENY` (no clickjacking of the sign-in form), `nosniff`, a strict referrer policy, HSTS and a restrictive permissions policy. Firebase's pages under `/__/` keep Firebase's own headers. |
 
 The Firebase web config is public by design (it identifies the project); it is not a secret. Never put a service
 account key or admin credentials in this repository or in Netlify.
@@ -63,7 +63,9 @@ Project: the one you created (Firestore location in India). Do these once.
    - **Authorized domains**: add `box-by-box.netlify.app` (`localhost` is there already). Remove anything you
      don't use.
    - **Password policy**: enable it, require at least 8 characters with uppercase, lowercase and a number, and set
-     enforcement to *Require enforcement* (weak passwords are then refused by the server too).
+     enforcement to *Require enforcement* (weak passwords are then refused by the server too). Requiring a symbol
+     or a longer minimum is fine: the sign-up form reads the policy and lists the same rules. The app never accepts
+     less than 8 characters with upper and lower case letters and a number, whatever the policy says.
    - **Email enumeration protection**: make sure it is enabled (it is by default on new projects).
 3. **Firestore Database → Create database**: production mode, location in India (for example `asia-south1`,
    Mumbai). Then open **Rules**, replace everything with the contents of `firebase/firestore.rules`, and
@@ -86,6 +88,25 @@ Project: the one you created (Firestore location in India). Do these once.
      Firebase App Check API.
    - Test sign-in afterwards; a missing entry shows up as "Sign-in isn't available on this site right now."
 7. Optional: **Authentication → Templates** to set the sender name of the verification and reset emails.
+8. **Sign-in pages on this site's domain** (see the next section):
+   - Google Cloud console → APIs & Services → **Credentials** → OAuth 2.0 Client IDs → **Web client (auto created by
+     Google Service)** → *Authorized redirect URIs* → add `https://box-by-box.netlify.app/__/auth/handler` → Save.
+   - Once the site with accounts is live: **Authentication → Templates** → edit any template → **Customize action
+     URL** → `https://box-by-box.netlify.app/__/auth/action` → Save (it applies to every email type).
+
+## Sign-in pages on this site's domain
+
+Google sign-in runs in a pop-up, and the verification and reset emails link to a page. Firebase hosts those pages on
+`<project-id>.firebaseapp.com`, which some office and school networks block (the pop-up then stays blank). So the
+deployed site serves them itself: `next.config.ts` forwards `/__/auth/*` and `/__/firebase/*` to Firebase, and
+`lib/cloud/config.ts` uses the site's own domain as the auth domain on any host except localhost. Google's screen
+then also says "Continue to box-by-box.netlify.app". This is Firebase's documented "proxy auth requests" setup.
+
+- **localhost** keeps using `<project-id>.firebaseapp.com`, so local development needs nothing extra (on a network
+  that blocks that domain, test Google sign-in on a deploy preview instead).
+- Every deployed domain needs its `/__/auth/handler` URI in the OAuth client (step 8) and its name in Authorized
+  domains (step 2), or Google sign-in fails there.
+- To turn this off (back to the pop-up on firebaseapp.com), set `NEXT_PUBLIC_FIREBASE_AUTH_PROXY=off` and redeploy.
 
 ## Setup (Netlify and local)
 
@@ -104,8 +125,9 @@ baked in at build time):
 up, also add `NEXT_PUBLIC_APPCHECK_DEBUG=true`, open the site on localhost once, copy the debug token printed in
 the browser console, and add it under App Check → Apps → Manage debug tokens.
 
-Deploy previews (`deploy-preview-N--box-by-box.netlify.app`) are not authorized domains, so sign-in only works on
-the main site and localhost.
+Deploy previews (`deploy-preview-N--box-by-box.netlify.app`): sign-in works there only after you add that domain
+to Authorized domains and `https://deploy-preview-N--box-by-box.netlify.app/__/auth/handler` to the OAuth client's
+redirect URIs. Remove both when you're done testing.
 
 ## Free plan
 
@@ -117,7 +139,7 @@ Email/password and Google sign-in are free; phone sign-in is not used.
 
 | File | Role |
 |---|---|
-| `lib/cloud/config.ts` | Reads the environment variables; accounts are off without them. |
+| `lib/cloud/config.ts` | Reads the environment variables (accounts are off without them); picks the auth domain. |
 | `lib/cloud/firebase.ts` | Loads Firebase on demand (guests never download it), App Check, the Firestore adapter. |
 | `lib/cloud/controller.ts` | Session restore, sign-in/up, reset, verification, sign-out, delete; runs the sync engine. |
 | `lib/cloud/sync-engine.ts` | Merge-on-sign-in, resume, debounced uploads, compare-and-set retries, offline retries. |
