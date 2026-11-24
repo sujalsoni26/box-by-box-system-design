@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { AccountPanel } from "@/components/account/account-panel";
 import { CompanionSettingsPanel } from "@/components/companion/companion-settings-panel";
 import { BookmarkList, RecentlyStudied, ReviewList } from "@/components/learning/dashboard-widgets";
 import { GeneralSettings, ProgressOverview } from "@/components/learning/progress-overview";
 import { caseStudies } from "@/lib/case-studies";
+import { cloudEnabled } from "@/lib/cloud/config";
 
 export const metadata: Metadata = { title: "Progress", description: "Lessons learned, topics marked for review, quiz results, bookmarks and settings." };
 
@@ -14,8 +16,13 @@ export default function ProgressPage() {
         <h1 className="mt-2 font-display text-[clamp(2rem,4.5vw,3rem)] font-extrabold leading-tight tracking-[-0.03em] text-ink">
           How far you have come
         </h1>
-        <p className="mt-3 max-w-2xl text-lg text-ink-2">Everything is saved in this browser and survives restarts. Nothing is sent anywhere.</p>
+        <p className="mt-3 max-w-2xl text-lg text-ink-2">
+          {cloudEnabled
+            ? "Everything is saved in this browser. Sign in (optional) to keep it in your account and use it on any device."
+            : "Everything is saved in this browser and survives restarts. Nothing is sent anywhere."}
+        </p>
       </header>
+      <AccountPanel />
       <ProgressOverview afterSummary={<ReviewList practiceSlugs={caseStudies.map((c) => c.slug)} />} />
       <div className="grid gap-6 md:grid-cols-2">
         <RecentlyStudied />

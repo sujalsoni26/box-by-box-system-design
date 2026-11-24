@@ -22,7 +22,9 @@ import remarkGfm from "remark-gfm";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LESSONS = path.join(ROOT, "content", "lessons");
-const read = (...p) => readFileSync(path.join(ROOT, ...p), "utf8");
+// Line endings are normalised, so Windows checkouts (core.autocrlf) validate the same as Linux.
+const normalizeEol = (text) => text.replace(/\r\n?/g, "\n");
+const read = (...p) => normalizeEol(readFileSync(path.join(ROOT, ...p), "utf8"));
 
 const problems = [];
 const warnings = [];
@@ -218,7 +220,7 @@ function checkTree(tree, file) {
 
 for (const f of files.sort()) {
   const file = `content/lessons/${f}`;
-  const source = readFileSync(path.join(LESSONS, f), "utf8");
+  const source = normalizeEol(readFileSync(path.join(LESSONS, f), "utf8"));
   if (!source.trim()) {
     fail(file, "empty file");
     continue;

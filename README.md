@@ -13,8 +13,9 @@ Every lesson follows one pattern: **problem → what breaks → building block �
 - **Study notes:** a plain-text note per lesson, saved in the browser. On wide screens Notes and "On this page" share the right column as collapsible panels (one open at a time); smaller screens use a sheet.
 - **Readable diagrams:** a diagram that is squeezed or overflows its column opens in an in-page lightbox with zoom and pan.
 - **Persistent progress:** saved in the browser, with light and dark themes, keyboard support and reduced-motion support.
+- **Optional accounts:** sign in with Google or email to keep progress, notes and settings in your account and use them on any device (Firebase, free plan). Guests keep everything in the browser as before. Setup: [docs/accounts.md](docs/accounts.md).
 
-Built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, MDX, Zustand, Motion, Mermaid and Shiki. There's no backend.
+Built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, MDX, Zustand, Motion, Mermaid and Shiki. There's no backend of its own; optional accounts use Firebase Authentication and Cloud Firestore.
 
 ## Run
 
@@ -30,6 +31,8 @@ npm test           # unit tests only (Node's built-in runner, no extra dependenc
 ```
 
 On Windows, if PowerShell blocks `npm` scripts, use `npm.cmd` instead, e.g. `npm.cmd run dev`.
+
+Accounts are off unless the Firebase variables are set (`NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`, optionally `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`) in `.env.local` or the host's build environment. See [docs/accounts.md](docs/accounts.md).
 
 ## Project layout
 

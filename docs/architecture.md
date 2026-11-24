@@ -57,6 +57,12 @@ On wide screens (xl) the right column holds two collapsible panels, "On this pag
 `lib/learning/side-panels.ts`). "On this page" starts open. The choice is kept for the browser session (sessionStorage
 `sdn-side-panel`), so moving between lessons does not flip it. Below xl, the Notes chip in the lesson header opens the sheet.
 
+**Optional accounts** (docs/accounts.md): when the Firebase variables are set, a signed-in learner's four stores are
+also kept in Firestore (`users/{uid}/stores/*`). The adapter notifies `lib/cloud/controller.ts` of every save; the
+sync engine (`lib/cloud/sync-engine.ts`) merges on sign-in, loads the account's copy on later visits, and uploads
+changes a few seconds later with compare-and-set revisions. A signed-out account's copy is cleared from the
+browser after 5 days (`lib/cloud/expiry.ts`, run before the stores load).
+
 Stores use `skipHydration` and are rehydrated in `AppProviders` on the client. Components that show persisted data check
 `useHydrated()` first, so server HTML and the first client render always match (no hydration errors). The theme is applied
 before first paint by `ThemeScript`, which reads the same localStorage key.
