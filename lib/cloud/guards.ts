@@ -155,6 +155,8 @@ export function authMessage(code: string, action: AuthAction): string | "silent"
     case "auth/network-request-failed":
       return "Can't reach the sign-in service. Check your connection and try again.";
     case "auth/unauthorized-domain":
+    case "auth/unauthorized-continue-uri":
+    case "auth/invalid-continue-uri":
     case "auth/operation-not-allowed":
     case "auth/invalid-api-key":
     case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":

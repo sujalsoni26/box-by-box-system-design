@@ -138,6 +138,8 @@ test("validation and messages: strong passwords, no account probing", () => {
   assert.equal(guards.authMessage("auth/user-not-found", "sign-in"), guards.authMessage("auth/wrong-password", "sign-in"));
   assert.equal(guards.authMessage("auth/invalid-credential", "sign-in"), guards.authMessage("auth/user-not-found", "sign-in"));
   assert.equal(guards.authMessage("auth/popup-closed-by-user", "google"), "silent");
+  // A site that isn't set up for email links says so (the reset form would otherwise claim an email was sent).
+  assert.match(guards.authMessage("auth/unauthorized-continue-uri", "reset"), /isn't available/);
   assert.ok(guards.countsAsFailure("auth/invalid-credential") && !guards.countsAsFailure("auth/network-request-failed"));
 });
 
