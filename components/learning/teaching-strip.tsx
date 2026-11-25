@@ -19,7 +19,7 @@ export function TeachingStrip({ lesson }: { lesson: Lesson }) {
   ].filter((s) => s.text);
 
   return (
-    <ol aria-label="Problem to building block" className="not-prose mb-10 grid gap-2 sm:grid-cols-2">
+    <ol id="lesson-overview" data-toc="Problem to building block" data-toc-level="1" aria-label="Problem to building block" className="not-prose mb-10 grid scroll-mt-24 gap-2 sm:grid-cols-2">
       {steps.map((s, i) => {
         const Icon = s.icon;
         return (

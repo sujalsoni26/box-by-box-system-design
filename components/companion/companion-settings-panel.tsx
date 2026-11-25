@@ -6,7 +6,7 @@ import { RangeField } from "@/components/ui/range-field";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { asmrNap } from "@/lib/companion/actions";
 import { lampFits } from "@/lib/companion/lamp-geometry";
-import { playPurr } from "@/lib/companion/sound";
+import { playCatSound, previewMoment } from "@/lib/companion/sound";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useCompanionStore } from "@/stores/companion-store";
@@ -23,16 +23,18 @@ function lampFitsHere(): boolean {
 }
 
 const PURR_CHOICES: { key: keyof PurrSettings; label: string; hint: string }[] = [
-  { key: "clicks", label: "Every click", hint: "a tiny prrt on buttons and links" },
-  { key: "meows", label: "Topic meows", hint: "when Cache meows about a topic" },
-  { key: "play", label: "Playing", hint: "yarn chases and break games" },
-  { key: "pets", label: "Petting and feeding", hint: "a long, happy purr" },
-  { key: "naps", label: "Dozing off", hint: "as she falls asleep, on her lamp too" },
-  { key: "celebrations", label: "Celebrations", hint: "lessons learned, modules done, perfect quizzes" },
+  { key: "talk", label: "When she talks", hint: "a small mew with her speech bubbles, now and then" },
+  { key: "wake", label: "Waking up", hint: "a sleepy mraow and a little trill" },
+  { key: "meows", label: "Topic meows", hint: "a meow and a purr when she shares a fact" },
+  { key: "play", label: "Playing", hint: "happy trills during yarn chases and games" },
+  { key: "pets", label: "Petting and feeding", hint: "a long, contented purr" },
+  { key: "naps", label: "Dozing off", hint: "a soft purr as she falls asleep" },
+  { key: "celebrations", label: "Celebrations", hint: "a trill, a mew and a purr for lessons, modules and perfect quizzes" },
   { key: "focus", label: "Focus blocks", hint: "a quiet purr while you focus" },
+  { key: "clicks", label: "Every click", hint: "a tiny prrt on buttons and links" },
 ];
 
-/** Which moments purr, and how loud. A tick plays a sample so the learner hears what they chose. */
+/** Which moments make a sound, and how loud. A tick plays that moment's sound so the learner hears what they chose. */
 function PurrChoices({ compact }: { compact: boolean }) {
   const companion = usePreferencesStore((s) => s.companion);
   const setCompanion = usePreferencesStore((s) => s.setCompanion);
@@ -40,7 +42,7 @@ function PurrChoices({ compact }: { compact: boolean }) {
   const volume = companion.purrVolume ?? DEFAULT_PURR_VOLUME;
   return (
     <fieldset className={cn("flex flex-col gap-2", compact ? "py-1.5" : "py-3")} data-testid="companion-purr-choices">
-      <legend className={cn("font-bold text-ink", compact ? "text-[0.84rem]" : "text-[0.92rem]")}>Purr when…</legend>
+      <legend className={cn("font-bold text-ink", compact ? "text-[0.84rem]" : "text-[0.92rem]")}>Sounds when…</legend>
       <div className={cn("grid gap-1", !compact && "sm:grid-cols-2")}>
         {PURR_CHOICES.map((c) => (
           <label key={c.key} className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-[0.86rem] hover:bg-surface-2">
@@ -50,7 +52,7 @@ function PurrChoices({ compact }: { compact: boolean }) {
               data-testid={`companion-purr-${c.key}`}
               onChange={(e) => {
                 setCompanion({ purr: { ...purr, [c.key]: e.target.checked } });
-                if (e.target.checked) playPurr(c.key === "clicks" || c.key === "focus" ? "chirp" : "short");
+                if (e.target.checked) previewMoment(c.key);
               }}
               className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]"
             />
@@ -71,9 +73,12 @@ function PurrChoices({ compact }: { compact: boolean }) {
         onChange={(v) => setCompanion({ purrVolume: v / 100 })}
         className={compact ? "text-[0.84rem]" : undefined}
       />
-      <div>
-        <Button size="sm" variant="ghost" onClick={() => playPurr("long")} data-testid="companion-purr-preview">
+      <div className="flex flex-wrap gap-1">
+        <Button size="sm" variant="ghost" onClick={() => playCatSound("purr-long")} data-testid="companion-purr-preview">
           Hear a purr
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => playCatSound("mew")} data-testid="companion-meow-preview">
+          Hear a mew
         </Button>
       </div>
     </fieldset>
@@ -211,14 +216,14 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
         <Row title="Focus length" description="How long one focus block lasts. A 5-minute break follows." compact={compact}>
           <FocusLength compact={compact} />
         </Row>
-        <Row title="Purring sounds" description="Cache's soft, relaxing purr at the moments you pick. Off by default." compact={compact}>
+        <Row title="Purrs and meows" description="Cache's soft purr and little meows at the moments you pick. Off by default." compact={compact}>
           <SegmentedControl<OnOff>
-            label="Purring sounds"
+            label="Purrs and meows"
             options={ON_OFF}
             value={onOff(settings.sound)}
             onChange={(v) => {
               setCompanion({ sound: v === "on" });
-              if (v === "on") playPurr("short");
+              if (v === "on") playCatSound("trill");
             }}
             size={size}
           />

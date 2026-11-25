@@ -76,6 +76,8 @@ export const defaultCompanionStats: CompanionStats = { feeds: 0, pets: 0, plays:
 
 export const defaultPurrSettings: PurrSettings = {
   clicks: false,
+  talk: true,
+  wake: true,
   meows: true,
   play: true,
   pets: true,

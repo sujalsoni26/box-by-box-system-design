@@ -179,6 +179,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
     carriedAsleep: pos.carrying,
   });
   const ambient = animated && pageVisible && still;
+  useVoice(mood);
 
   const toggleMenu = (focus: "first" | "last" = "first") => {
     const s = useCompanionStore.getState();
@@ -434,6 +435,24 @@ function usePurrSounds(focusPhase: string | null) {
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
   }, []);
+}
+
+/** Little meows: a mew when a new speech bubble appears, a sleepy mraow when she wakes (both if ticked; rate-limited). */
+function useVoice(mood: string) {
+  const bubbleId = useCompanionStore((s) => s.bubble?.id ?? 0);
+  const seenBubble = useRef(bubbleId);
+  useEffect(() => {
+    if (!bubbleId || bubbleId === seenBubble.current) return;
+    seenBubble.current = bubbleId;
+    purrFor("talk");
+  }, [bubbleId]);
+
+  const lastMood = useRef(mood);
+  useEffect(() => {
+    const was = lastMood.current;
+    lastMood.current = mood;
+    if (was === "sleeping" && mood !== "sleeping") purrFor("wake");
+  }, [mood]);
 }
 
 /**

@@ -92,10 +92,14 @@ export interface CompanionSettings {
   completionAsked: Record<string, number>;
 }
 
-/** The moments Cache purrs, once purring sounds are on (ASMR naps are asked for from her menu). */
+/** The moments Cache makes a sound, once her sounds are on (ASMR naps are asked for from her menu). */
 export interface PurrSettings {
   /** A tiny "prrt" on every button and link click. */
   clicks: boolean;
+  /** A small mew when she says something. */
+  talk: boolean;
+  /** A sleepy "mraow" when she wakes up. */
+  wake: boolean;
   /** Topic meows and "Meow about this topic". */
   meows: boolean;
   /** Playing: the yarn chase and break-time games. */
