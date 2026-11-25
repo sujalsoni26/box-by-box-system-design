@@ -9,6 +9,14 @@ interface LessonPageProps {
   params: Promise<{ slug: string }>;
 }
 
+/**
+ * No instant-navigation validation for lessons (dev-only check; production and prerendering are unchanged).
+ * Every lesson is fully static, so the check has nothing to find, and in `next dev` (Next 16.4, Turbopack) it fails
+ * on the first visit after a fresh compile for some lessons, e.g. case-study-method, with "Could not validate
+ * `instant`… module factory is not available" for the glossary popover's client module. Revisit on a Next upgrade.
+ */
+export const instant = false;
+
 /** Every lesson is prerendered at build time; any other slug renders the 404 page. */
 export function generateStaticParams() {
   return lessons.map((l) => ({ slug: l.slug }));
