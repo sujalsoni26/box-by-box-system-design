@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AccountPanel } from "@/components/account/account-panel";
+import { ProfileForm } from "@/components/account/profile-form";
 import { CompanionSettingsPanel } from "@/components/companion/companion-settings-panel";
 import { BookmarkList, RecentlyStudied, ReviewList } from "@/components/learning/dashboard-widgets";
 import { GeneralSettings, ProgressOverview } from "@/components/learning/progress-overview";
@@ -28,6 +29,17 @@ export default function ProgressPage() {
         <RecentlyStudied />
         <BookmarkList />
       </div>
+      <section id="profile" aria-labelledby="profile-h" className="scroll-mt-24 rounded-2xl border border-line bg-surface p-5">
+        <h2 id="profile-h" className="font-display text-2xl font-bold text-ink">
+          Your profile
+        </h2>
+        <p className="mb-4 mt-1 text-ink-2">
+          {cloudEnabled
+            ? "Optional, and nothing sensitive. Kept with your settings, so it follows your account when you sign in."
+            : "Optional, and nothing sensitive. Kept in this browser with your settings."}
+        </p>
+        <ProfileForm />
+      </section>
       <GeneralSettings />
       <section aria-labelledby="companion-settings-h">
         <h2 id="companion-settings-h" className="mb-4 font-display text-2xl font-bold text-ink">

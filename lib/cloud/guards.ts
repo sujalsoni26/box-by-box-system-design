@@ -123,7 +123,7 @@ export function passwordProblems(pw: string, rules: PasswordRules = BASE_PASSWOR
 
 /* ------------------------------------------------------------------ messages */
 
-export type AuthAction = "sign-in" | "sign-up" | "google" | "reset" | "verify" | "delete";
+export type AuthAction = "sign-in" | "sign-up" | "google" | "reset" | "verify" | "delete" | "password";
 
 /**
  * A short, safe message for a Firebase error code. Never says whether an email has an account (that would let
@@ -140,10 +140,16 @@ export function authMessage(code: string, action: AuthAction): string | "silent"
     case "auth/wrong-password":
     case "auth/user-not-found":
     case "auth/invalid-email":
+      if (action === "password") return "Your current password is incorrect.";
       return action === "sign-up" ? "Enter a valid email address." : "The email or password is incorrect.";
+    case "auth/provider-already-linked":
+      return "This account already has a password. Use “Change password” instead.";
+    case "auth/user-mismatch":
+      return "Confirm with the Google account you signed in with.";
     case "auth/email-already-in-use":
     case "auth/credential-already-in-use":
     case "auth/account-exists-with-different-credential":
+      if (action === "password") return "Couldn't add a password to this account. Please try again later.";
       return "Couldn't create the account with that email. If you already have one, sign in (or reset your password).";
     case "auth/weak-password":
     case "auth/password-does-not-meet-requirements":

@@ -1,12 +1,13 @@
 import { catMeows } from "@/data/cat-meows";
 import { getLesson, getModule, lessons, nextIncompleteLesson, overallProgress } from "@/lib/curriculum";
 import { formatPercent } from "@/lib/utils";
-import { usePreferencesStore } from "@/stores/preferences-store";
+import { DEFAULT_CALL_ME, usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 import { useCompanionStore, useFocusStore, type BubbleAction, type FocusEvent } from "@/stores/companion-store";
 import type { AccessoryId, CompanionEvent } from "@/types/companion";
 import { ACCESSORIES, getAccessory, rewardContext, unlockedIds } from "./accessories";
-import { fill, line, LINES } from "./lines";
+import { fill, line, LINES, setYouSource } from "./lines";
+import { daysUntil } from "@/lib/learning/pace";
 import { markFactShown } from "./topic-facts";
 import { companionBlip } from "./sound";
 import { TIMING } from "./timing";
@@ -19,6 +20,9 @@ import { TIMING } from "./timing";
  */
 
 const companion = () => useCompanionStore.getState();
+
+// What Cache calls the learner: their answer in the profile, or "hooman".
+setYouSource(() => usePreferencesStore.getState().profile?.callMe || DEFAULT_CALL_ME);
 const focusActive = () => useFocusStore.getState().session?.phase === "focus";
 
 /** May Cache speak in response to something the learner just did? */
@@ -249,27 +253,44 @@ export function maybeGreet(currentSlug: string | undefined, now: number): void {
   const { completed, lastVisited, review } = useProgressStore.getState();
   const s = companion();
   if (!Object.keys(completed).length && !lastVisited) {
-    s.say({ text: LINES.greetNew, actions: [{ label: "Nice to meet you", primary: true }], mood: "happy" });
+    s.say({ text: fill(LINES.greetNew, {}), actions: [{ label: "Nice to meet you", primary: true }], mood: "happy" });
     return;
   }
   // Topics marked for review get a gentle reminder in the greeting (with a shortcut to the list).
   const toReview = Object.keys(review ?? {}).length;
   const reviewText = toReview ? ` ${toReview === 1 ? line("reviewWaitingOne") : fill(line("reviewWaiting"), { n: toReview })}` : "";
   const reviewAction: BubbleAction[] = toReview ? [{ label: "Review list", href: "/progress#review" }] : [];
+  const countdown = targetCountdown();
   const next = nextIncompleteLesson(completed, lastVisited);
   if (!next || next.slug === currentSlug) {
     s.say({
-      text: `${line("greetStudying")}${reviewText}`,
+      text: `${line("greetStudying")}${countdown}${reviewText}`,
       actions: toReview ? [...reviewAction, { label: "Later", primary: true }] : undefined,
       mood: "happy",
     });
     return;
   }
   s.say({
-    text: `${line("greetBack")} Next up: ${next.number} ${next.title}.${reviewText}`,
+    text: `${line("greetBack")}${countdown} Next up: ${next.number} ${next.title}.${reviewText}`,
     actions: [{ label: `Continue: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, ...reviewAction, { label: "Later" }],
     mood: "happy",
   });
+}
+
+/** " 12 days to your big day." when the profile has a date within the next two months (else ""). */
+function targetCountdown(): string {
+  const days = daysUntil(usePreferencesStore.getState().profile?.targetDate ?? null, new Date());
+  if (days === null || days < 0 || days > 60) return "";
+  if (days === 0) return " Today is your big day. You've got this.";
+  return ` ${days === 1 ? "1 day" : `${days} days`} to your big day.`;
+}
+
+/** Right after signing in (the dialog has closed): a short hello that uses the learner's name. */
+export function welcomeSignedIn(): void {
+  const s = companion();
+  s.react("happy", 1800);
+  if (!canRespond()) return;
+  s.say({ text: line("signedIn"), mood: "happy", ms: 4500, solicited: true });
 }
 
 /** After a long nap: a quiet welcome back with a general tip. */
