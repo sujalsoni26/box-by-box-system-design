@@ -9,7 +9,7 @@ import { ACCESSORIES, getAccessory, rewardContext, unlockedIds } from "./accesso
 import { fill, line, LINES, setYouSource } from "./lines";
 import { daysUntil } from "@/lib/learning/pace";
 import { markFactShown } from "./topic-facts";
-import { companionBlip } from "./sound";
+import { purrFor } from "./sound";
 import { TIMING } from "./timing";
 
 /*
@@ -64,7 +64,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       const next = nextIncompleteLesson(completed, event.slug);
       if (event.courseCompleted) {
         s.react("celebrating", 3200);
-        companionBlip("chime");
+        purrFor("celebrations");
         if (canRespond())
           s.say({
             title: "Course complete",
@@ -78,7 +78,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       if (event.moduleCompleted && lesson) {
         const m = getModule(lesson.moduleId);
         s.react("celebrating", 2800);
-        companionBlip("chime");
+        purrFor("celebrations");
         const actions: BubbleAction[] = next
           ? [{ label: `Next: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, { label: "Later" }]
           : [{ label: "Nice" }];
@@ -93,7 +93,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
         return;
       }
       s.react("happy", 1800);
-      companionBlip("happy");
+      purrFor("celebrations");
       if (!canRespond()) return;
       const { done, total, fraction } = overallProgress(completed);
       const praise = fill(line("lessonDone"), { done, total, left: total - done, pct: formatPercent(fraction) });
@@ -103,7 +103,6 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
 
     case "quiz-answer": {
       s.react(event.correct ? "happy" : "thinking", event.correct ? 1300 : 1700);
-      companionBlip(event.correct ? "happy" : "soft");
       if (!canRespond() || now - lastQuizBubbleAt < TIMING.quizBubbleGapMs) return;
       // Encourage after every miss (rate-limited); praise only some of the time.
       if (!event.correct || Math.random() < 0.4) {
@@ -117,7 +116,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       const ratio = event.total ? event.score / event.total : 0;
       const perfect = event.total > 0 && event.score === event.total;
       s.react(perfect ? "celebrating" : ratio >= 0.6 ? "happy" : "thinking", perfect ? 2600 : 2000);
-      if (perfect) companionBlip("happy");
+      if (perfect) purrFor("celebrations");
       if (!canRespond()) return;
       lastQuizBubbleAt = now;
       const template = perfect ? LINES.quizPerfect : ratio >= 0.6 ? LINES.quizGood : LINES.quizLow;
@@ -198,7 +197,7 @@ export function announceUnlocks(): boolean {
   if (!first) return true;
   const s = companion();
   s.react("celebrating", 2400);
-  companionBlip("chime");
+  purrFor("celebrations");
   const wear = () => {
     usePreferencesStore.getState().equipAccessory(first.slot, first.id);
     useCompanionStore.getState().react("happy", 1400);
@@ -304,7 +303,7 @@ export function reactToFocusEvent(event: FocusEvent, now: number): void {
   if (now - event.at > TIMING.focusEventFreshMs) return;
   const s = companion();
   const focus = useFocusStore.getState();
-  companionBlip("chime");
+  purrFor("focus");
   if (event.kind === "focus-done") {
     s.react("happy", 2200);
     s.say({

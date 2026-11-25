@@ -6,15 +6,16 @@ import { stepLength, type Gait } from "@/lib/companion/gait";
 import { hopDownX, LAMP, PERCH_LIFT, perchPoint, planLamp } from "@/lib/companion/lamp-geometry";
 import { line } from "@/lib/companion/lines";
 import { canNudge } from "@/lib/companion/reactions";
-import type { Point } from "@/lib/companion/resting";
-import { companionBlip } from "@/lib/companion/sound";
+import { readViewport, type Point } from "@/lib/companion/resting";
+import { purrFor } from "@/lib/companion/sound";
 import { useCompanionStore } from "@/stores/companion-store";
+import { isToolbarResize } from "./use-companion-position";
 
 export { lampFits } from "@/lib/companion/lamp-geometry";
 
 /*
- * The lamp nap. Started by a long quiet spell on desktop (sometimes), or on purpose from the menu
- * ("Lamp nap"). A little lamp pops up a few steps away; Cache looks at it, walks 3–5 natural steps, crouches
+ * The lamp nap. Started by a long quiet spell (sometimes), or on purpose from the menu ("Lamp nap", "ASMR purr").
+ * Phones and tablets get it too, with a smaller lamp beside the smaller cat. A little lamp pops up a few steps away; Cache looks at it, walks 3–5 natural steps, crouches
  * with a wiggle, leaps along an arc, lands with a squash (the lamp wobbles and lights up), settles, yawns and
  * falls asleep in the warm light.
  *
@@ -97,7 +98,11 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
       }
       if (s.idleLevel === 0 && prev.idleLevel !== 0) wake();
     });
-    const onResize = () => wake();
+    // A real layout change wakes her; a phone's toolbars sliding in or out while the learner scrolls does not.
+    const startView = readViewport();
+    const onResize = () => {
+      if (!isToolbarResize(startView, readViewport())) wake();
+    };
     window.addEventListener("resize", onResize);
 
     const run = async () => {
@@ -137,7 +142,7 @@ export function useLampRoutine(deps: RoutineDeps): { lamp: LampState | null; ste
       // Land: a squash, the lamp wobbles and lights up.
       setStep("lamp-land");
       setLamp({ cx, lit: true, bump: 1, attached: true });
-      companionBlip("soft");
+      purrFor("naps");
       await wait(BEAT.land);
       if (cancelled) return;
       if (getPhase() !== "perched") return finishAwake();

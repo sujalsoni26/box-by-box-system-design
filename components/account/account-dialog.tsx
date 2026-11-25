@@ -518,7 +518,7 @@ function Account() {
           Sign out
         </Button>
         {!confirming ? (
-          <Button variant="ghost" className="text-bad" onClick={() => setConfirming(true)} data-testid="account-delete-start">
+          <Button variant="danger" onClick={() => setConfirming(true)} data-testid="account-delete-start">
             Delete account…
           </Button>
         ) : null}

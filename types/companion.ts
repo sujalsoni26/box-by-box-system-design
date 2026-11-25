@@ -73,7 +73,11 @@ export interface CompanionSettings {
   enabled: boolean;
   physics: boolean;
   studyTips: boolean;
+  /** Purring sounds, master switch (off by default). Which moments purr is in `purr`. */
   sound: boolean;
+  purr: PurrSettings;
+  /** 0..1 */
+  purrVolume: number;
   position: CompanionPosition | null;
   stats: CompanionStats;
   /** One accessory per slot. */
@@ -86,6 +90,24 @@ export interface CompanionSettings {
   topicMeows: boolean;
   /** Lessons where Cache already asked "mark it as learned?": slug -> when. It never asks twice. */
   completionAsked: Record<string, number>;
+}
+
+/** The moments Cache purrs, once purring sounds are on (ASMR naps are asked for from her menu). */
+export interface PurrSettings {
+  /** A tiny "prrt" on every button and link click. */
+  clicks: boolean;
+  /** Topic meows and "Meow about this topic". */
+  meows: boolean;
+  /** Playing: the yarn chase and break-time games. */
+  play: boolean;
+  /** Petting and feeding. */
+  pets: boolean;
+  /** Falling asleep (a nap, her lamp). */
+  naps: boolean;
+  /** Lessons learned, modules finished, perfect quizzes, new accessories. */
+  celebrations: boolean;
+  /** A soft purr while a focus block runs, and a chirp when a block or break ends. */
+  focus: boolean;
 }
 
 /** Events any part of the app can emit; the companion decides whether and how to react. */

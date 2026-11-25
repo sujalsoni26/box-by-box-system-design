@@ -35,7 +35,7 @@ interface BrainOptions {
 
 /**
  * Local behaviour, no AI: listens to the app's companion events, tracks inactivity (sit after 45 s,
- * sometimes a lamp nap after 70 s on desktop, a yawn and sleep after 2 min, a stretch on waking), greets
+ * sometimes a lamp nap after 70 s, a yawn and sleep after 2 min, a stretch on waking), greets
  * once per session, schedules lesson tips, announces focus-timer phase changes and expires short
  * reactions. All timers are one-shot.
  */

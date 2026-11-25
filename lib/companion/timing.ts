@@ -12,7 +12,7 @@ export const TIMING = {
   quizBubbleGapMs: 20_000,
   /** Minimum gap between bubbles about marking topics for review (the pose still reacts). */
   reviewBubbleGapMs: 60_000,
-  /** No input for this long: the cat may (sometimes) go and nap on a lamp (desktop only). */
+  /** No input for this long: the cat may (sometimes) go and nap on a lamp (where it fits, phones included). */
   lampMs: 70_000,
   /** Chance the lamp routine runs in a given idle stretch ("occasionally"). */
   lampChance: 0.6,

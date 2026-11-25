@@ -139,7 +139,7 @@ and the paws. Play stops first; with reduced motion the fish appears whole, with
 pointer presses and moves, touch, wheel, scroll, and the tab becoming visible again.
 
 - 45 s without input: she settles (`sitting`).
-- 70 s (desktop, sometimes): the idle lamp nap (below).
+- 70 s (sometimes): the idle lamp nap (below).
 - 2 min: a yawn, then sleep. Activity wakes her with a short stretch (and a "welcome back" after a long nap).
 - She is kept awake while the menu is open, a bubble waits for an answer, a focus block runs, a modal dialog is
   open (e.g. a diagram lightbox), focus is in a text field or a knowledge check is in use. A routine (lamp, play,
@@ -175,12 +175,15 @@ Nothing is ever marked without an explicit answer.
 
 ### Lamp nap
 
-Desktop only (at least 700 px wide, the 84 px cat, motion allowed). Two ways in:
+Where there is room and motion is allowed: on desktop at least 700 px wide with the 84 px cat (as before), and on phones
+and tablets any screen at least 300 px wide, with a smaller lamp beside the smaller cat. A phone's toolbars sliding in or
+out while scrolling never wake her. Ways in:
 
 - **Idle:** after 70 s without input, with a 60% chance per idle stretch. Keys, scrolling, touch, a press anywhere or
   coming back to the tab wake her; the mouse merely moving does not (so she can be reached and carried).
 - **Menu:** "Lamp nap" in the Play group (shown only where the lamp can run). A nap on request: ordinary activity and
   opening the menu do not wake her; a tap, "Wake up" or a pet does.
+- **ASMR purr** (menu, or the Start button in settings): a nap on request with a continuous purr (below).
 
 The sequence: a lamp pops up 3–5 walk steps (plus a jump) away, on the side with room, towards the middle of the screen
 (`lib/companion/lamp-geometry.ts`); she turns to it, walks those steps, crouches with a wiggle, leaps along an arc, lands
@@ -210,7 +213,25 @@ routine cleanly at any step (never leaving her in the air); every timer and subs
 Click, tap, Enter or Space on the cat (ArrowDown/ArrowUp also open it). Arrow keys, Home and End move,
 Escape closes and returns focus to the cat, Tab leaves. Items: Explain simply, Quick revision, Focus timer (shows the
 chosen length), What should I learn next?, Meow about this topic, Pause / Resume topic meows, a "Play with Cache" group
-(Wardrobe with a "N new" badge, Feed, Pet, Nap / Wake up, Lamp nap (desktop), Play), Hide companion, Companion settings.
+(Wardrobe with a "N new" badge, Feed, Pet, Nap / Wake up, Lamp nap, Play, ASMR purr), Hide companion, Companion settings.
+
+## Purring sounds
+
+Synthesised in the browser (`lib/companion/purr.ts`, no audio files): soft noise in the 100–800 Hz range (warm, but
+audible on phone speakers) chopped into rounded pulses at 22–28 a second, on a breathing envelope (the out-breath a
+little louder and slower). Sounds: a short "prrt" chirp, a one-breath purr, a three-breath purr and a 21 s loop that
+starts and ends silent so it repeats seamlessly. Playback, volume and the moments are in `lib/companion/sound.ts`.
+
+- **Off by default** (`companion.sound`). Turned on in Companion settings, with a tick per moment
+  (`companion.purr`) and a volume (`companion.purrVolume`); ticking a moment plays a sample.
+- Moments: every click on a button or link (off by default), topic meows, playing, petting and feeding, dozing off,
+  celebrations (lessons, modules, perfect quizzes, accessories) and focus blocks (a quieter loop while a block runs, off
+  by default). Each moment has a minimum gap, so a burst of clicks is not a burst of purrs. Short purrs only play in a
+  visible tab.
+- **ASMR purr** (menu or settings): she goes to her lamp (or naps where she is when the lamp has no room or motion is
+  reduced) and, once asleep, purrs continuously, fading in, until she is woken (a tap, "Wake up" or a pet), when it fades
+  out. Scrolling and reading don't wake her. It plays even with purring sounds off, because it was asked for, and keeps
+  playing in a background tab.
 
 ## Drag, gravity and the floor
 
@@ -219,6 +240,11 @@ chosen length), What should I learn next?, Meow about this topic, Pause / Resume
 - On release she falls to the floor under constant gravity. The floor is the bottom of the viewport, or the
   top of the fixed bottom tab bar (`nav[aria-label=Main]`) on phones. Side edges are walls; the top is a
   ceiling only at the top of the page. rAF runs only in flight.
+- The companion's frame hangs from the **bottom** of the viewport (`fixed bottom-0`, shifted up by the viewport
+  height), so positions stay top-left viewport coordinates but the floor is the real bottom edge. Phone browsers move
+  that edge while their toolbars slide in and out during scrolling, and Cache moves with it instead of floating above the
+  tab bar or sinking below the screen. A same-width resize smaller than 160 px is treated as toolbars: she keeps her
+  spot (standing, perched or mid-move).
 - Where she lands, she stays: the floor x is stored normalised (`{ x, y: 1, floor: true }`) and restored at the
   same relative spot after refresh, navigation and resize, always fully on screen. "Reset position" in
   settings is the only thing that walks her back to the corner.

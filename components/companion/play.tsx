@@ -5,6 +5,7 @@ import { isStill, type BodyPhase, type RoutineStep } from "@/lib/companion/behav
 import type { Gait } from "@/lib/companion/gait";
 import { line } from "@/lib/companion/lines";
 import { breakGame, clampX, playDirection, restMs } from "@/lib/companion/play-plan";
+import { purrFor } from "@/lib/companion/sound";
 import type { Point, World } from "@/lib/companion/resting";
 import { clamp } from "@/lib/utils";
 import { useCompanionStore, useFocusStore } from "@/stores/companion-store";
@@ -229,6 +230,7 @@ export function usePlay(deps: PlayDeps): { step: RoutineStep; yarn: Yarn; showYa
       const back = clampX(out - dir * dist * 0.5, w.minX, w.maxX);
       if (!(await walkTo(back, "trot")) || cancelled) return false;
       setStep("play-cheer");
+      purrFor("play");
       await wait(650);
       if (cancelled) return false;
       setStep(null);
@@ -243,6 +245,7 @@ export function usePlay(deps: PlayDeps): { step: RoutineStep; yarn: Yarn; showYa
       if (ok) {
         const s = useCompanionStore.getState();
         s.react("happy", 1400);
+        purrFor("play");
         s.say({ text: line("playDone"), mood: "happy", ms: 2600, solicited: true });
       }
       end();

@@ -28,13 +28,20 @@ export function readViewport(): Size {
 /** Gap between the cat's box and the floor line, px. */
 export const FLOOR_GAP = 2;
 
-/** The floor line: the bottom of the viewport, or the top of a fixed bottom tab bar (`nav[aria-label=Main]`). */
+/**
+ * The floor line: the bottom of the viewport, or the top of a fixed bottom tab bar (`nav[aria-label=Main]`).
+ * The bar is measured by its height, not its top: on phones it rides the real bottom edge (which toolbars move),
+ * as does the companion's frame, so "view height minus bar height" is right whatever the toolbars are doing.
+ */
 export function readFloorLine(view: Size): number {
   let line = view.h;
+  const bottom = Math.max(view.h, window.innerHeight || 0);
   document.querySelectorAll('nav[aria-label="Main"]').forEach((nav) => {
     const r = nav.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) return;
-    if (r.bottom >= view.h - 4 && r.top < view.h && r.top > view.h * 0.5) line = Math.min(line, r.top);
+    if (r.bottom >= Math.min(view.h, window.innerHeight || view.h) - 4 && r.bottom <= bottom + 4 && r.height < view.h * 0.5) {
+      line = Math.min(line, view.h - r.height);
+    }
   });
   return line;
 }

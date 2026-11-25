@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { persistenceAdapter, STORAGE_KEYS } from "@/lib/storage/adapter";
-import type { AccessoryId, AccessorySlot, CompanionPosition, CompanionSettings, CompanionStats } from "@/types/companion";
+import type { AccessoryId, AccessorySlot, CompanionPosition, CompanionSettings, CompanionStats, PurrSettings } from "@/types/companion";
 
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -74,11 +74,33 @@ interface PreferencesActions {
 
 export const defaultCompanionStats: CompanionStats = { feeds: 0, pets: 0, plays: 0, focusSessions: 0 };
 
+export const defaultPurrSettings: PurrSettings = {
+  clicks: false,
+  meows: true,
+  play: true,
+  pets: true,
+  naps: true,
+  celebrations: true,
+  focus: false,
+};
+
+export const DEFAULT_PURR_VOLUME = 0.6;
+
+/** Saved purr choices, with defaults for anything missing or malformed. */
+export function cleanPurr(input: unknown): PurrSettings {
+  const p = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const out = { ...defaultPurrSettings };
+  for (const k of Object.keys(out) as (keyof PurrSettings)[]) if (typeof p[k] === "boolean") out[k] = p[k] as boolean;
+  return out;
+}
+
 export const defaultCompanionSettings: CompanionSettings = {
   enabled: true,
   physics: true,
   studyTips: true,
   sound: false,
+  purr: defaultPurrSettings,
+  purrVolume: DEFAULT_PURR_VOLUME,
   position: null,
   stats: defaultCompanionStats,
   equipped: {},
@@ -155,6 +177,8 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
             // Accessories announced before the wardrobe tracked "seen" are not shown as new again.
             seenAccessories: Array.isArray(c.seenAccessories) ? c.seenAccessories : announced,
             topicMeows: typeof c.topicMeows === "boolean" ? c.topicMeows : true,
+            purr: cleanPurr(c.purr),
+            purrVolume: typeof c.purrVolume === "number" && Number.isFinite(c.purrVolume) ? Math.min(1, Math.max(0, c.purrVolume)) : DEFAULT_PURR_VOLUME,
             completionAsked: c.completionAsked && typeof c.completionAsked === "object" ? c.completionAsked : {},
           },
         };

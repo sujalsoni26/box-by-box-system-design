@@ -6,7 +6,7 @@ import { useCompanionStore, useFocusStore, type BubbleAction, type BubbleInput }
 import type { Lesson } from "@/types/curriculum";
 import { fill, line, LINES } from "./lines";
 import { pickRevision, type RevisionSource } from "./lesson-context";
-import { companionBlip } from "./sound";
+import { purrFor } from "./sound";
 
 /*
  * What each menu item does. Plain functions over the stores, so they can run from click handlers
@@ -93,7 +93,7 @@ function revealRevision(lesson: Lesson): void {
         primary: true,
         onSelect: () => {
           useCompanionStore.getState().react("happy", 1400);
-          companionBlip("happy");
+          purrFor("celebrations");
         },
       },
       { label: "Review lesson", href: lessonHref(lesson) },
@@ -178,6 +178,7 @@ export function meowLine(lesson?: Lesson): string {
 }
 
 export function meowAboutTopic(lesson?: Lesson): void {
+  purrFor("meows");
   ask({
     title: lesson ? `Meow: ${lesson.title}` : "Meow",
     text: meowLine(lesson),
@@ -206,12 +207,11 @@ export function feedCache(): void {
   usePreferencesStore.getState().bumpCompanionStat("feeds");
   s.dismiss();
   s.react("eating", EATING_MS);
-  companionBlip("pop");
+  purrFor("pets");
   window.clearTimeout(feedTimer);
   feedTimer = window.setTimeout(() => {
     const c = useCompanionStore.getState();
     c.react("happy", 1600);
-    companionBlip("happy");
     c.say({ text: line("nom"), mood: "happy", ms: 3000, solicited: true });
   }, EATING_MS);
 }
@@ -224,7 +224,7 @@ export function petCache(lesson?: Lesson, speak = true): void {
   const s = useCompanionStore.getState();
   usePreferencesStore.getState().bumpCompanionStat("pets");
   s.react("purring", 1900);
-  companionBlip("happy");
+  purrFor("pets");
   if (!speak) return;
   // Mostly purrs; every third pet on a lesson page, the topic meow instead.
   petCount += 1;
@@ -252,7 +252,7 @@ export function toggleNap(): void {
 }
 
 /**
- * "Lamp nap" (desktop, motion allowed): a lamp pops up a few steps away; she walks over, leaps on, settles and
+ * "Lamp nap" (where it fits, phones included; motion allowed): a lamp pops up a few steps away; she walks over, leaps on, settles and
  * sleeps until woken on purpose. The companion component plays it out (lamp.tsx).
  */
 export function lampNap(): void {
@@ -261,8 +261,31 @@ export function lampNap(): void {
   if (s.napping) s.setNapping(false);
   s.dismiss();
   s.startActivity("lamp", "menu");
-  companionBlip("pop");
   s.say({ text: line("lampNap"), mood: "happy", ms: 2600, solicited: true });
+}
+
+/**
+ * ASMR nap: she curls up on her lamp (or where she is, when the lamp has no room or motion is reduced) and purrs
+ * continuously until woken: a tap, "Wake up" or a pet. The purr plays even with purring sounds off: it was asked for.
+ * The companion component plays the loop while she sleeps and ends ASMR when she wakes.
+ */
+export function asmrNap(lampAvailable: boolean): void {
+  const s = useCompanionStore.getState();
+  s.dismiss();
+  if (lampAvailable) {
+    if (s.activity?.kind !== "lamp") {
+      if (s.napping) s.setNapping(false);
+      s.startActivity("lamp", "menu");
+    } else if (!s.napping) {
+      // Already asleep on the lamp from an idle spell: make it a nap on request, so reading doesn't wake her.
+      s.setNapping(true);
+    }
+  } else {
+    if (s.activity) s.endActivity(s.activity.id);
+    s.setNapping(true);
+  }
+  s.setAsmr(true);
+  s.say({ text: line(lampAvailable ? "asmrLamp" : "asmrHere"), mood: "sleeping", ms: 3600, solicited: true });
 }
 
 /** A yarn ball rolls along the floor; the companion component plays the chase (needs her position). */
@@ -272,7 +295,7 @@ export function playWithCache(): void {
   const s = useCompanionStore.getState();
   s.dismiss();
   s.startActivity("play");
-  companionBlip("pop");
+  purrFor("play");
 }
 
 export function openWardrobe(): void {

@@ -8,6 +8,7 @@ import {
   Compass,
   EyeOff,
   Fish,
+  Headphones,
   Heart,
   LampFloor,
   Lightbulb,
@@ -22,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  asmrNap,
   explainSimply,
   feedCache,
   hideCompanion,
@@ -62,7 +64,7 @@ interface CompanionMenuProps {
   animated: boolean;
   /** The cat button: focus returns here, and clicks on it do not count as "outside". */
   anchorRef: RefObject<HTMLElement | null>;
-  /** "Lamp nap" is offered where the lamp routine can run (desktop-sized viewport, motion allowed). */
+  /** "Lamp nap" is offered where the lamp routine can run (room beside her, motion allowed). */
   lampAvailable: boolean;
 }
 
@@ -76,6 +78,7 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef, lampAvai
   const focusMinutes = useFocusStore((s) => s.focusMinutes);
   const napping = useCompanionStore((s) => s.napping);
   const onLamp = useCompanionStore((s) => s.activity?.kind === "lamp");
+  const asmr = useCompanionStore((s) => s.asmr);
   const topicMeows = usePreferencesStore((s) => s.companion.topicMeows);
   const newAccessories = useNewAccessoryCount();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -118,6 +121,7 @@ export function CompanionMenu({ id, lesson, above, animated, anchorRef, lampAvai
     { id: "nap", label: napping || onLamp ? "Wake up" : "Nap", icon: napping || onLamp ? Sun : Moon, run: toggleNap },
     ...(lampAvailable && !onLamp ? [{ id: "lamp", label: "Lamp nap", hint: "cosy", icon: LampFloor, run: lampNap }] : []),
     { id: "play", label: "Play", hint: "yarn", icon: Volleyball, run: playWithCache },
+    ...(asmr ? [] : [{ id: "asmr", label: "ASMR purr", hint: "sleepy", icon: Headphones, run: () => asmrNap(lampAvailable) }]),
   ];
   const endItems: MenuItem[] = [
     { id: "hide", label: "Hide companion", icon: EyeOff, run: hideCompanion },
