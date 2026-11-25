@@ -183,7 +183,6 @@ out while scrolling never wake her. Ways in:
   coming back to the tab wake her; the mouse merely moving does not (so she can be reached and carried).
 - **Menu:** "Lamp nap" in the Play group (shown only where the lamp can run). A nap on request: ordinary activity and
   opening the menu do not wake her; a tap, "Wake up" or a pet does.
-- **ASMR purr** (menu, or the Start button in settings): a nap on request with a continuous purr (below).
 
 The sequence: a lamp pops up 3–5 walk steps (plus a jump) away, on the side with room, towards the middle of the screen
 (`lib/companion/lamp-geometry.ts`); she turns to it, walks those steps, crouches with a wiggle, leaps along an arc, lands
@@ -213,33 +212,7 @@ routine cleanly at any step (never leaving her in the air); every timer and subs
 Click, tap, Enter or Space on the cat (ArrowDown/ArrowUp also open it). Arrow keys, Home and End move,
 Escape closes and returns focus to the cat, Tab leaves. Items: Explain simply, Quick revision, Focus timer (shows the
 chosen length), What should I learn next?, Meow about this topic, Pause / Resume topic meows, a "Play with Cache" group
-(Wardrobe with a "N new" badge, Feed, Pet, Nap / Wake up, Lamp nap, Play, ASMR purr), Hide companion, Companion settings.
-
-## Purrs and meows
-
-Synthesised in the browser (`lib/companion/cat-sounds.ts`, no audio files); playback, volume and the moments are in
-`lib/companion/sound.ts`.
-
-- **Purr:** soft, warm noise (about 90% of it below 600 Hz) gently ruffled, never chopped, about 25 times a second,
-  with the rate drifting a little as a real cat's does, a faint breathy layer (1–3 kHz) so it is heard on phone
-  speakers, and slow breaths in (quieter) and out (fuller). A one-breath purr, a three-breath purr and a 26 s loop
-  that starts and ends silent, so it repeats seamlessly. (The first version chopped brighter noise deeply and sounded
-  like an engine; `scripts/tests/cat-sounds.test.mjs` now checks the purr stays low and gently ruffled.)
-- **Meows:** a small voice made from harmonics shaped by moving mouth resonances, like speech: "m" opening to "ee" or
-  "ah" and closing to "ow" while the pitch rises and falls. A kitten **mew** (about 1 kHz), a fuller **meow**, a sleepy
-  **mraow** for waking, and **trills** ("prrt", softly rolled); each plays at a slightly different pitch every time.
-- **Off by default** (`companion.sound`, "Purrs and meows" in Companion settings), with a tick per moment
-  (`companion.purr`) and a volume (`companion.purrVolume`); ticking a moment plays it, and "Hear a purr" / "Hear a
-  mew" preview the voice.
-- Moments: when she talks (a mew with a new speech bubble, at most every 8 s and not right after another sound),
-  waking up (mraow and a trill), topic meows (meow and purr), playing (trill and mew), petting and feeding (long purr),
-  dozing off (long purr), celebrations (trill, mew, purr) and focus blocks (a quieter purr loop while a block runs; off
-  by default), plus every click on a button or link (a tiny prrt; off by default). Each moment has a minimum gap, and
-  sounds only play in a visible tab.
-- **ASMR purr** (menu or settings): she goes to her lamp (or naps where she is when the lamp has no room or motion is
-  reduced) and, once asleep, purrs continuously, fading in, until she is woken (a tap, "Wake up" or a pet), when it fades
-  out. Scrolling and reading don't wake her. It plays even with sounds off, because it was asked for, and keeps playing
-  in a background tab.
+(Wardrobe with a "N new" badge, Feed, Pet, Nap / Wake up, Lamp nap, Play), Hide companion, Companion settings.
 
 ## Drag, gravity and the floor
 

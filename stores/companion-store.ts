@@ -77,8 +77,6 @@ interface CompanionRuntimeState {
   breakPlayOff: number;
   /** Bumped to wake Cache on the lamp on purpose (a tap, "Wake up"); the lamp routine listens. */
   lampWake: number;
-  /** ASMR nap: she sleeps (on her lamp where it fits) and purrs continuously until woken. Runtime only. */
-  asmr: boolean;
 }
 
 interface CompanionRuntimeActions {
@@ -100,7 +98,6 @@ interface CompanionRuntimeActions {
   stopBreakPlay: (breakStartedAt: number) => void;
   /** Wake her on the lamp: she stretches and hops down. */
   wakeLamp: () => void;
-  setAsmr: (on: boolean) => void;
 }
 
 let nextId = 1;
@@ -125,7 +122,6 @@ export const useCompanionStore = create<CompanionRuntimeState & CompanionRuntime
   activity: null,
   breakPlayOff: 0,
   lampWake: 0,
-  asmr: false,
 
   say: (input) => {
     const id = nextId++;
@@ -176,7 +172,6 @@ export const useCompanionStore = create<CompanionRuntimeState & CompanionRuntime
     if (get().activity?.id === id) set({ activity: null });
   },
   wakeLamp: () => set((s) => ({ lampWake: s.lampWake + 1, napping: false, idleLevel: 0 })),
-  setAsmr: (on) => set({ asmr: on }),
   stopBreakPlay: (breakStartedAt) => {
     const a = get().activity;
     set({ breakPlayOff: breakStartedAt, activity: a?.kind === "break-play" ? null : a });

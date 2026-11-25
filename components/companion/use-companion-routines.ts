@@ -4,7 +4,6 @@ import { canActOnItsOwn, type BodyPhase } from "@/lib/companion/behaviour";
 import { fill, line, LINES } from "@/lib/companion/lines";
 import { pageIsBusy, trackWidgetInteractions } from "@/lib/companion/quiet";
 import { canNudge, canRespond } from "@/lib/companion/reactions";
-import { purrFor } from "@/lib/companion/sound";
 import { markFactShown, nextFact } from "@/lib/companion/topic-facts";
 import { TIMING } from "@/lib/companion/timing";
 import { completeLesson } from "@/lib/learning/complete-lesson";
@@ -80,7 +79,6 @@ export function useTopicMeows({ lesson, compact, getPhase }: RoutineOptions) {
       if (!fact) return; // every fact for this lesson already shown this session
       shown += 1;
       markFactShown(slug, fact.key);
-      purrFor("meows");
       useCompanionStore.getState().say({
         title: `Meow fact · ${fact.title}`,
         text: fact.text,

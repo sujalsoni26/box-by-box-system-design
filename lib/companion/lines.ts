@@ -127,11 +127,6 @@ export const LINES = {
   completionReview: ["Flagged for review. It's waiting in your review list.", "Marked for review. Come back to it whenever you like."],
   topicPaused: "Topic meows paused. Resume them from my menu whenever you like.",
   topicResumed: "Topic meows back on. I will share a fact from the lesson now and then.",
-  asmrLamp: [
-    "Purr mode. Off to my warm lamp. Tap me when you want me back.",
-    "Sleepy purrs, coming up. I'll be on my lamp; a tap wakes me.",
-  ],
-  asmrHere: ["Purr mode. I'll doze right here. Tap me to wake me.", "Curling up for sleepy purrs. A tap wakes me."],
   signedIn: [
     "Signed in. Welcome, {you}! Your progress now follows you to any device.",
     "Mrrp! Hello, {you}. I will keep your progress safe in your account.",
