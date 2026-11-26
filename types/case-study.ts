@@ -10,7 +10,7 @@ export interface CaseStudyStep {
 }
 
 /**
- * A guided interview exercise built on a case-study lesson (data/case-studies.ts).
+ * A guided interview exercise built on a case-study lesson (data/case-studies/<slug>.ts).
  * `slug` is the lesson slug of the full walkthrough, so progress and "marked for review"
  * are shared between the exercise and its lesson.
  */

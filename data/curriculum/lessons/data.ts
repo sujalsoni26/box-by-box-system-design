@@ -1,0 +1,77 @@
+import type { LessonMeta } from "@/types/curriculum";
+
+/** Module 4: Data. Bodies: content/lessons/<slug>.mdx; teaching guidance: data/lesson-guides/data.ts. */
+export const lessons: LessonMeta[] = [
+  {
+    slug: "sql-nosql", title: "SQL vs NoSQL", moduleId: "data", level: "basic", minutes: 9,
+    problem: "Different data has different shapes and access patterns, and no single database is best at all of them.",
+    summary: "Relational databases give schemas, joins and ACID transactions; NoSQL is a family (key-value, document, wide-column, graph). Default to relational and choose by data model, access pattern, consistency and scale.",
+    catTip: "SQL is my neatly labelled toy drawers. NoSQL is four different toy boxes, each great for one kind of toy. Most big houses, Instagram included, use both.",
+    recall: { q: "What four questions decide SQL vs NoSQL?", a: "Data model (relational or flexible?), access patterns (joins or key lookups at huge scale?), consistency (money or likes?) and expected scale." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "acid", title: "Transactions and ACID", moduleId: "data", level: "intermediate", minutes: 9,
+    problem: "Moving ₹500 from A to B is two writes. If the server crashes between them, money disappears.",
+    summary: "A transaction makes several operations one unit: all commit or all roll back. ACID names the four guarantees.",
+    catTip: "A transaction is me knocking a glass off the table: either it reaches the floor or it never left. No glass floats halfway. Atomicity, meow.",
+    recall: { q: "How is ACID's C different from CAP's C?", a: "ACID C: rules and constraints always hold. CAP C: every read sees the latest write." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "indexing", title: "Database indexing", moduleId: "data", level: "basic", minutes: 8,
+    problem: "On 500M rows, WHERE email = … without an index reads every single row.",
+    summary: "An index (usually a B-tree) keeps a column sorted with pointers to rows, turning an O(n) scan into O(log n) steps. It costs storage and slower writes.",
+    catTip: "Without an index, finding my favourite toy means checking every corner of the house. With an index, I know: living room, under the sofa, left side. Three steps.",
+    recall: { q: "A composite index on (country, city): which queries does it help?", a: "Queries on country, or country + city. Not city alone, because the leftmost column must be used." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "normalization", title: "Normalization vs denormalization", moduleId: "data", level: "basic", minutes: 6,
+    problem: "Storing each fact once keeps data correct, but hot read paths then need slow joins.",
+    summary: "Normalize by default (each fact once); denormalize the hot read paths that measurements show are bottlenecked.",
+    catTip: "Normalized: my name is written once, on my collar. Denormalized: it's on my bowl, my bed and my scratching post. Faster to read, but rename me and you're relabelling all day.",
+    recall: { q: "When should you denormalize?", a: "For read-heavy hot paths (feeds, dashboards) that measurements show are bottlenecked by joins." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "replication", title: "Database replication", moduleId: "data", level: "intermediate", minutes: 11,
+    problem: "One database can't serve every read, and if it dies, everything stops.",
+    summary: "Keep copies on several machines: the primary takes writes and streams changes to replicas, which serve reads. Async replication is fast but causes lag and stale reads.",
+    catTip: "Replication is me teaching the kittens my moves. I invent the trick (writes); they copy it a bit later (replicas). Ask a kitten too soon and you get last week's trick.",
+    recall: { q: "Your comment appears, then vanishes on refresh. What's happening, and what's the fix?", a: "The refresh read hit a lagging async replica. Fix: read-your-own-writes, sending that user's reads to the primary for a short time after they write." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "sharding", title: "Sharding and partitioning", moduleId: "data", level: "advanced", minutes: 12,
+    problem: "The data outgrows one machine (say 50 TB), or writes overwhelm a single primary.",
+    summary: "Split the rows across machines by a shard key. Replication copies the same data; sharding splits different data. Shard last.",
+    catTip: "Sharding is splitting my toy collection across three rooms by toy number. Great until one room gets all the catnip mice. That's a hot shard, and it's chaos.",
+    recall: { q: "Replication or sharding: which helps when the data is too big for one machine?", a: "Sharding. It splits different rows across machines; replication only copies the same data." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "consistency", title: "Consistency: strong vs eventual", moduleId: "data", level: "intermediate", minutes: 8,
+    problem: "Once data has copies, they can briefly disagree: your profile update reached the primary but not yet a replica.",
+    summary: "A consistency model is the promise about what a read returns after a write. Strong costs latency; eventual is fast but may be stale; causal and read-your-writes sit in between.",
+    catTip: "Eventual consistency: I told one human I was fed, the other one hasn't heard yet, so I get a second breakfast. For likes that's harmless. For your bank balance, please don't.",
+    recall: { q: "Give one feature that needs strong consistency and one that is fine with eventual.", a: "Strong: balances, payments, inventory, permissions. Eventual: likes, views, follower counts, feeds." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "cap", title: "CAP and PACELC", moduleId: "data", level: "advanced", minutes: 16,
+    problem: "With copies in several places, a broken or slow network forces a choice between correct answers and any answer.",
+    summary: "During a partition you choose consistency (refuse or wait) or availability (answer, maybe stale). PACELC adds the everyday case: even when healthy, you trade latency against consistency.",
+    catTip: "CAP, cat edition: the door between me and the food room is shut. I can refuse to say whether I've eaten (C), or confidently say \"never fed, ever\" (A). I always pick A.",
+    recall: { q: "Why doesn't CAP apply to one server with one database?", a: "There's a single source of truth and nothing to partition. The trade-off appears only once data lives in more than one place." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "object-storage", title: "Object storage", moduleId: "data", level: "basic", minutes: 6,
+    problem: "Images, videos and PDFs are large binary blobs that bloat a relational database and clog the app servers that relay them.",
+    summary: "Store files as objects in buckets (S3, Google Cloud Storage, Azure Blob), upload them directly with pre-signed URLs, keep only the key and metadata in the database, and serve them through a CDN.",
+    catTip: "The database is my filing cabinet. Object storage is the giant warehouse out back. I keep the shelf number in the cabinet, never the actual sofa.",
+    recall: { q: "Why do clients upload straight to object storage with a pre-signed URL?", a: "So large files skip the app servers. The URL is a temporary, limited permission to upload one object." },
+    archNodes: ["storage"],
+  },
+];

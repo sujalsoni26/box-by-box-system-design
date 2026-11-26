@@ -1,0 +1,15 @@
+Copyright (c) 2026 Sujal Soni. All rights reserved.
+
+Box by Box, including its source code, lesson content, case studies, quizzes, diagrams, illustrations and the
+"Cache" companion character, is proprietary.
+
+No part of it may be copied, modified, distributed, published, sublicensed, sold or used to create derivative
+works, in whole or in part, without prior written permission from the copyright holder. Access to this
+repository does not grant any licence to its contents.
+
+Third-party components keep their own licences and are not covered by this notice:
+- the fonts in app/fonts (Bricolage Grotesque, Atkinson Hyperlegible Next, JetBrains Mono) are licensed under the
+  SIL Open Font License 1.1;
+- the npm packages listed in package.json are licensed by their authors under their respective licences.
+
+THE SOFTWARE AND CONTENT ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.

@@ -2,26 +2,26 @@
 
 ## Content
 
-- **Curriculum** (`data/curriculum.ts`): 16 modules, 143 lessons, in learning order. Each lesson has metadata the layout renders:
+- **Curriculum** (`data/curriculum/`: `modules.ts` and one `lessons/<module>.ts` per module): 16 modules, 143 lessons, in learning order. Each lesson has metadata the layout renders:
   title, level, minutes, `problem`, `summary` (the building block), `catTip`, `recall`, and `archNodes` (the boxes of the final
   architecture it lights up).
-- **Teaching guidance** (`data/lesson-guides.ts`): `breaks`, `tradeoffs`, `explainSimply`, `hint` per lesson. Kept separate so it
+- **Teaching guidance** (`data/lesson-guides/<module>.ts`): `breaks`, `tradeoffs`, `explainSimply`, `hint` per lesson. Kept separate so it
   can be edited without touching lesson metadata. `lib/curriculum.ts` merges both into a `Lesson`.
 - **Lesson bodies** (`content/lessons/<slug>.mdx`): prose plus a small component vocabulary (see `mdx-components.tsx`):
   `Callout`, `Comparison`/`ComparisonItem`, `DeepDive`, `Steps`, `ConceptCard`, `Diagram`, `Mermaid`, `Interactive`.
   The lesson page imports the MDX file by slug and prerenders every lesson route at build time.
-- **Quizzes** (`data/quizzes.ts`) are optional knowledge checks shown after the lesson that completes their topics, and all
+- **Quizzes** (`data/quizzes/<module>.ts`) are optional knowledge checks shown after the lesson that completes their topics, and all
   together on `/practice`. A question may only test lessons up to its check's `afterLesson`; answer positions are balanced.
-  **Recall decks** (`data/recall.ts`) feed the flashcards.
-- **Case studies** (`data/case-studies.ts`, `types/case-study.ts`) are guided interview exercises, one per HLD/LLD case-study
+  **Recall decks** (`data/recall/<deck>.ts`) feed the flashcards.
+- **Case studies** (`data/case-studies/<slug>.ts`, `types/case-study.ts`) are guided interview exercises, one per HLD/LLD case-study
   lesson and keyed by that lesson's slug. `/case-studies/[slug]` reveals one step at a time (prompt, optional hint, insight);
   the lesson stays the full worked answer, and links to the exercise. `scripts/validate-practice.mjs` checks quizzes and
   case studies (ids, options, answer balance, lesson order, step counts).
 
 ### Adding a lesson
 
-1. Add metadata to `data/curriculum.ts` and list the slug in a module.
-2. Add guidance to `data/lesson-guides.ts`.
+1. Add metadata to `data/curriculum/lessons/<module>.ts` and list the slug in that module in `data/curriculum/modules.ts`.
+2. Add guidance to `data/lesson-guides/<module>.ts`.
 3. Write `content/lessons/<slug>.mdx`.
 4. Run `npm run check` (types, lint, `validate:content` and `validate:practice`).
 

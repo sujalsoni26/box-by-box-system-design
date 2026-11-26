@@ -11,7 +11,7 @@ locally: there is no AI and no network call.
 |---|---|
 | `components/companion/companion.tsx` | `Companion` root (mounted once in the root layout). Gates on hydration and the On/Off setting; wires position, behaviour, routines, bubble, menu, lamp, yarn and timer chip. |
 | `lib/companion/behaviour.ts` | The state model: body phases, routine steps, `deriveMood()` (one pose from all state), `SIDE_MOODS`, `canActOnItsOwn()` (one guard for anything unprompted). |
-| `components/companion/pixel-cat.tsx` | `PixelCat`: the cat as vector SVG parts posed with Motion; a front view and a four-legged side view (walk, crouch, leap); accessories, costumes and the fish. |
+| `components/companion/pixel-cat.tsx` | `PixelCat`: the cat as vector SVG parts posed with Motion, front view and the mosaic; its parts are in `components/companion/cat/`: `art.ts` (poses, paths, palette), `side-view.tsx` (the four-legged walk, crouch and leap), `accessories.tsx` (accessories and costumes) and `details.tsx` (eyes, mouth and the fish). |
 | `components/companion/use-companion-position.ts` | The body state machine: drag (Motion), throw physics, landing, gait-based walking, jumping, perching, persistence of the position, resize handling. |
 | `components/companion/use-companion-brain.ts` | Event bus listener, inactivity (sit, lamp, yawn, sleep, wake), greeting, lesson tips, focus-timer notices. |
 | `components/companion/use-companion-routines.ts` | Topic meows and the end-of-lesson completion prompt (scheduling, observers, cleanup). |

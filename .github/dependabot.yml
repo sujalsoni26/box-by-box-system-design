@@ -1,0 +1,27 @@
+# Weekly update pull requests for npm packages and the GitHub Actions used by CI. Minor and patch updates come
+# grouped in one pull request per ecosystem; major versions come one by one, so each can be checked on its own.
+# Security updates are separate and immediate (turn on "Dependabot security updates" in the repo settings).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

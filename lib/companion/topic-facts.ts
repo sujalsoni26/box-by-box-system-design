@@ -7,7 +7,7 @@ import type { Lesson } from "@/types/curriculum";
  * generated or paraphrased beyond trimming, so Cache can never state something the course does not:
  * 1. sentences the author highlighted with <mark> in the lesson body (read from the page);
  * 2. glossary terms this lesson defines (data/glossary.json, lessonSlug === lesson);
- * 3. the lesson's own one-line building block and trade-off (data/curriculum.ts, data/lesson-guides.ts);
+ * 3. the lesson's own one-line building block and trade-off (data/curriculum/lessons/, data/lesson-guides/);
  * 4. its meow-speak line (data/cat-meows.ts), as the occasional playful one.
  */
 

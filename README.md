@@ -19,7 +19,8 @@ Built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, MDX, Zustand, Motio
 
 ## Run
 
-Requires Node.js 20.9 or newer. Versions of everything used are in [TECH_STACK.md](TECH_STACK.md).
+Node.js 20.9 or newer runs the site; `npm run check` needs 22.15 or newer (the tests use synchronous module hooks). The
+site is developed and tested with Node.js 26, which CI also uses. Exact package versions are in `package-lock.json`.
 
 ```bash
 npm install
@@ -32,20 +33,36 @@ npm test           # unit tests only (Node's built-in runner, no extra dependenc
 
 On Windows, if PowerShell blocks `npm` scripts, use `npm.cmd` instead, e.g. `npm.cmd run dev`.
 
-Accounts are off unless the Firebase variables are set (`NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`, optionally `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`) in `.env.local` or the host's build environment. See [docs/accounts.md](docs/accounts.md).
+Accounts are off unless the Firebase variables are set in `.env.local` or the host's build environment. Copy
+[.env.example](.env.example) to `.env.local` and fill it in; setup is in [docs/accounts.md](docs/accounts.md).
 
 ## Project layout
 
 ```
 app/              routes: dashboard, /learn, /learn/[module]/[slug] (old /learn/<slug> URLs redirect), /case-studies, /case-studies/[slug], /practice, /progress, /glossary
 content/lessons/  lesson bodies (MDX)
-data/             curriculum, quizzes, case studies, flashcards, glossary, lesson guides
-components/       UI, lesson layout, diagrams, quiz, glossary, companion
-stores/           Zustand stores (progress, preferences, companion)
-lib/              helpers, hooks, storage adapter, MDX plugin
-docs/             architecture and companion notes
+data/             curriculum/ (modules + lessons per module), lesson-guides/ and quizzes/ (per module),
+                  case-studies/ (one file per study), recall/ (one file per flashcard deck), glossary, cat meows
+components/       UI, lesson layout, diagrams, quiz, glossary, account, companion (the cat's art in companion/cat/)
+stores/           Zustand stores (progress, preferences, notes, account, companion)
+lib/              helpers, hooks, storage adapter, cloud sync, MDX plugin
+firebase/         Firestore security rules
+docs/             architecture, companion and accounts notes
+.github/          CI (npm run check on every pull request and on main) and Dependabot
 ```
 
-More detail is in [docs/architecture.md](docs/architecture.md) and [docs/companion.md](docs/companion.md).
+More detail is in [docs/architecture.md](docs/architecture.md), [docs/companion.md](docs/companion.md) and
+[docs/accounts.md](docs/accounts.md).
 
-Fonts (Bricolage Grotesque, Atkinson Hyperlegible Next, JetBrains Mono) are self-hosted under the SIL Open Font License 1.1.
+## Security
+
+- Every page is served with a Content Security Policy and other hardening headers (`next.config.ts`): scripts,
+  requests and frames are limited to this site and the Firebase/Google endpoints sign-in needs.
+- No secrets in the repository: `.env*` files are ignored (only the empty `.env.example` is committed), and the
+  Firebase web config is public by design. Firestore access is enforced by `firebase/firestore.rules`.
+- Dependabot opens weekly update pull requests for npm packages and GitHub Actions; CI actions are pinned to commits.
+
+## License
+
+Proprietary: all rights reserved. See [LICENSE](LICENSE). The self-hosted fonts (Bricolage Grotesque, Atkinson
+Hyperlegible Next, JetBrains Mono) are under the SIL Open Font License 1.1.
