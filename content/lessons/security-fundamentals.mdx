@@ -10,11 +10,11 @@ Security goals are usually stated as the **CIA triad**; the definitions below pa
 | Integrity | Data is not improperly modified or destroyed, and actions can be attributed | A like count the client cannot edit | Server-side validation, signatures, audit logs |
 | Availability | Timely, reliable access for legitimate users | The feed still loads during a bot flood | Redundancy, rate limiting, load shedding |
 
-<mark>Availability is a security property.</mark> A denial-of-service attack reads nothing and changes nothing, yet it breaks the contract, so the reliability module (see [Availability](/learn/availability)) and this one defend the same thing from different directions.
+<mark>Availability is a security property.</mark> A denial-of-service attack reads nothing and changes nothing, yet it breaks the contract, so the reliability module (see [Availability](/learn/reliability/availability)) and this one defend the same thing from different directions.
 
 ## Who is asking, what may they do, what did they do
 
-Three words carry the module. **Authentication** establishes *who* is asking: a password, a session cookie, a certificate (see [Authentication](/learn/authentication)). **Authorisation** decides whether that identity *may* do this action to this object (see [Authorisation](/learn/authorization)). **Accounting**, or auditing, records *what they did*, so actions can be attributed and a breach reconstructed (see [Logging](/learn/logging)). The order is fixed: an unauthenticated request cannot be authorised, and an unlogged action cannot be investigated.
+Three words carry the module. **Authentication** establishes *who* is asking: a password, a session cookie, a certificate (see [Authentication](/learn/security/authentication)). **Authorisation** decides whether that identity *may* do this action to this object (see [Authorisation](/learn/security/authorization)). **Accounting**, or auditing, records *what they did*, so actions can be attributed and a breach reconstructed (see [Logging](/learn/operations/logging)). The order is fixed: an unauthenticated request cannot be authorised, and an unlogged action cannot be investigated.
 
 ## Trust boundaries and attack surface
 
@@ -50,7 +50,7 @@ The **attack surface** is the set of points where an attacker can try to get in,
 
 <Callout type="idea" title="The inside is not safe either">
 
-Calling the private network "trusted" is a simplification: a compromised service or a stolen laptop is already inside, which is why zero trust designs, covered in [Threat modelling](/learn/threat-modelling), authenticate internal calls too.
+Calling the private network "trusted" is a simplification: a compromised service or a stolen laptop is already inside, which is why zero trust designs, covered in [Threat modelling](/learn/security/threat-modelling), authenticate internal calls too.
 
 </Callout>
 
@@ -64,8 +64,8 @@ Suppose the post service's database password leaks through a log line. With one 
 
 1. The database accepts connections only from the private subnet, so the password is useless from outside.
 2. The credential belongs to a user that can read and write the posts tables but cannot read users or messages.
-3. Sensitive columns are encrypted with keys that database user cannot reach (see [Encryption](/learn/encryption)).
-4. An alert fires on a login from an unexpected source and the credential is rotated within minutes (see [Secrets management](/learn/secrets-management)).
+3. Sensitive columns are encrypted with keys that database user cannot reach (see [Encryption](/learn/security/encryption)).
+4. An alert fires on a login from an unexpected source and the credential is rotated within minutes (see [Secrets management](/learn/security/secrets-management)).
 
 </Steps>
 
@@ -80,7 +80,7 @@ A branch does not rely on its front door: a lock, a guard, cameras, a time-locke
 Saltzer and Schroeder wrote in 1975 that every program and every user "should operate using the least set of privileges necessary to complete the job". In a distributed system:
 
 - **Services** each get their own database user and cloud role and reach only the services they call. The thumbnail worker writes to the thumbnails bucket and nothing else.
-- **Tokens** carry only the scopes the task needs (see [OAuth 2.0, OpenID Connect and JWT](/learn/oauth-jwt)).
+- **Tokens** carry only the scopes the task needs (see [OAuth 2.0, OpenID Connect and JWT](/learn/security/oauth-jwt)).
 - **People** read by default and use a time-limited, logged break-glass path for production writes.
 
 The companion rule is **fail-safe defaults**: base decisions on permission rather than exclusion, so a missing rule denies. Least privilege is what makes defence in depth work; a layer that lets through everything except what you thought of is not a layer.

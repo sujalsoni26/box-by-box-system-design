@@ -48,6 +48,6 @@ Tools: Resilience4j, service meshes (Istio/Envoy). Netflix's Hystrix popularized
 
 <DeepDive title="Go deeper: bulkheads">
 
-A ship is split into watertight compartments (bulkheads) so one leak can't sink it. The software version gives each dependency its own limited pool of threads or connections. If the recommendations service hangs, it can exhaust only its own pool, and calls to payments still have threads to run on. Breakers stop the calls; bulkheads limit the damage while they happen. Bulkheads, cells and degraded modes get a full lesson: [Bulkheads and graceful degradation](/learn/bulkheads-degradation).
+A ship is split into watertight compartments (bulkheads) so one leak can't sink it. The software version gives each dependency its own limited pool of threads or connections. If the recommendations service hangs, it can exhaust only its own pool, and calls to payments still have threads to run on. Breakers stop the calls; bulkheads limit the damage while they happen. Bulkheads, cells and degraded modes get a full lesson: [Bulkheads and graceful degradation](/learn/operations/bulkheads-degradation).
 
 </DeepDive>

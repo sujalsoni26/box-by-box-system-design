@@ -1,4 +1,4 @@
-**Stream processing** computes over data that never ends. Instead of a job over last night's file, a processor keeps running: it consumes events as they arrive, holds state about what it has seen (counts, open sessions, the latest price per product) and emits results continuously. Two things make it harder than batch: time has two meanings, and state must survive crashes. The guarantees underneath are those of [Delivery semantics and exactly-once](/learn/delivery-semantics).
+**Stream processing** computes over data that never ends. Instead of a job over last night's file, a processor keeps running: it consumes events as they arrive, holds state about what it has seen (counts, open sessions, the latest price per product) and emits results continuously. Two things make it harder than batch: time has two meanings, and state must survive crashes. The guarantees underneath are those of [Delivery semantics and exactly-once](/learn/streaming/delivery-semantics).
 
 ## Two clocks
 
@@ -74,7 +74,7 @@ A distributed engine: a JobManager coordinates, TaskManagers run the operators, 
 
 ## Backpressure in a pipeline
 
-A slow operator must slow its upstream, or buffers grow until something dies. Kafka-based pipelines get this almost free: consumers pull, so a slow stage shows up as consumer lag rather than memory pressure. Inside Flink every network channel has a bounded pool of buffers and a task with no free output buffer is backpressured; since Flink 1.5 credit-based flow control has the receiver announce how many buffers it can take, so one slow channel no longer blocks the TCP connection it shares with healthy ones. The web UI shows each operator's time split between busy, backpressured and idle, the first place to look when a job falls behind; the general mechanisms are in [Backpressure and load shedding](/learn/backpressure).
+A slow operator must slow its upstream, or buffers grow until something dies. Kafka-based pipelines get this almost free: consumers pull, so a slow stage shows up as consumer lag rather than memory pressure. Inside Flink every network channel has a bounded pool of buffers and a task with no free output buffer is backpressured; since Flink 1.5 credit-based flow control has the receiver announce how many buffers it can take, so one slow channel no longer blocks the TCP connection it shares with healthy ones. The web UI shows each operator's time split between busy, backpressured and idle, the first place to look when a job falls behind; the general mechanisms are in [Backpressure and load shedding](/learn/reliability/backpressure).
 
 <Callout type="interview" title="Name the clock, then the late data">
 

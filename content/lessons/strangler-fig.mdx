@@ -2,7 +2,7 @@ The **strangler fig** pattern replaces a system gradually: put a routing facade 
 
 ## Why not a rewrite
 
-A big-bang rewrite takes years during which features are frozen; the old system's real behaviour is specified nowhere but in its code, and much of it is unwanted; and it ends on one cut-over night when everything changes at once. Replacing one capability at a time delivers value early, lets the first slice teach you how to do the second, and makes rollback as cheap as a routing change. Investment and return happen, in Fowler's words, "gradually and visibly". The lines you cut along are the bounded contexts from [Monolith, modular monolith, SOA and microservices](/learn/modular-monolith-soa).
+A big-bang rewrite takes years during which features are frozen; the old system's real behaviour is specified nowhere but in its code, and much of it is unwanted; and it ends on one cut-over night when everything changes at once. Replacing one capability at a time delivers value early, lets the first slice teach you how to do the second, and makes rollback as cheap as a routing change. Investment and return happen, in Fowler's words, "gradually and visibly". The lines you cut along are the bounded contexts from [Monolith, modular monolith, SOA and microservices](/learn/architecture/modular-monolith-soa).
 
 ## The facade
 
@@ -19,7 +19,7 @@ A big-bang rewrite takes years during which features are frozen; the old system'
 
 <Steps>
 
-1. Put a facade in front: an API gateway or reverse proxy (see [API gateway and backend-for-frontend](/learn/api-gateway)) that at first routes everything to the legacy system. Nothing else changes, and every request is now visible and steerable.
+1. Put a facade in front: an API gateway or reverse proxy (see [API gateway and backend-for-frontend](/learn/architecture/api-gateway)) that at first routes everything to the legacy system. Nothing else changes, and every request is now visible and steerable.
 2. Pick a **seam**: a capability with clear inputs and outputs and few tangled dependencies. Menu search before payments. Build it anew.
 3. Route a slice of its traffic to the new implementation, shadow first, then a small percentage, then all, keeping the switch that sends it back.
 4. Move the data the capability owns (below).
@@ -50,7 +50,7 @@ You do not close for a year. You fence off one aisle, fit out the new aisle behi
 The shortcut everyone reaches for is the **dual write**: the new service writes each change to its own database and to the legacy one. No transaction spans both, so one write succeeds while the other fails, the copies diverge silently, and retries make it worse. The safe route is **parallel change**, better known as expand and contract, written up by Danilo Sato in 2014:
 
 - **Expand.** Add the new store or columns beside the old. The legacy system stays the single writer of record.
-- **Migrate.** Backfill, then keep the new store in step by change data capture from the legacy database's log (see [CDC](/learn/cdc)) or an outbox (see [Pub/sub](/learn/pubsub)). Move readers, then writers, one writer of record at a time, with CDC flowing the other way while the old system still reads.
+- **Migrate.** Backfill, then keep the new store in step by change data capture from the legacy database's log (see [CDC](/learn/streaming/cdc)) or an outbox (see [Pub/sub](/learn/reliability/pubsub)). Move readers, then writers, one writer of record at a time, with CDC flowing the other way while the old system still reads.
 - **Contract.** Remove the old columns and code once nothing uses them.
 
 <mark>One writer of record at a time; let a log, not your application code, keep the copies in step.</mark>

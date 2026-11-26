@@ -56,6 +56,6 @@ A fixed window is two Redis commands: `INCR rate:user42:1201` then `EXPIRE` on f
 
 A cheap middle ground is the **sliding window counter**: estimate the rolling count as `current window + previous window × (fraction of it still inside the last 60 s)`. Cloudflare has described using this approximation at scale: two counters per client instead of a log of every timestamp.
 
-A full design, including Redis failure and per-tenant quotas: [Design a distributed rate limiter](/learn/design-rate-limiter). Limits as one layer of API defence: [API security](/learn/api-security).
+A full design, including Redis failure and per-tenant quotas: [Design a distributed rate limiter](/learn/hld/design-rate-limiter). Limits as one layer of API defence: [API security](/learn/security/api-security).
 
 </DeepDive>

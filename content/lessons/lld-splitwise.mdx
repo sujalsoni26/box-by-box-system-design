@@ -33,7 +33,7 @@ A **Splitwise-style expense sharer** records who paid for what, divides each exp
 | `DebtSimplifier` | Does the reduction from net balances to a short list of transfers |
 | `ExpenseService` | Does the use cases: validate, split, append, update balances, answer queries |
 
-The sentence that shapes everything else is `Expense`'s: a record that cannot be constructed in an invalid state, so no later code re-checks it. Each split type is a class with one reason to change, the single responsibility rule from [SOLID principles](/learn/solid), so a new split type is a new class rather than a new branch.
+The sentence that shapes everything else is `Expense`'s: a record that cannot be constructed in an invalid state, so no later code re-checks it. Each split type is a class with one reason to change, the single responsibility rule from [SOLID principles](/learn/lld/solid), so a new split type is a new class rather than a new branch.
 
 ## Class design
 
@@ -91,7 +91,7 @@ The sentence that shapes everything else is `Expense`'s: a record that cannot be
     ExpenseService --> DebtSimplifier : uses
 `} />
 
-Read the diamonds with the lifetime test from [Class relationships and UML](/learn/class-relationships-uml): delete an expense and its shares go with it; delete a group and its members remain. `ExpenseLedger` is left off the picture to stay within twelve classes; it sits between the service and the balance sheet.
+Read the diamonds with the lifetime test from [Class relationships and UML](/learn/lld/class-relationships-uml): delete an expense and its shares go with it; delete a group and its members remain. `ExpenseLedger` is left off the picture to stay within twelve classes; it sits between the service and the balance sheet.
 
 ## Key interfaces and methods
 
@@ -221,7 +221,7 @@ Anna owes Bob ₹200 and Bob owes Cathy ₹200. Bob hands Anna's IOU to Cathy, a
 ## Design patterns used and why
 
 - **Strategy** for the split. Three interchangeable algorithms chosen per expense, each three to ten lines and tested alone. The alternative, an enum with a `switch` inside `Expense`, puts every split rule in one method and reopens it for each new type.
-- **Immutable records as the unit of truth.** `Share` and `Expense` cannot change after creation and the ledger is append-only; corrections are new entries. Not a GoF pattern, but the decision that makes balances rebuildable and history trustworthy, the same idea as [event sourcing](/learn/event-sourcing) in miniature.
+- **Immutable records as the unit of truth.** `Share` and `Expense` cannot change after creation and the ledger is append-only; corrections are new entries. Not a GoF pattern, but the decision that makes balances rebuildable and history trustworthy, the same idea as [event sourcing](/learn/architecture/event-sourcing) in miniature.
 - **A static factory** such as `SplitStrategy.of(type, params)` turns API input into a strategy. Call it what it is: a factory method in the small sense, not the GoF Factory Method with subclasses.
 - **Observer, later.** `ExpenseAdded` events for notifications, so the service never learns about email or push.
 - **Not used.** No State pattern: nothing here has a lifecycle. No Singleton for the ledger; it is created once and injected.
@@ -241,11 +241,11 @@ Anna owes Bob ₹200 and Bob owes Cathy ₹200. Bob hands Anna's IOU to Cathy, a
 | Simplify changes who you pay | Opt-in per group: a member can be told to pay someone they never dealt with directly |
 | Same expense submitted twice | The client generates the expense id; the ledger ignores a duplicate id, so retries are safe |
 
-Failures are unchecked exceptions named for the rule they break, `InvalidSplit`, `NotAMember`, `InvalidAmount`, thrown from constructors and strategies and turned into responses at the boundary, as the [error handling](/learn/error-handling) lesson sets out; each carries the numbers the user needs to fix the input.
+Failures are unchecked exceptions named for the rule they break, `InvalidSplit`, `NotAMember`, `InvalidAmount`, thrown from constructors and strategies and turned into responses at the boundary, as the [error handling](/learn/lld/error-handling) lesson sets out; each carries the numbers the user needs to fix the input.
 
 ## Concurrency
 
-Two members add expenses to the same group at once. Because the ledger is append-only and net balances are a sum, order does not matter: replaying the ledger in any order gives the same `net`. If balances are cached rather than recomputed, update the cache under a per-group lock or with a version column, exactly as the seat hold does in [Movie ticket booking](/learn/lld-movie-ticket-booking). Simplification reads a snapshot of the balances and never writes, so it needs no lock at all. Client-generated ids make a retried `addExpense` idempotent.
+Two members add expenses to the same group at once. Because the ledger is append-only and net balances are a sum, order does not matter: replaying the ledger in any order gives the same `net`. If balances are cached rather than recomputed, update the cache under a per-group lock or with a version column, exactly as the seat hold does in [Movie ticket booking](/learn/lld-practice/lld-movie-ticket-booking). Simplification reads a snapshot of the balances and never writes, so it needs no lock at all. Client-generated ids make a retried `addExpense` idempotent.
 
 ## Extensibility and trade-offs
 

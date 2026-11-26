@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { glossary } from "@/data/glossary";
-import { lessons } from "@/lib/curriculum";
+import { lessons, lessonHref } from "@/lib/curriculum";
 import { cn } from "@/lib/utils";
 
 interface Result {
@@ -40,7 +40,7 @@ function search(query: string): Result[] {
             : `${l.summary} ${l.problem}`.toLowerCase().includes(q)
               ? 1
               : 0;
-    if (score) out.push({ kind: "Lesson", label: l.title, detail: `Lesson ${l.number}`, href: `/learn/${l.slug}`, score });
+    if (score) out.push({ kind: "Lesson", label: l.title, detail: `Lesson ${l.number}`, href: lessonHref(l.slug), score });
   }
   if (q) {
     for (const g of glossary) {

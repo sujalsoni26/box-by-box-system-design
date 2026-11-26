@@ -1,4 +1,4 @@
-Given a long URL, return a short one; visiting the short URL redirects to the original. This walks through [the interview playbook](/learn/playbook) step by step. It is the smallest study in the module, so it covers the first five steps of [the case-study template](/learn/case-study-method) in full, folds the rest into four deep dives, and ends with how the design grows.
+Given a long URL, return a short one; visiting the short URL redirects to the original. This walks through [the interview playbook](/learn/practice/playbook) step by step. It is the smallest study in the module, so it covers the first five steps of [the case-study template](/learn/hld/case-study-method) in full, folds the rest into four deep dives, and ends with how the design grows.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ Given a long URL, return a short one; visiting the short URL redirects to the or
 | Storage | 10⁹ rows × 500 B (code, long URL, timestamps) | \~500 GB |
 | Code length | 62⁵ ≈ 0.9 billion (too few) · 62⁶ ≈ 57 billion · 62⁷ ≈ 3.5 trillion | 6 base-62 characters (7 for 100B URLs) |
 
-→ Read-heavy with a small dataset: <mark>500 GB fits one PostgreSQL instance, so no sharding</mark>. Saying that is a green flag. The [worked estimation example](/learn/estimation-examples) assumed about 365× more writes (100M a day), which pushes storage to \~1 PB and codes to 7 characters, and that is where sharding enters.
+→ Read-heavy with a small dataset: <mark>500 GB fits one PostgreSQL instance, so no sharding</mark>. Saying that is a green flag. The [worked estimation example](/learn/practice/estimation-examples) assumed about 365× more writes (100M a day), which pushes storage to \~1 PB and codes to 7 characters, and that is where sharding enters.
 
 **Base 62** = 0–9, A–Z, a–z: 62 URL-safe characters, avoiding `?`, `#` and `/`, which mean something in a URL.
 
@@ -44,7 +44,7 @@ CREATE TABLE urls (
 );
 ```
 
-The `UNIQUE` constraint builds a B-tree index, so a lookup takes a few steps instead of scanning a billion rows (see [Database indexing](/learn/indexing)).
+The `UNIQUE` constraint builds a B-tree index, so a lookup takes a few steps instead of scanning a billion rows (see [Database indexing](/learn/data/indexing)).
 
 ## High-level design
 
@@ -118,17 +118,17 @@ Redis lives in memory, so the counter needs persistence (AOF) and a replica, or 
 ## Deep dive 3: fast reads at 3,000 QPS
 
 - The unique index makes each lookup a few B-tree steps, so PostgreSQL alone meets the 200 ms target. Because the code is the base 62 of the ID, you can also decode it and look up by primary key.
-- **Hot links** (a viral Diwali-sale link) skew traffic. Put Redis in front as a cache-aside layer (see [Caching](/learn/caching)), evict with LRU (a recently clicked link tends to be clicked again), and set a TTL of about a day, never beyond the link's `expires_at`.
+- **Hot links** (a viral Diwali-sale link) skew traffic. Put Redis in front as a cache-aside layer (see [Caching](/learn/reliability/caching)), evict with LRU (a recently clicked link tends to be clicked again), and set a TTL of about a day, never beyond the link's `expires_at`.
 - The 99.99% target needs **redundancy everywhere**: several app servers, a PostgreSQL read replica with failover, and a Redis replica.
 
 ## Deep dive 4: custom aliases
 
-- Two users can request the same alias at the same instant, so check-then-insert in the app is a race (see [Idempotency](/learn/idempotency)). Let the database's **unique constraint** decide: insert, and return **409 Conflict** if it fails.
+- Two users can request the same alias at the same instant, so check-then-insert in the app is a race (see [Idempotency](/learn/reliability/idempotency)). Let the database's **unique constraint** decide: insert, and return **409 Conflict** if it fails.
 - An alias can also clash with a code the counter generates later. Keep aliases in their own namespace (say, longer than 6 characters) or have the generator skip codes already taken.
 
 ## Expiry and analytics
 
-Expired links return **410 Gone**, and a background job deletes them. With 302 you can log every click as an event to a queue (Kafka) and aggregate it asynchronously, so analytics never slows the redirect (see [Message queues](/learn/message-queues)).
+Expired links return **410 Gone**, and a background job deletes them. With 302 you can log every click as an event to a queue (Kafka) and aggregate it asynchronously, so analytics never slows the redirect (see [Message queues](/learn/reliability/message-queues)).
 
 <Callout type="interview" title="Don't over-engineer">
 
@@ -148,6 +148,6 @@ Writes never become the problem: even at 100× they sit well inside one primary'
 
 <Callout type="idea" title="What the other case studies change">
 
-Every case study in this module follows the same steps. What changes is the number that dominates: [a pastebin](/learn/design-pastebin) adds large objects, [a notification system](/learn/design-notification-system) adds fan-out and retries, [a key-value store](/learn/design-key-value-store) adds replication and consensus. Keep the shortener's habit: say the numbers first, then earn each box.
+Every case study in this module follows the same steps. What changes is the number that dominates: [a pastebin](/learn/hld/design-pastebin) adds large objects, [a notification system](/learn/hld/design-notification-system) adds fan-out and retries, [a key-value store](/learn/hld/design-key-value-store) adds replication and consensus. Keep the shortener's habit: say the numbers first, then earn each box.
 
 </Callout>

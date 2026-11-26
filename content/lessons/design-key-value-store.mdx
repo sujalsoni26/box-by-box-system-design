@@ -1,4 +1,4 @@
-Store a value of up to 1 MB under a key, across many machines, so that `get`, `put` and `delete` keep working while nodes crash and networks split, with the consistency of each request chosen by the caller. This is the design the **Dynamo** paper described in 2007 and the one Cassandra's architecture documentation still names. It assumes [quorums](/learn/quorums), [partitioning](/learn/partitioning-internals) and [LSM storage engines](/learn/btree-vs-lsm), and follows the order of [How to work a case study](/learn/case-study-method).
+Store a value of up to 1 MB under a key, across many machines, so that `get`, `put` and `delete` keep working while nodes crash and networks split, with the consistency of each request chosen by the caller. This is the design the **Dynamo** paper described in 2007 and the one Cassandra's architecture documentation still names. It assumes [quorums](/learn/distributed/quorums), [partitioning](/learn/internals/partitioning-internals) and [LSM storage engines](/learn/internals/btree-vs-lsm), and follows the order of [How to work a case study](/learn/hld/case-study-method).
 
 ## Requirements
 
@@ -6,7 +6,7 @@ Store a value of up to 1 MB under a key, across many machines, so that `get`, `p
 - **Out of scope:** range scans, secondary indexes, transactions across keys, multi-region deployment (it returns under *How it evolves*).
 - **Non-functional:**
   - **Always writeable:** a `put` is never refused because a replica is down, because the callers are carts and sessions, where rejecting a write costs more than merging two versions later. This drives most of the design.
-  - **Low tail latency:** p99 under 10 ms for reads in one data centre, because the slowest replica sets a caller's latency (see [Latency](/learn/latency)).
+  - **Low tail latency:** p99 under 10 ms for reads in one data centre, because the slowest replica sets a caller's latency (see [Latency](/learn/foundations/latency)).
   - **Durability:** three copies on three machines before anyone hears "success".
   - **Incremental scalability:** one more node adds capacity without downtime or moving most of the data.
   - **No special node:** every node runs the same software, so there is no master to fail over.
@@ -28,7 +28,7 @@ Assume 100M keys, a 10 KB average value, 100k reads/s and 20k writes/s, replicat
 | Egress to clients | 100k × 10 KB | 1 GB/s ≈ 8 Gbps |
 | Write bandwidth in the cluster | 20k × 10 KB × 3 copies | 600 MB/s, 15 MB/s per node |
 
-→ <mark>Throughput and tail latency size this cluster, not storage</mark>: 3 TB fits on three machines, but 800k replica operations a second need about forty. Every key is rewritten about seventeen times a day, so the engine's write path and compaction matter more than capacity. In the terms of [Three system shapes](/learn/system-shapes): read-heavy with small objects, plus a heavy write stream.
+→ <mark>Throughput and tail latency size this cluster, not storage</mark>: 3 TB fits on three machines, but 800k replica operations a second need about forty. Every key is rewritten about seventeen times a day, so the engine's write path and compaction matter more than capacity. In the terms of [Three system shapes](/learn/practice/system-shapes): read-heavy with small objects, plus a heavy write stream.
 
 ## API
 
@@ -58,7 +58,7 @@ ring state       node_id -> tokens[16], status (joining|up|leaving|down), heartb
 hint store       owner_node_id -> [(key, version)]   -- writes held for a node that was down
 ```
 
-The version vector, not a timestamp, decides whether two versions are ordered or concurrent (see [Clocks, time and ordering](/learn/time-and-ordering)); Dynamo capped it at ten entries. A tombstone is a version with an empty value, so deletes replicate and repair like writes (deep dive 3).
+The version vector, not a timestamp, decides whether two versions are ordered or concurrent (see [Clocks, time and ordering](/learn/distributed/time-and-ordering)); Dynamo capped it at ten entries. A tombstone is a version with an empty value, so deletes replicate and repair like writes (deep dive 3).
 
 ## High-level design
 
@@ -82,7 +82,7 @@ No master, no metadata service, no routing tier. The client connects to any node
 
 - **Client library:** hashes the key so its coordinator is also a home replica, retries with backoff, and carries the context from a `get` to the next `put`, because the store cannot otherwise know what the client saw.
 - **Coordinator (any node):** builds the key's **preference list** (the first N distinct physical nodes clockwise from the hash, skipping a rack already represented), writes to all N and waits for W acknowledgements, reads R replicas and returns the newest version or all concurrent ones, and performs **read repair** so that every read nudges stale replicas into line.
-- **Storage engine:** an LSM tree per node, because seventeen rewrites per key per day is a write stream and append-only files make it sequential I/O (see [B-trees vs LSM trees](/learn/btree-vs-lsm)); the [write-ahead log](/learn/wal) makes a confirmed write survive a crash.
+- **Storage engine:** an LSM tree per node, because seventeen rewrites per key per day is a write stream and append-only files make it sequential I/O (see [B-trees vs LSM trees](/learn/internals/btree-vs-lsm)); the [write-ahead log](/learn/internals/wal) makes a confirmed write survive a crash.
 - **Gossip and failure detection:** replace a central registry, because a registry is the one box whose failure stops every request from being routed.
 - **Hint store and anti-entropy:** keep "always writeable" from becoming "sometimes lost": hints carry writes to a replica that was briefly down, Merkle trees find what hints missed.
 
@@ -131,13 +131,13 @@ sequenceDiagram
 | Ring and membership | Memory on every node | Zero-hop routing: any node routes any key without asking anyone |
 | Hints | Local disk on the stand-in node | Must survive a restart, or the hinted write is lost |
 
-Compaction strategy is a trade-off, not a fact: size-tiered (Cassandra's default) keeps write cost lowest and suits the rewrite stream; leveled reads fewer files and wastes less disk at the price of more rewriting. There is no cache tier: for most callers <mark>this store is the cache</mark>. A hot key still saturates its three replicas, and the fix is a short-lived copy in the client (see [Caching](/learn/caching)), because a cache in front of the store would hide the consistency controls the API exposes.
+Compaction strategy is a trade-off, not a fact: size-tiered (Cassandra's default) keeps write cost lowest and suits the rewrite stream; leveled reads fewer files and wastes less disk at the price of more rewriting. There is no cache tier: for most callers <mark>this store is the cache</mark>. A hot key still saturates its three replicas, and the fix is a short-lived copy in the client (see [Caching](/learn/reliability/caching)), because a cache in front of the store would hide the consistency controls the API exposes.
 
 ## Scaling
 
 ### The ring and virtual nodes
 
-Hash each key onto a ring. Each node owns **16 tokens** (Cassandra's default since its deterministic token allocator arrived; the earlier 256 was judged too high), so its data is 16 slices spread around the ring. When a 41st node joins it takes slices from many nodes, and about 1/41 of the data moves rather than three quarters of it. [Sharding](/learn/sharding) introduced the ring; the rebalancing strategies and the places the key-to-node map can live are in [Partitioning and rebalancing](/learn/partitioning-internals).
+Hash each key onto a ring. Each node owns **16 tokens** (Cassandra's default since its deterministic token allocator arrived; the earlier 256 was judged too high), so its data is 16 slices spread around the ring. When a 41st node joins it takes slices from many nodes, and about 1/41 of the data moves rather than three quarters of it. [Sharding](/learn/data/sharding) introduced the ring; the rebalancing strategies and the places the key-to-node map can live are in [Partitioning and rebalancing](/learn/internals/partitioning-internals).
 
 <Interactive name="shard-router" />
 
@@ -149,7 +149,7 @@ Every second each node picks a random peer and the two reconcile their view of t
 
 ## Consistency and availability
 
-Consistency is a per-request dial. The rule is the one from [Quorums](/learn/quorums): with R + W > N a read overlaps the last acknowledged write.
+Consistency is a per-request dial. The rule is the one from [Quorums](/learn/distributed/quorums): with R + W > N a read overlaps the last acknowledged write.
 
 | Data class | N, R, W | Conflict rule | Why |
 | --- | --- | --- | --- |
@@ -157,7 +157,7 @@ Consistency is a per-request dial. The rule is the one from [Quorums](/learn/quo
 | Session token | 3, 1, 1 | Last-write-wins | Only the latest heartbeat matters; a stale read costs one extra login check |
 | Feature flags | 3, 3, 1 | Last-write-wins | Read constantly, written rarely; a stalled write is acceptable, a stale read is not |
 
-(3, 2, 2) is the configuration the Dynamo paper reports as common in production. None of these is **strongly consistent** in the strict sense: a quorum read can miss a write that reached one node or came through a sloppy quorum, and concurrent writes have no winner, which is why the API returns siblings instead of pretending. Callers that need one agreed order of writes need [consensus](/learn/consensus) and must accept that a minority partition stops answering; [Linearizability](/learn/linearizability) spells out the gap.
+(3, 2, 2) is the configuration the Dynamo paper reports as common in production. None of these is **strongly consistent** in the strict sense: a quorum read can miss a write that reached one node or came through a sloppy quorum, and concurrent writes have no winner, which is why the API returns siblings instead of pretending. Callers that need one agreed order of writes need [consensus](/learn/distributed/consensus) and must accept that a minority partition stops answering; [Linearizability](/learn/distributed/linearizability) spells out the gap.
 
 <Interactive name="cap-partition" />
 
@@ -175,24 +175,24 @@ Three flatmates keep the shopping list in three notebooks, and a change counts o
 | --- | --- | --- |
 | One replica down for minutes | Nothing: the other two still meet W = 2 and R = 2 | The coordinator writes to the next healthy node with a **hint**, replayed when the replica returns (Cassandra generates hints for up to `max_hint_window`, 3 hours by default) |
 | One replica down for a day | Nothing, but the returning replica is stale | Hints have expired; **anti-entropy** compares Merkle trees per token range and streams only the differing keys |
-| Coordinator dies mid-request | A timeout; the client retries on another node | The retry carries the same context, so the two writes are identical siblings that collapse on the next read (see [Idempotency](/learn/idempotency)) |
+| Coordinator dies mid-request | A timeout; the client retries on another node | The retry carries the same context, so the two writes are identical siblings that collapse on the next read (see [Idempotency](/learn/reliability/idempotency)) |
 | Partition between racks | Both sides keep writing | Sloppy quorums accept the writes; after the heal the store returns siblings and the application merges (deep dive 2) |
 | Disk corruption on one node | Nothing: two copies serve | Checksums fail the bad SSTable; the node is replaced and re-streams its ranges |
-| Compaction falls behind | Read p99 climbs as reads touch more files | Slow writes with [backpressure](/learn/backpressure) before the engine stalls; add nodes |
+| Compaction falls behind | Read p99 climbs as reads touch more files | Slow writes with [backpressure](/learn/reliability/backpressure) before the engine stalls; add nodes |
 | Clock skew between nodes | Last-write-wins keys keep the wrong value | Nothing heals it: monitor drift, use version vectors for anything that matters |
 
 <mark>Hinted handoff covers minutes, repair covers days, and only W copies cover the next few seconds</mark>: a hint lives on the stand-in's disk, so if that node dies too the write sits on fewer than N replicas until anti-entropy notices.
 
 ## Security
 
-- **Authentication:** clients present per-service credentials over TLS and nodes authenticate each other with mutual TLS (see [Encryption](/learn/encryption)), because the worst abuse this design invites is a stranger joining the ring: gossip would hand it token ranges and replicas would stream it data.
-- **Authorization:** keys are namespaced per tenant and the coordinator checks the caller's namespace before touching a replica (see [Multi-tenancy](/learn/multi-tenancy)).
+- **Authentication:** clients present per-service credentials over TLS and nodes authenticate each other with mutual TLS (see [Encryption](/learn/security/encryption)), because the worst abuse this design invites is a stranger joining the ring: gossip would hand it token ranges and replicas would stream it data.
+- **Authorization:** keys are namespaced per tenant and the coordinator checks the caller's namespace before touching a replica (see [Multi-tenancy](/learn/architecture/multi-tenancy)).
 - **Data protection:** values are opaque bytes, so encrypt them at rest with per-tenant keys; keep the context opaque too, so a client cannot forge version vectors over other writers.
 - **Abuse:** reject values over 1 MB at the coordinator (413), rate-limit per tenant, and treat a delete storm as a write storm, because every delete is a tombstone that costs disk for days.
 
 ## Observability
 
-Six numbers prove the store is healthy (see [Metrics and monitoring](/learn/metrics-monitoring)): **p99 latency per operation and consistency level**, because the tail is the requirement; **503 rate**, quorums failing to form; **hints pending per node**, a replica down; **SSTables read per `get` and pending compactions**, compaction debt; **sibling rate**, clients writing without reading; and **range imbalance**, the busiest node's load over the mean. The one trace to keep (see [Distributed tracing](/learn/tracing)) is a `GET` with one span per replica, so a slow p99 shows *which* replica was slow and whether read repair fired.
+Six numbers prove the store is healthy (see [Metrics and monitoring](/learn/operations/metrics-monitoring)): **p99 latency per operation and consistency level**, because the tail is the requirement; **503 rate**, quorums failing to form; **hints pending per node**, a replica down; **SSTables read per `get` and pending compactions**, compaction debt; **sibling rate**, clients writing without reading; and **range imbalance**, the busiest node's load over the mean. The one trace to keep (see [Distributed tracing](/learn/operations/tracing)) is a `GET` with one span per replica, so a slow p99 shows *which* replica was slow and whether read repair fired.
 
 ## Trade-offs and bottlenecks
 
@@ -206,7 +206,7 @@ Any node takes any write and a partition never stops writes on either side. The 
 
 <ComparisonItem title="Raft-replicated shards">
 
-Each shard has a leader elected by [consensus](/learn/consensus); writes have one order and reads can be linearizable. The cost is availability: a shard whose leader is on the minority side of a partition stops accepting writes until the majority elects a new one.
+Each shard has a leader elected by [consensus](/learn/distributed/consensus); writes have one order and reads can be linearizable. The cost is availability: a shard whose leader is on the minority side of a partition stops accepting writes until the majority elects a new one.
 
 </ComparisonItem>
 
@@ -222,9 +222,9 @@ The condition that decides: <mark>can the application merge two versions of this
 
 ## How it evolves
 
-At **10×** (1B keys, 1M reads/s, 200k writes/s) the ring grows to about 400 nodes and the mechanisms start to cost: repair must be incremental, gossip carries 400 entries, and a rack-aware preference list is mandatory. A second data centre arrives, with every key replicated in both and most requests using a *local* quorum so nothing waits on the inter-site link (see [Multi-region architecture](/learn/multi-region)).
+At **10×** (1B keys, 1M reads/s, 200k writes/s) the ring grows to about 400 nodes and the mechanisms start to cost: repair must be incremental, gossip carries 400 entries, and a rack-aware preference list is mandatory. A second data centre arrives, with every key replicated in both and most requests using a *local* quorum so nothing waits on the inter-site link (see [Multi-region architecture](/learn/infrastructure/multi-region)).
 
-At **100×** nobody runs one ring. Each workload gets a cluster with its own N, R, W and compaction settings under a control plane, and the wide-column model (many columns under one partition key, Cassandra's shape) replaces bare key-value for callers who keep asking for "the last 50 items for this user". Or the whole thing is rented: DynamoDB hides N, R and W behind a per-request consistency flag. The next case studies reuse the store as a part: [Design Google Drive / Dropbox](/learn/design-file-storage) keeps metadata in something like it, [Design Instagram](/learn/design-instagram) builds its feed cache and counters on one.
+At **100×** nobody runs one ring. Each workload gets a cluster with its own N, R, W and compaction settings under a control plane, and the wide-column model (many columns under one partition key, Cassandra's shape) replaces bare key-value for callers who keep asking for "the last 50 items for this user". Or the whole thing is rented: DynamoDB hides N, R and W behind a per-request consistency flag. The next case studies reuse the store as a part: [Design Google Drive / Dropbox](/learn/hld/design-file-storage) keeps metadata in something like it, [Design Instagram](/learn/hld/design-instagram) builds its feed cache and counters on one.
 
 ## Deep dive 1: adding a node and rebalancing
 

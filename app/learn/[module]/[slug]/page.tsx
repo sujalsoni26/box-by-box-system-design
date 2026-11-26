@@ -6,7 +6,7 @@ import { getLesson, lessons } from "@/lib/curriculum";
 import { getLessonHeadings } from "@/lib/lesson-headings";
 
 interface LessonPageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ module: string; slug: string }>;
 }
 
 /**
@@ -17,21 +17,30 @@ interface LessonPageProps {
  */
 export const instant = false;
 
-/** Every lesson is prerendered at build time; any other slug renders the 404 page. */
+/**
+ * Every lesson is prerendered at build time at /learn/<module>/<slug>; any other pair renders the 404 page.
+ * The old /learn/<slug> addresses redirect here (next.config.ts).
+ */
 export function generateStaticParams() {
-  return lessons.map((l) => ({ slug: l.slug }));
+  return lessons.map((l) => ({ module: l.moduleId, slug: l.slug }));
+}
+
+/** The lesson at this address: the slug must exist and sit in this module. */
+async function lessonAt(params: LessonPageProps["params"]) {
+  const { module, slug } = await params;
+  const lesson = getLesson(slug);
+  return lesson && lesson.moduleId === module ? lesson : undefined;
 }
 
 export async function generateMetadata({ params }: LessonPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const lesson = getLesson(slug);
+  const lesson = await lessonAt(params);
   return lesson ? { title: lesson.title, description: lesson.summary } : {};
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {
-  const { slug } = await params;
-  const lesson = getLesson(slug);
+  const lesson = await lessonAt(params);
   if (!lesson) notFound();
+  const { slug } = lesson;
   const { default: Content } = (await import(`@/content/lessons/${slug}.mdx`)) as { default: ComponentType };
   return (
     <LessonLayout lesson={lesson} headings={getLessonHeadings(slug)}>

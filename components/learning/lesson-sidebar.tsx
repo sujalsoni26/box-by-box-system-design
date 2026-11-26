@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Check, Flag } from "lucide-react";
-import { getModule, getModuleLessons, modules, moduleProgress } from "@/lib/curriculum";
+import { getModule, getModuleLessons, modules, moduleProgress, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
@@ -20,7 +20,7 @@ function LessonList({ moduleId, currentSlug }: { moduleId: ModuleId; currentSlug
         return (
           <li key={l.slug}>
             <Link
-              href={`/learn/${l.slug}`}
+              href={lessonHref(l.slug)}
               aria-current={current ? "page" : undefined}
               className={cn(
                 "relative grid grid-cols-[24px_1fr] items-start gap-2.5 rounded-lg py-1.5 pr-2 text-[0.88rem] leading-snug transition-colors",
@@ -68,7 +68,7 @@ export function LessonSidebar({ moduleId, currentSlug }: { moduleId: ModuleId; c
           return (
             <li key={m.id}>
               <Link
-                href={open ? `/learn#${m.id}` : `/learn/${m.lessons[0]}`}
+                href={open ? `/learn#${m.id}` : lessonHref(m.lessons[0])}
                 className={cn("flex items-center justify-between gap-2 rounded-lg px-1 py-1.5 font-display font-bold", open ? "text-ink" : "text-ink-2 hover:text-ink")}
               >
                 <span>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CaseStudyList, type CaseStudyGroup } from "@/components/case-studies/case-study-list";
 import { CASE_STUDY_TRACKS, caseStudies, caseStudiesFor } from "@/lib/case-studies";
-import { getLesson } from "@/lib/curriculum";
+import { getLesson, lessonHref } from "@/lib/curriculum";
 
 export const metadata: Metadata = {
   title: "Case studies",
@@ -44,7 +44,7 @@ export default function CaseStudiesPage() {
         <p className="mt-3 max-w-2xl text-lg text-ink-2">
           {caseStudies.length} problems from the course, posed the way an interviewer would. Work each one step by step, then compare with the full
           walkthrough. Not sure how to start? Read the{" "}
-          <Link href="/learn/playbook" className="font-semibold text-link underline underline-offset-2">
+          <Link href={lessonHref("playbook")} className="font-semibold text-link underline underline-offset-2">
             interview framework
           </Link>{" "}
           first.

@@ -21,7 +21,7 @@ Send a request to another machine and wait. Nothing comes back. Which of these h
 
 </Steps>
 
-From where you sit, all six look identical: silence. A **timeout** is the moment you stop waiting and decide, but it is a guess, not a fact. In cases 4 and 5 the work happened; retrying blindly does it twice, which is why payments carry an idempotency key (see [Idempotency](/learn/idempotency)) and why [timeouts and retries](/learn/timeouts-retries) are designed together rather than bolted on.
+From where you sit, all six look identical: silence. A **timeout** is the moment you stop waiting and decide, but it is a guess, not a fact. In cases 4 and 5 the work happened; retrying blindly does it twice, which is why payments carry an idempotency key (see [Idempotency](/learn/reliability/idempotency)) and why [timeouts and retries](/learn/reliability/timeouts-retries) are designed together rather than bolted on.
 
 <Mermaid caption="A timeout tells you that no reply arrived in time. It does not tell you whether the work was done." chart={`---
 config:
@@ -41,7 +41,7 @@ sequenceDiagram
     Note over P: Second charge, unless the key is recognised
 `} />
 
-Messages can also arrive **out of order** (two packets took different routes) or **more than once** (a retry overtook the original). Reliable transports such as TCP hide reordering and duplication inside one connection (see [IP, TCP and UDP](/learn/tcp-udp)), but not across connections, retries or restarts. Your application sees them again one level up.
+Messages can also arrive **out of order** (two packets took different routes) or **more than once** (a retry overtook the original). Reliable transports such as TCP hide reordering and duplication inside one connection (see [IP, TCP and UDP](/learn/foundations/tcp-udp)), but not across connections, retries or restarts. Your application sees them again one level up.
 
 ## There is no "now"
 
@@ -59,7 +59,7 @@ A single server fails completely or not at all. A system of fifty servers almost
 | Crash-recovery | A node stops, then restarts with its disk intact but its memory gone | A process is OOM-killed and restarted |
 | Omission | Messages are dropped | A congested switch, a full socket buffer |
 | Timing | Messages arrive, but late | A GC pause, a slow disk, a saturated link |
-| Network partition | Two groups of healthy nodes cannot reach each other | A misconfigured router, a cut cable (see [CAP and PACELC](/learn/cap)) |
+| Network partition | Two groups of healthy nodes cannot reach each other | A misconfigured router, a cut cable (see [CAP and PACELC](/learn/data/cap)) |
 | Grey failure | A node is alive and answers health checks but works badly | 50% packet loss on one network card |
 | Byzantine | A node lies or behaves arbitrarily | A bug or an attacker; most internal systems assume this does not happen |
 

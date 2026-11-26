@@ -1,4 +1,4 @@
-A **log** is a record of one event, with a timestamp, written as it happens. Where a metric (see [Metrics and monitoring](/learn/metrics-monitoring)) counts or summarises, a log keeps the individual: this order, this error, this retry. That makes logs indispensable for debugging and expensive at scale: a service at 2,000 requests per second writing one 300-byte line per request produces about 50 GB a day, and a company has hundreds of services. This lesson is about making that volume searchable, affordable and safe.
+A **log** is a record of one event, with a timestamp, written as it happens. Where a metric (see [Metrics and monitoring](/learn/operations/metrics-monitoring)) counts or summarises, a log keeps the individual: this order, this error, this retry. That makes logs indispensable for debugging and expensive at scale: a service at 2,000 requests per second writing one 300-byte line per request produces about 50 GB a day, and a company has hundreds of services. This lesson is about making that volume searchable, affordable and safe.
 
 ## Structure, not prose
 
@@ -35,7 +35,7 @@ The discipline is at the top: ERROR means a failure that mattered, not every cau
 
 ## One id that follows the request
 
-A line is only useful in context, and the context in a distributed system is the request. Generate a **correlation id** at the edge, pass it in a header on every call, and stamp it on every line each service writes; one filter then returns the whole story of a request across nine services, in order. With tracing in place the trace id does this job: the W3C `traceparent` header already carries it hop to hop, and it lands in the `trace_id` field above. The trace shows which hop was slow; the lines carrying that trace id say why (see [Distributed tracing](/learn/tracing)).
+A line is only useful in context, and the context in a distributed system is the request. Generate a **correlation id** at the edge, pass it in a header on every call, and stamp it on every line each service writes; one filter then returns the whole story of a request across nine services, in order. With tracing in place the trace id does this job: the W3C `traceparent` header already carries it hop to hop, and it lands in the `trace_id` field above. The trace shows which hop was slow; the lines carrying that trace id say why (see [Distributed tracing](/learn/operations/tracing)).
 
 ## The pipeline
 
@@ -49,7 +49,7 @@ A line is only useful in context, and the context in a distributed system is the
     C -.->|rehydrate on demand| Q
 `} />
 
-The twelve-factor rule applies: the app writes its event stream to stdout and never concerns itself with routing or storage. A node-level **agent** (Fluent Bit, Vector and Filebeat are common) tails the files, parses the JSON, adds pod, host and zone, and ships. A **broker** such as Kafka (see [Kafka architecture](/learn/kafka-architecture)) sits between agents and indexers so that a deploy storm producing ten times the normal volume is absorbed rather than dropped, and so that a second consumer can read the same stream. Indexers write to a **hot store** built for search (Elasticsearch or OpenSearch, Loki, ClickHouse); the raw stream goes to object storage.
+The twelve-factor rule applies: the app writes its event stream to stdout and never concerns itself with routing or storage. A node-level **agent** (Fluent Bit, Vector and Filebeat are common) tails the files, parses the JSON, adds pod, host and zone, and ships. A **broker** such as Kafka (see [Kafka architecture](/learn/streaming/kafka-architecture)) sits between agents and indexers so that a deploy storm producing ten times the normal volume is absorbed rather than dropped, and so that a second consumer can read the same stream. Indexers write to a **hot store** built for search (Elasticsearch or OpenSearch, Loki, ClickHouse); the raw stream goes to object storage.
 
 ## Sampling and dynamic levels
 

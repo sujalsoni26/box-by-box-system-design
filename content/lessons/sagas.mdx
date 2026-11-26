@@ -1,4 +1,4 @@
-A **saga** splits one business transaction into a sequence of local transactions, one per service, and pairs each step with a **compensating transaction** that undoes its effect. Each service commits locally and moves on; if a later step fails, the saga runs the compensations for the completed steps, in reverse. <mark>Nothing is rolled back, because nothing is held open: a saga ends in a corrected state, not the original one.</mark> The name comes from Garcia-Molina and Salem's 1987 paper on long-running transactions inside a single database; microservices revived it because [two-phase commit](/learn/distributed-transactions) across services holds locks over network calls and couples everyone's availability.
+A **saga** splits one business transaction into a sequence of local transactions, one per service, and pairs each step with a **compensating transaction** that undoes its effect. Each service commits locally and moves on; if a later step fails, the saga runs the compensations for the completed steps, in reverse. <mark>Nothing is rolled back, because nothing is held open: a saga ends in a corrected state, not the original one.</mark> The name comes from Garcia-Molina and Salem's 1987 paper on long-running transactions inside a single database; microservices revived it because [two-phase commit](/learn/distributed/distributed-transactions) across services holds locks over network calls and couples everyone's availability.
 
 ## A checkout as a saga
 
@@ -73,15 +73,15 @@ Chris Richardson's classification tells you how to order the steps:
 
 - **Compensatable** steps come first and can be undone: create the order, reserve stock.
 - The **pivot** is the go/no-go step. If it succeeds the saga will complete; if it fails, everything before it is compensated. Charging the card is the natural pivot: it is the hardest step to undo cleanly and the most expensive to get wrong.
-- **Retriable** steps follow the pivot and must eventually succeed, so they are retried until they do and must be idempotent (see [Idempotency](/learn/idempotency)).
+- **Retriable** steps follow the pivot and must eventually succeed, so they are retried until they do and must be idempotent (see [Idempotency](/learn/reliability/idempotency)).
 
 Put irreversible actions, such as sending a confirmation or handing a parcel to a courier, after the pivot as retriable steps, so they only ever run for orders that will complete.
 
 ## What a saga does not give you: isolation
 
-Between the first step and the last, the system is in an intermediate state that others can see: stock reserved for an order that will be cancelled, a payment taken for an order not yet confirmed. A saga has none of the isolation of [ACID transactions](/learn/acid). The usual countermeasure is a **semantic lock**: the PENDING state on the order is an application-level flag that says "a saga is in progress here", and other code treats PENDING rows as provisional rather than acting on them. Other countermeasures include making updates commutative (reserve and release are increments, so their order does not matter) and re-reading a value just before acting on it.
+Between the first step and the last, the system is in an intermediate state that others can see: stock reserved for an order that will be cancelled, a payment taken for an order not yet confirmed. A saga has none of the isolation of [ACID transactions](/learn/data/acid). The usual countermeasure is a **semantic lock**: the PENDING state on the order is an application-level flag that says "a saga is in progress here", and other code treats PENDING rows as provisional rather than acting on them. Other countermeasures include making updates commutative (reserve and release are increments, so their order does not matter) and re-reading a value just before acting on it.
 
-Two more things to design for. Compensations can fail and must be retried, so they are idempotent too. And every step may run twice, because the messages that drive a saga arrive at least once; publishing the event and committing the order must be atomic, which is what the outbox pattern in [Pub/Sub](/learn/pubsub) is for, and the duplicate publishes it allows are harmless only because the steps are idempotent.
+Two more things to design for. Compensations can fail and must be retried, so they are idempotent too. And every step may run twice, because the messages that drive a saga arrive at least once; publishing the event and committing the order must be atomic, which is what the outbox pattern in [Pub/Sub](/learn/reliability/pubsub) is for, and the duplicate publishes it allows are harmless only because the steps are idempotent.
 
 <Callout type="analogy" title="Booking a holiday yourself">
 

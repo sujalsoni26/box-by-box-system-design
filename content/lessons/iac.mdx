@@ -1,6 +1,6 @@
-**Infrastructure as Code** (IaC) means the machines, networks, queues and permissions your system runs on are described in version-controlled files and created by a tool from that description, never by clicking through a console: the discipline that made [container images](/learn/containers) repeatable, applied to everything around them.
+**Infrastructure as Code** (IaC) means the machines, networks, queues and permissions your system runs on are described in version-controlled files and created by a tool from that description, never by clicking through a console: the discipline that made [container images](/learn/infrastructure/containers) repeatable, applied to everything around them.
 
-The cost of not doing it arrives at the worst time: a hand-built environment cannot be rebuilt, staging and production differ in ways nobody can list, and standing the stack up in a second region for [disaster recovery](/learn/disaster-recovery) takes days; AWS's recovery guidance says that without IaC a recovery-region restore is likely to exceed the recovery time objective.
+The cost of not doing it arrives at the worst time: a hand-built environment cannot be rebuilt, staging and production differ in ways nobody can list, and standing the stack up in a second region for [disaster recovery](/learn/operations/disaster-recovery) takes days; AWS's recovery guidance says that without IaC a recovery-region restore is likely to exceed the recovery time objective.
 
 ## Declarative or imperative
 
@@ -70,7 +70,7 @@ GitOps turns the last step inside out: instead of CI pushing into a cluster with
 
 ## What gets hard
 
-Secrets cannot sit in Git in plain text, so GitOps needs sealed secrets or an external store ([Secrets management](/learn/secrets-management)); a pipeline with broad cloud permissions is a high-value target. Two engineers applying without a lock, a lost state file, or an `apply` aimed at the wrong environment are the classic self-inflicted outages; the fix is one pipeline, one state per environment, locks on, humans reading plans.
+Secrets cannot sit in Git in plain text, so GitOps needs sealed secrets or an external store ([Secrets management](/learn/security/secrets-management)); a pipeline with broad cloud permissions is a high-value target. Two engineers applying without a lock, a lost state file, or an `apply` aimed at the wrong environment are the classic self-inflicted outages; the fix is one pipeline, one state per environment, locks on, humans reading plans.
 
 <Callout type="analogy" title="Blueprints, not verbal instructions">
 

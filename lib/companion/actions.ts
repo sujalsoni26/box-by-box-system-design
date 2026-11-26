@@ -1,5 +1,5 @@
 import { catMeows } from "@/data/cat-meows";
-import { lessons, nextIncompleteLesson } from "@/lib/curriculum";
+import { lessons, nextIncompleteLesson, lessonHref } from "@/lib/curriculum";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 import { useCompanionStore, useFocusStore, type BubbleAction, type BubbleInput } from "@/stores/companion-store";
@@ -13,7 +13,7 @@ import { pickRevision, type RevisionSource } from "./lesson-context";
  */
 
 const ask = (input: BubbleInput) => useCompanionStore.getState().say({ solicited: true, focus: true, ...input });
-const lessonHref = (l: Lesson) => `/learn/${l.slug}`;
+const lessonUrl = (l: Lesson) => lessonHref(l.slug);
 const label = (l: Lesson) => `${l.number} ${l.title}`;
 
 function nextAfter(from?: string | null): Lesson | undefined {
@@ -30,7 +30,7 @@ const FEATURE_TEXT: Record<LessonFeature, string> = {
 export function needLesson(feature: LessonFeature): void {
   const next = nextAfter();
   const actions: BubbleAction[] = next
-    ? [{ label: `Open ${next.title}`, href: lessonHref(next), primary: true }, { label: "Later" }]
+    ? [{ label: `Open ${next.title}`, href: lessonUrl(next), primary: true }, { label: "Later" }]
     : [{ label: "Browse lessons", href: "/learn", primary: true }, { label: "Later" }];
   ask({
     title: "Open a lesson first",
@@ -94,7 +94,7 @@ function revealRevision(lesson: Lesson): void {
           useCompanionStore.getState().react("happy", 1400);
         },
       },
-      { label: "Review lesson", href: lessonHref(lesson) },
+      { label: "Review lesson", href: lessonUrl(lesson) },
       { label: "Another", onSelect: quickRevision },
     ],
   });
@@ -107,7 +107,7 @@ export function suggestNext(current?: Lesson): void {
     ask({
       title: "Every lesson learned",
       text: `You have finished all ${lessons.length} lessons. Lock it in with the Test yourself deck.`,
-      actions: [{ label: "Test yourself", href: "/learn/test-yourself", primary: true }, { label: "Later" }],
+      actions: [{ label: "Test yourself", href: lessonHref("test-yourself"), primary: true }, { label: "Later" }],
       mood: "celebrating",
     });
     return;
@@ -118,7 +118,7 @@ export function suggestNext(current?: Lesson): void {
       title: "Next up",
       text: `Finish this one first: ${current.title}.${after ? ` After that, ${label(after)} (${after.minutes} min).` : " It is the last one left."}`,
       actions: after
-        ? [{ label: `Preview ${after.title}`, href: lessonHref(after) }, { label: "Keep reading", primary: true }]
+        ? [{ label: `Preview ${after.title}`, href: lessonUrl(after) }, { label: "Keep reading", primary: true }]
         : [{ label: "Keep reading", primary: true }],
       mood: "happy",
     });
@@ -127,7 +127,7 @@ export function suggestNext(current?: Lesson): void {
   ask({
     title: "Next up",
     text: `${label(next)} (${next.minutes} min). ${next.problem}`,
-    actions: [{ label: `Open ${next.title}`, href: lessonHref(next), primary: true }, { label: "Later" }],
+    actions: [{ label: `Open ${next.title}`, href: lessonUrl(next), primary: true }, { label: "Later" }],
     mood: "happy",
   });
 }

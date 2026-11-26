@@ -12,7 +12,7 @@ class NotificationService {
 }
 ```
 
-Three problems hide in six lines: the service knows every concrete class and constructor, adding a channel edits working code, and no test can substitute a fake sender because the `new` is hard-wired (see [Interfaces, abstractions and dependency injection](/learn/interfaces-abstractions-di)).
+Three problems hide in six lines: the service knows every concrete class and constructor, adding a channel edits working code, and no test can substitute a fake sender because the `new` is hard-wired (see [Interfaces, abstractions and dependency injection](/learn/lld/interfaces-abstractions-di)).
 
 ## Factory Method: let someone else choose the class
 
@@ -92,7 +92,7 @@ Required parts go in the builder's constructor so they cannot be forgotten; opti
 
 ## Singleton: one instance, global access
 
-A **Singleton** guarantees a class has exactly one instance and gives global access to it through something like `Config.getInstance()`. One instance is often legitimate (a connection pool, a metrics registry); global access is the smell. Every caller of `getInstance()` has a hidden dependency its constructor does not declare, tests cannot replace it, and state leaks between tests, which pass alone and fail together. Lazy initialisation adds a race unless written carefully (see [Concurrency and thread safety](/learn/concurrency-basics)), and a singleton is one instance *per JVM*: on two machines, "only one" needs a lock or a leader (see [Distributed locks](/learn/distributed-locks)).
+A **Singleton** guarantees a class has exactly one instance and gives global access to it through something like `Config.getInstance()`. One instance is often legitimate (a connection pool, a metrics registry); global access is the smell. Every caller of `getInstance()` has a hidden dependency its constructor does not declare, tests cannot replace it, and state leaks between tests, which pass alone and fail together. Lazy initialisation adds a race unless written carefully (see [Concurrency and thread safety](/learn/lld/concurrency-basics)), and a singleton is one instance *per JVM*: on two machines, "only one" needs a lock or a leader (see [Distributed locks](/learn/distributed/distributed-locks)).
 
 The answer: create the one instance at the composition root and inject it.
 
@@ -128,7 +128,7 @@ Factory Method is the counter where you say "one biryani" and the kitchen decide
 
 </Callout>
 
-Applied in the case studies: creating tickets and spots in [Parking lot](/learn/lld-parking-lot), obtaining a logger in [Logging framework](/learn/lld-logging-framework), and assembling a ride request with optional preferences in [Ride booking](/learn/lld-ride-booking).
+Applied in the case studies: creating tickets and spots in [Parking lot](/learn/lld-practice/lld-parking-lot), obtaining a logger in [Logging framework](/learn/lld-practice/lld-logging-framework), and assembling a ride request with optional preferences in [Ride booking](/learn/lld-practice/lld-ride-booking).
 
 <DeepDive title="Go deeper: if you must write a Singleton">
 

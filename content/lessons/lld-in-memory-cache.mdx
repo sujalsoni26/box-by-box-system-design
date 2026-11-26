@@ -12,7 +12,7 @@ An in-memory cache looks like a map with a size limit, and the first design most
 
 **Assumptions**, stated so they can be challenged: one process; capacity between ten thousand and a million entries; reads outnumber writes about ten to one; values are immutable once cached; keys have a good `hashCode`. Capacity counts entries rather than bytes, which is wrong for mixed sizes; weighing is an extension.
 
-**Out of scope**: persistence, replication, anything that spans machines. What to cache, cache-aside versus write-through and what a distributed cache changes are in [Caching](/learn/caching) and are not re-taught here.
+**Out of scope**: persistence, replication, anything that spans machines. What to cache, cache-aside versus write-through and what a distributed cache changes are in [Caching](/learn/reliability/caching) and are not re-taught here.
 
 **Non-functional**: no operation on the hot path may take time proportional to the number of entries; correctness under concurrent access; throughput that does not collapse to one thread's worth when many threads read.
 
@@ -187,7 +187,7 @@ scheduler.scheduleWithFixedDelay(cache::sweepExpired, 1, 1, TimeUnit.SECONDS);  
 
 `sweepExpired` takes the lock, walks a bounded number of entries, removes the stale ones and returns. Bounding the work per tick matters more than the period: a sweep that holds the lock for a million entries is a pause every caller feels. Guava's cache has no background thread at all: it does small amounts of maintenance inside callers' writes and occasional reads, so that no extra thread competes for the lock, and offers `cleanUp()` for anyone who wants a schedule.
 
-Statistics are a Decorator in the sense of [Design patterns II](/learn/design-patterns-structural): same interface, one added concern, stackable, absent in tests.
+Statistics are a Decorator in the sense of [Design patterns II](/learn/lld/design-patterns-structural): same interface, one added concern, stackable, absent in tests.
 
 ```java
 final class StatsCache<K, V> implements Cache<K, V> {
@@ -311,7 +311,7 @@ A stack of papers on a desk is an LRU cache: whatever you touch goes on top, and
 
 ## Concurrency
 
-Name the shared mutable state, as [Concurrency and thread safety](/learn/concurrency-basics) asks: the map, the list links inside every entry, the value and deadline fields, the statistics. Then notice the fact that decides the section: **in an LRU cache a read is a write**. Every `get` relinks an entry, so there is no read-only path to optimise.
+Name the shared mutable state, as [Concurrency and thread safety](/learn/lld/concurrency-basics) asks: the map, the list links inside every entry, the value and deadline fields, the statistics. Then notice the fact that decides the section: **in an LRU cache a read is a write**. Every `get` relinks an entry, so there is no read-only path to optimise.
 
 | Design | How | What it buys | What it costs |
 | --- | --- | --- | --- |
@@ -328,7 +328,7 @@ The rest is mechanical. The `LoadingCache` map is a `ConcurrentHashMap` and `put
 - **Least frequently used.** One more `EvictionPolicy`. The naive version keeps a heap and pays a logarithmic cost per access; the O(1) version in the deep dive costs a counter per entry and brings the pollution problem: last week's hot item outranks today's until its count is aged down.
 - **Removal listener.** A callback on eviction and expiry, invoked after the lock is released so a slow listener cannot stall the cache: the Observer left out of the core.
 - **Weighing.** Capacity in bytes rather than entries: a weigher function and a running total replace `map.size()`, and the victim loop evicts until the total fits.
-- **Write-through, write-behind, and across machines.** `put` also writes to the source, synchronously or through a queue; a shared cache needs a network, a serialisation format and a consistency story. Both are the system-level track's business, in [Caching](/learn/caching), not a bigger `HashMap`.
+- **Write-through, write-behind, and across machines.** `put` also writes to the source, synchronously or through a queue; a shared cache needs a network, a serialisation format and a consistency story. Both are the system-level track's business, in [Caching](/learn/reliability/caching), not a bigger `HashMap`.
 
 | Choice made | What it buys | What it costs |
 | --- | --- | --- |

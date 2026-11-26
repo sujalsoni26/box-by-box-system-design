@@ -43,9 +43,9 @@ sequenceDiagram
 ## Caching cuts both ways
 
 - Caching makes lookups near-instant, but **DNS changes spread slowly** until old TTLs expire. Before a planned migration, teams lower the TTL days in advance.
-- DNS can hand **different IPs to different users**, such as the nearest data center. This is <mark>geo-routing</mark>, and CDNs rely on it (see [CDN](/learn/cdn)).
-- Geo-routing is not the only way to reach the nearest site. With **anycast**, many sites announce the same IP address and the network itself carries each user to a nearby one, with no TTL to wait out when a site fails (see [CDN architecture in depth](/learn/cdn-internals)).
-- The same lookup pattern runs **inside** a data center to find services rather than websites (see [Service discovery and internal DNS](/learn/service-discovery)).
+- DNS can hand **different IPs to different users**, such as the nearest data center. This is <mark>geo-routing</mark>, and CDNs rely on it (see [CDN](/learn/scaling/cdn)).
+- Geo-routing is not the only way to reach the nearest site. With **anycast**, many sites announce the same IP address and the network itself carries each user to a nearby one, with no TTL to wait out when a site fails (see [CDN architecture in depth](/learn/infrastructure/cdn-internals)).
+- The same lookup pattern runs **inside** a data center to find services rather than websites (see [Service discovery and internal DNS](/learn/infrastructure/service-discovery)).
 
 <Callout type="analogy" title="Your phone's contacts">
 

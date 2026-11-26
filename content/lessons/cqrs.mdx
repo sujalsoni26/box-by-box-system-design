@@ -6,7 +6,7 @@ Bertrand Meyer's command-query separation says a method either changes state or 
 
 ## One write model, many read models
 
-The write model is normalised (see [Normalization and denormalization](/learn/normalization)) and transactional, and it is where the invariants live: an order cannot be cancelled after dispatch, a promo code applies once. Read models are denormalised, usually one per screen: the customer's order list with restaurant name and live status, the restaurant's board of open orders, the courier's next pickups, the analyst's hourly totals. Each can sit in whatever store suits it, a Postgres table, a search index, a Redis hash. One write model can feed many projections, and one projection can combine several write models when a screen needs data from more than one.
+The write model is normalised (see [Normalization and denormalization](/learn/data/normalization)) and transactional, and it is where the invariants live: an order cannot be cancelled after dispatch, a promo code applies once. Read models are denormalised, usually one per screen: the customer's order list with restaurant name and live status, the restaurant's board of open orders, the courier's next pickups, the analyst's hourly totals. Each can sit in whatever store suits it, a Postgres table, a search index, a Redis hash. One write model can feed many projections, and one projection can combine several write models when a screen needs data from more than one.
 
 <Mermaid caption="A command is validated against the write model and committed; the resulting event reaches projectors through a topic (fed by an outbox or CDC); each projector maintains a read store that queries hit directly." chart={`flowchart LR
     U["Customer app"] -->|"PlaceOrder"| C["Command handler and write model"]
@@ -25,8 +25,8 @@ The write model is normalised (see [Normalization and denormalization](/learn/no
 <Steps>
 
 1. The command handler loads the write model, checks the rules and commits the change in one transaction.
-2. The change leaves the write side as an event, either written to an outbox table in that same transaction and relayed afterwards (see the deep dive in [Pub/sub](/learn/pubsub)), or captured from the database log by change data capture (see [CDC](/learn/cdc)). The event shapes and the pitfalls are in [Event-driven architecture in practice](/learn/eda-patterns).
-3. Each projector consumes the event and upserts its read store. Events can arrive twice, so the upsert must be idempotent (see [Idempotency](/learn/idempotency)).
+2. The change leaves the write side as an event, either written to an outbox table in that same transaction and relayed afterwards (see the deep dive in [Pub/sub](/learn/reliability/pubsub)), or captured from the database log by change data capture (see [CDC](/learn/streaming/cdc)). The event shapes and the pitfalls are in [Event-driven architecture in practice](/learn/streaming/eda-patterns).
+3. Each projector consumes the event and upserts its read store. Events can arrive twice, so the upsert must be idempotent (see [Idempotency](/learn/reliability/idempotency)).
 4. Queries touch only read stores. The write database never serves a list screen.
 5. A new screen next year means a new projector, fed by replaying the retained events.
 
@@ -36,7 +36,7 @@ CQRS does not require two databases. A materialised view, or a denormalised tabl
 
 ## Eventual consistency and what the UI must do
 
-After `PlaceOrder` returns, the "my orders" projection may lag by milliseconds or, during an incident, minutes (see [Consistency](/learn/consistency)). The failure to design for is the most common CQRS bug report: "I just paid and my order is not in my list."
+After `PlaceOrder` returns, the "my orders" projection may lag by milliseconds or, during an incident, minutes (see [Consistency](/learn/data/consistency)). The failure to design for is the most common CQRS bug report: "I just paid and my order is not in my list."
 
 | Technique | How | Cost |
 | --- | --- | --- |
@@ -65,6 +65,6 @@ It fits collaborative domains, where many actors work on the same data and the o
 
 <DeepDive title="Go deeper: CQRS without events">
 
-The humblest CQRS is a read replica (see [Replication](/learn/replication)): same model, different hardware, and the same lag problem in a smaller form. One step up is a materialised view or a denormalised table refreshed inside the write transaction: read-optimised shapes with no lag, at the cost of slower writes and a shared schema. The event-fed design earns its complexity only when the read store must differ in kind (a search index, a cache cluster) or scale independently of the writes.
+The humblest CQRS is a read replica (see [Replication](/learn/data/replication)): same model, different hardware, and the same lag problem in a smaller form. One step up is a materialised view or a denormalised table refreshed inside the write transaction: read-optimised shapes with no lag, at the cost of slower writes and a shared schema. The event-fed design earns its complexity only when the read store must differ in kind (a search index, a cache cluster) or scale independently of the writes.
 
 </DeepDive>

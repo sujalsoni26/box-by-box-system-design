@@ -102,7 +102,7 @@ The detail that makes the rest simple is the pair of stop sets. A car heading up
     ElevatorCar --> CarMode
 `} />
 
-The mode is an `enum` with one guard in `step()`, not four State classes. The [behavioural patterns lesson](/learn/design-patterns-behavioural) drew the line: State earns its place when behaviour per state is substantial. Here every non-normal mode does the same thing, refuse to move, so a table-sized enum is the honest choice, and the contrast with the vending machine, where each state has real behaviour, is worth saying aloud.
+The mode is an `enum` with one guard in `step()`, not four State classes. The [behavioural patterns lesson](/learn/lld/design-patterns-behavioural) drew the line: State earns its place when behaviour per state is substantial. Here every non-normal mode does the same thing, refuse to move, so a table-sized enum is the honest choice, and the contrast with the vending machine, where each state has real behaviour, is worth saying aloud.
 
 ## Key interfaces and methods
 
@@ -295,7 +295,7 @@ A nearest-request-first lift is a taxi: it takes whoever is closest, and the per
 
 ## Concurrency
 
-Name the shared mutable state, as [Concurrency and thread safety](/learn/concurrency-basics) insists: each car's floor, heading, mode and two stop sets. Button handlers (many threads), the ticker (one), and the technician console all reach them. `TreeSet` is not synchronised, so unguarded concurrent `add` and `remove` corrupt it; the per-car `ReentrantLock` is the cheapest correct tool, taken with `lock()` and released in `finally` on both paths.
+Name the shared mutable state, as [Concurrency and thread safety](/learn/lld/concurrency-basics) insists: each car's floor, heading, mode and two stop sets. Button handlers (many threads), the ticker (one), and the technician console all reach them. `TreeSet` is not synchronised, so unguarded concurrent `add` and `remove` corrupt it; the per-car `ReentrantLock` is the cheapest correct tool, taken with `lock()` and released in `finally` on both paths.
 
 The dispatcher runs on a button thread and asks every car for `ticksToReach`, which takes that car's lock briefly to read a consistent floor and heading. The estimate is stale the moment the lock is released and that is fine: dispatch is a heuristic, and a slightly wrong choice costs a few ticks, not correctness. No thread ever holds two car locks, and the controller's own lock on the unassigned-call queue is never held while a car lock is taken, so there is no cycle and no deadlock to reason about.
 

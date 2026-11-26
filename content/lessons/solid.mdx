@@ -45,7 +45,7 @@ record FlatDiscount(Money amount) implements Discount {
 // PercentDiscount, FestivalDiscount: new classes; Checkout takes a List<Discount> and never changes
 ```
 
-This is the Strategy pattern, composition applied to behaviour as in [Composition over inheritance](/learn/composition-over-inheritance); a new subclass in a hierarchy does the same job. **Trade-off.** You can only close a class against changes you anticipated, and an abstraction built for a change that never comes is dead weight; apply the principle once the second case has shown the axis of change.
+This is the Strategy pattern, composition applied to behaviour as in [Composition over inheritance](/learn/lld/composition-over-inheritance); a new subclass in a hierarchy does the same job. **Trade-off.** You can only close a class against changes you anticipated, and an abstraction built for a change that never comes is dead weight; apply the principle once the second case has shown the axis of change.
 
 ## L: Liskov substitution
 
@@ -125,7 +125,7 @@ class OrderService {
     InMemoryOrderRepository ..|> OrderRepository : implements, in tests
 `} />
 
-**Trade-off.** Somebody must now construct the graph and pass the pieces in, which is the subject of [Interfaces, abstractions and dependency injection](/learn/interfaces-abstractions-di). Inverting a dependency on something that will never vary and never needs faking, such as a `Money` arithmetic helper, is ceremony.
+**Trade-off.** Somebody must now construct the graph and pass the pieces in, which is the subject of [Interfaces, abstractions and dependency injection](/learn/lld/interfaces-abstractions-di). Inverting a dependency on something that will never vary and never needs faking, such as a `Money` arithmetic helper, is ceremony.
 
 <Callout type="analogy" title="A kitchen with stations">
 

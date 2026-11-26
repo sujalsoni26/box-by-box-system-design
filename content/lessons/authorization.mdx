@@ -1,4 +1,4 @@
-**Authorisation** decides whether an already-authenticated caller may perform this action on this object. Authentication tells you the request comes from user 42 (see [Authentication](/learn/authentication)); it says nothing about whether user 42 may delete post 9812. That question is answered on every request, and the default answer is no.
+**Authorisation** decides whether an already-authenticated caller may perform this action on this object. Authentication tells you the request comes from user 42 (see [Authentication](/learn/security/authentication)); it says nothing about whether user 42 may delete post 9812. That question is answered on every request, and the default answer is no.
 
 ## Three ways to say who may do what
 
@@ -36,7 +36,7 @@ The **policy enforcement point** (PEP) sits in the request path, gathers the fac
 | May this user touch this specific object? | Cannot know; it has not loaded the object | Yes, after loading it |
 | Which fields may this caller see or change? | No | Yes |
 
-The gateway (see [API gateway](/learn/api-gateway)) rejects the obviously wrong cheaply. Only the service that loads post 9812 knows who wrote it, so object-level and field-level checks live there. <mark>A design that authorises "at the gateway" and nowhere else has the next failure built in.</mark>
+The gateway (see [API gateway](/learn/architecture/api-gateway)) rejects the obviously wrong cheaply. Only the service that loads post 9812 knows who wrote it, so object-level and field-level checks live there. <mark>A design that authorises "at the gateway" and nowhere else has the next failure built in.</mark>
 
 ## The commonest failure: broken object level authorisation
 
@@ -46,7 +46,7 @@ The fix is procedural: every function that loads a record by a client-supplied i
 
 ## Isolating tenants
 
-In a multi-tenant system (see [Multi-tenancy](/learn/multi-tenancy)) the object-level check becomes a tenant check on every query. The tenant id comes from the token, never the URL or body; a shared repository layer adds the predicate so nobody forgets; and where you can, push the check into the database. PostgreSQL row-level security attaches a policy to the table, and once enabled a table with no matching policy returns no rows, so a missing rule fails closed.
+In a multi-tenant system (see [Multi-tenancy](/learn/architecture/multi-tenancy)) the object-level check becomes a tenant check on every query. The tenant id comes from the token, never the URL or body; a shared repository layer adds the predicate so nobody forgets; and where you can, push the check into the database. PostgreSQL row-level security attaches a policy to the table, and once enabled a table with no matching policy returns no rows, so a missing rule fails closed.
 
 ```sql
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
@@ -74,6 +74,6 @@ A central decision point gives consistent policy and one audit trail but adds a 
 
 <DeepDive title="Go deeper: the new enemy problem">
 
-Authorisation data is replicated like any other data (see [Replication](/learn/replication)), so a check can read a stale permission. Zanzibar calls the dangerous case the *new enemy* problem: Alice removes Bob from a folder's ACL, then adds new documents, and a check that neglects the order of the two changes lets Bob read them. Its answer is a consistency token, a *zookie*, issued when content is written and presented with later checks, so permissions older than the content are never used.
+Authorisation data is replicated like any other data (see [Replication](/learn/data/replication)), so a check can read a stale permission. Zanzibar calls the dangerous case the *new enemy* problem: Alice removes Bob from a folder's ACL, then adds new documents, and a check that neglects the order of the two changes lets Bob read them. Its answer is a consistency token, a *zookie*, issued when content is written and presented with later checks, so permissions older than the content are never used.
 
 </DeepDive>

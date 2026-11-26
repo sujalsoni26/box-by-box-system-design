@@ -30,7 +30,7 @@
 | `Game` | Does the turn: whose go, roll, resolve overshoot, follow a jump, check the win, rotate the queue |
 | `BoardBuilder` | Does setup validation and produces an immutable `Board` |
 
-There is no `Cell` class. A cell is an `int`; a class earns its place when it has behaviour or an invariant, and a cell number here has neither. Saying that out loud is better than drawing a hundred objects that do nothing. `Snake` and `Ladder` are two classes behind one interface because the board treats them identically, the polymorphism from [OOP pillars](/learn/oop-pillars): `destination(cell)` never asks which kind it has.
+There is no `Cell` class. A cell is an `int`; a class earns its place when it has behaviour or an invariant, and a cell number here has neither. Saying that out loud is better than drawing a hundred objects that do nothing. `Snake` and `Ladder` are two classes behind one interface because the board treats them identically, the polymorphism from [OOP pillars](/learn/lld/oop-pillars): `destination(cell)` never asks which kind it has.
 
 ## Class design
 
@@ -97,11 +97,11 @@ There is no `Cell` class. A cell is an `int`; a class earns its place when it ha
     BoardBuilder ..> Board : builds
 `} />
 
-The relationships are the vocabulary of [Class relationships and UML](/learn/class-relationships-uml) applied once each. `Board` to `Jump` is composition: a jump belongs to one board and dies with it. `Game` to `Player` is aggregation: the same players can start a second game. `Game` to `Dice` is an association to an interface, which is the seam the tests use. `BoardBuilder` to `Board` is a dependency: it creates the board and keeps no reference.
+The relationships are the vocabulary of [Class relationships and UML](/learn/lld/class-relationships-uml) applied once each. `Board` to `Jump` is composition: a jump belongs to one board and dies with it. `Game` to `Player` is aggregation: the same players can start a second game. `Game` to `Dice` is an association to an interface, which is the seam the tests use. `BoardBuilder` to `Board` is a dependency: it creates the board and keeps no reference.
 
 ## Key interfaces and methods
 
-The dice first, because everything testable depends on it. `Random.nextInt(6)` returns 0 to 5, so a die adds one. `FixedDice` is a fake in the sense of [Testing and extensibility](/learn/testing-extensibility): a working, simplified implementation whose rolls come from a script.
+The dice first, because everything testable depends on it. `Random.nextInt(6)` returns 0 to 5, so a die adds one. `FixedDice` is a fake in the sense of [Testing and extensibility](/learn/lld/testing-extensibility): a working, simplified implementation whose rolls come from a script.
 
 ```java
 interface Dice { int roll(); }
@@ -244,7 +244,7 @@ In a stage play the die is a prop, and in rehearsal the director decides what it
 ## Design patterns used and why
 
 - **Strategy**, twice. `Dice` makes randomness replaceable, which is what makes the game testable; `OvershootRule` makes the house rule replaceable without a conditional in the loop. Both have more than one real implementation, which is the test for whether a Strategy has earned its place.
-- **Builder** for the board. A board has many optional parts, snakes and ladders in any number, and rules that only make sense once all parts are known: no two jumps from one cell, no jump starting on the last cell. `build()` is where those checks run, as the [creational patterns](/learn/design-patterns-creational) lesson describes.
+- **Builder** for the board. A board has many optional parts, snakes and ladders in any number, and rules that only make sense once all parts are known: no two jumps from one cell, no jump starting on the last cell. `build()` is where those checks run, as the [creational patterns](/learn/lld/design-patterns-creational) lesson describes.
 - **Not used.** No Singleton for `Game` or `Board`: two games in one process is a normal thing to want, and a test wants dozens. No Observer yet: a `PlayerMoved` event is the natural hook for a display, and it is listed under extensibility rather than built now.
 
 Reproducibility has a second route worth knowing: two `Random` instances created with the same seed and given the same sequence of calls produce identical sequences. A seeded `RandomDice` reproduces a whole game, which is useful for replaying a bug report; the fake remains the better unit-testing tool because a test can state the rolls it needs instead of searching for a seed that produces them.
@@ -264,7 +264,7 @@ Reproducibility has a second route worth knowing: two `Random` instances created
 | A player leaves mid-game | Remove from the queue; with one player left, that player wins by default, a documented decision |
 | Board of one cell, or dice with one face | Reject: no game is possible |
 
-Setup problems are `IllegalArgumentException`s thrown by constructors and `build()`, so a bad board never reaches a turn; `playTurn` after a win is an `IllegalStateException`. Fail fast at the boundary, as the [error handling](/learn/error-handling) lesson puts it, and the loop itself needs no defensive checks.
+Setup problems are `IllegalArgumentException`s thrown by constructors and `build()`, so a bad board never reaches a turn; `playTurn` after a win is an `IllegalStateException`. Fail fast at the boundary, as the [error handling](/learn/lld/error-handling) lesson puts it, and the loop itself needs no defensive checks.
 
 ## Concurrency
 
@@ -275,7 +275,7 @@ None, and say so. The game is turn-based and single-threaded; the only mutable s
 - **Bigger boards, more faces, two dice**: configuration, plus a `Dice` implementation that sums two rolls.
 - **New cell effects** ("miss a turn", teleport): when the second kind of effect arrives, generalise `Jump` to a `CellEffect` with `apply(Player)`; not before.
 - **A display or a log**: an Observer on `PlayerMoved` and `GameWon`.
-- **Undo** belongs to the next case study, [Chess](/learn/lld-chess), where moves become Commands.
+- **Undo** belongs to the next case study, [Chess](/learn/lld-practice/lld-chess), where moves become Commands.
 
 | Decision | You gain | You pay |
 | --- | --- | --- |

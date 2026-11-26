@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
 import type { CaseStudyTrack } from "@/types/case-study";
 import type { Level } from "@/types/curriculum";
+import { lessonHref } from "@/lib/curriculum";
 
 /** The fields a card needs; the full exercise (steps) stays on the detail page. */
 export interface CaseStudyCard {
@@ -80,7 +81,7 @@ export function CaseStudyList({ groups }: { groups: CaseStudyGroup[] }) {
                   </h2>
                   <p className="mt-1 max-w-2xl text-ink-2">{g.blurb}</p>
                 </div>
-                <Link href={`/learn/${g.method.slug}`} className="text-sm font-bold text-link underline underline-offset-2">
+                <Link href={lessonHref(g.method.slug)} className="text-sm font-bold text-link underline underline-offset-2">
                   Method: {g.method.title}
                 </Link>
               </div>
@@ -133,7 +134,7 @@ export function CaseStudyList({ groups }: { groups: CaseStudyGroup[] }) {
                           <Link href={`/case-studies/${c.slug}`} className={buttonClasses("primary", "sm")}>
                             Attempt it<span className="sr-only">: {c.title}</span>
                           </Link>
-                          <Link href={`/learn/${c.slug}`} className="text-sm font-bold text-ink-2 underline-offset-2 hover:text-link hover:underline">
+                          <Link href={lessonHref(c.slug)} className="text-sm font-bold text-ink-2 underline-offset-2 hover:text-link hover:underline">
                             Read the walkthrough<span className="sr-only">: {c.title}</span>
                           </Link>
                         </div>

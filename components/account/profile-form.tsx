@@ -38,16 +38,26 @@ function Field({ label, hint, children }: { label: string; hint?: ReactNode; chi
 /**
  * The learner's profile: a name, what Cache calls them, why they are here and an optional target date (with a
  * suggested daily pace). Nothing sensitive. Saved with the settings, so a signed-in account syncs it.
- * `onDone` (in the account dialog) adds a Back button and runs after saving.
+ * `inDialog` (the account dialog, whose header has the way back): one full-width Save; `onDone` runs after saving.
  */
-export function ProfileForm({ onDone }: { onDone?: () => void }) {
+export function ProfileForm({ onDone, inDialog = false }: { onDone?: () => void; inDialog?: boolean }) {
   const hydrated = useHydrated();
   // The form starts from this browser's saved profile (and today's date), so it renders once that has loaded.
   if (!hydrated) return <div aria-busy="true" className="min-h-[26rem]" />;
-  return <ProfileFields onDone={onDone} />;
+  return <ProfileFields onDone={onDone} inDialog={inDialog} />;
 }
 
-function ProfileFields({ onDone }: { onDone?: () => void }) {
+/** A quiet label above a group of fields. */
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-ink-3">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function ProfileFields({ onDone, inDialog }: { onDone?: () => void; inDialog: boolean }) {
   const saved = usePreferencesStore((s) => s.profile);
   const setProfile = usePreferencesStore((s) => s.setProfile);
   const completed = useProgressStore((s) => s.completed);
@@ -67,7 +77,7 @@ function ProfileFields({ onDone }: { onDone?: () => void }) {
 
   return (
     <form
-      className="flex max-w-xl flex-col gap-4"
+      className="flex max-w-xl flex-col gap-6"
       data-testid="profile-form"
       noValidate
       onSubmit={(e) => {
@@ -78,6 +88,7 @@ function ProfileFields({ onDone }: { onDone?: () => void }) {
         onDone?.();
       }}
     >
+      <Section title="About you">
       <Field label="Your name" hint="Optional. Shown on your account.">
         <input
           type="text"
@@ -101,6 +112,8 @@ function ProfileFields({ onDone }: { onDone?: () => void }) {
           data-testid="profile-call-me"
         />
       </Field>
+      </Section>
+      <Section title="Your plan">
       <fieldset className="flex flex-col gap-1.5" aria-labelledby={goalLabel}>
         <span id={goalLabel} className="text-sm font-bold text-ink-2">
           What brings you here?
@@ -155,18 +168,14 @@ function ProfileFields({ onDone }: { onDone?: () => void }) {
           .{draft.goal === "interview" ? " Short on time? Modules 1 to 6 and the case studies matter most." : ""}
         </p>
       ) : null}
-      <p role="status" className={cn("text-sm text-good", !note && "sr-only")}>
-        {note}
-      </p>
-      <div className="flex flex-wrap gap-2">
+      </Section>
+      <div className={cn("flex flex-col gap-2", !inDialog && "items-start")}>
         <Button type="submit" variant="primary" disabled={!dirty} data-testid="profile-save">
           Save profile
         </Button>
-        {onDone ? (
-          <Button variant="secondary" onClick={onDone}>
-            Back
-          </Button>
-        ) : null}
+        <p role="status" className={cn("text-sm text-good", !note && "sr-only")}>
+          {note}
+        </p>
       </div>
     </form>
   );

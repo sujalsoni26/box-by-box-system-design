@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { Lesson } from "@/types/curriculum";
+import { lessonHref } from "@/lib/curriculum";
 
 /** Previous / next lesson cards, plus ← → keyboard shortcuts (ignored while typing or inside a simulation). */
 export function LessonNavigation({ prev, next }: { prev?: Lesson; next?: Lesson }) {
@@ -14,8 +15,8 @@ export function LessonNavigation({ prev, next }: { prev?: Lesson; next?: Lesson 
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.closest("input, textarea, select, [contenteditable], [data-interactive], dialog, [role='slider']") || t.isContentEditable)) return;
-      if (e.key === "ArrowRight" && next) router.push(`/learn/${next.slug}`);
-      if (e.key === "ArrowLeft" && prev) router.push(`/learn/${prev.slug}`);
+      if (e.key === "ArrowRight" && next) router.push(lessonHref(next.slug));
+      if (e.key === "ArrowLeft" && prev) router.push(lessonHref(prev.slug));
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -25,7 +26,7 @@ export function LessonNavigation({ prev, next }: { prev?: Lesson; next?: Lesson 
     <nav aria-label="Lesson navigation" data-companion-avoid="" className="mt-8 grid gap-3 sm:grid-cols-2">
       {prev ? (
         <Link
-          href={`/learn/${prev.slug}`}
+          href={lessonHref(prev.slug)}
           className="group flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-4 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[var(--shadow-soft)]"
         >
           <span className="flex items-center gap-1.5 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink-3">
@@ -38,7 +39,7 @@ export function LessonNavigation({ prev, next }: { prev?: Lesson; next?: Lesson 
       )}
       {next ? (
         <Link
-          href={`/learn/${next.slug}`}
+          href={lessonHref(next.slug)}
           className="group flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-4 text-right transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[var(--shadow-soft)]"
         >
           <span className="flex items-center justify-end gap-1.5 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink-3">

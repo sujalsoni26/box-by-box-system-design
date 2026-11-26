@@ -94,9 +94,6 @@ export function OnThisPage({ headings, open, onToggle }: { headings: LessonHeadi
 
   if (entries.length < 2) return null;
 
-  // Collapsed, the header still says where the reader is.
-  const current = open ? undefined : entries.find((h) => h.id === active)?.label;
-
   const toggle = () => {
     onToggle();
     // The column scrolls on its own; bring the opened list into view when it lands below the fold.
@@ -119,11 +116,6 @@ export function OnThisPage({ headings, open, onToggle }: { headings: LessonHeadi
             <span className="font-mono text-[0.68rem] uppercase tracking-[0.12em]">On this page</span>
             <ChevronDown aria-hidden="true" className={cn("ml-auto size-4 shrink-0 transition-transform", open && "rotate-180")} />
           </span>
-          {current ? (
-            <span aria-hidden="true" className="mt-1 block truncate text-[0.8rem] text-ink-2">
-              {current}
-            </span>
-          ) : null}
         </button>
       </h2>
       <div ref={regionRef} id={regionId} hidden={!open} data-testid="side-panel-toc" data-open={open ? "true" : "false"} className="mt-3">

@@ -1,4 +1,4 @@
-In **leaderless replication** there is no primary. Any replica accepts writes, and a client, or a coordinator acting for it, sends each write to every copy and each read to several. A **quorum** is the minimum number of replicas that must answer before the operation counts as done. This builds on [Replication](/learn/replication) and the [consistency models](/learn/consistency).
+In **leaderless replication** there is no primary. Any replica accepts writes, and a client, or a coordinator acting for it, sends each write to every copy and each read to several. A **quorum** is the minimum number of replicas that must answer before the operation counts as done. This builds on [Replication](/learn/data/replication) and the [consistency models](/learn/data/consistency).
 
 ## N, W and R
 
@@ -50,9 +50,9 @@ R + W > N promises overlap, nothing more. A successful read can still return old
 - **Writes are concurrent.** Two clients update the same key at once; "newest" is now a rule such as last-write-wins, and the rule can pick wrong.
 - **A write partially failed.** A write that reached one node before the client timed out is reported as failed but not rolled back, so later reads may or may not return it.
 - **The quorum was sloppy.** The W acknowledgements came from stand-in nodes, so the read and write sets no longer overlap.
-- **The read overlaps the write.** One replica already has the new version and another does not; quorum reads are not linearizable (see [Linearizability](/learn/linearizability)).
+- **The read overlaps the write.** One replica already has the new version and another does not; quorum reads are not linearizable (see [Linearizability](/learn/distributed/linearizability)).
 
-Put simply, <mark>quorums give you overlap, not agreement</mark>. When nodes must agree on one order of events you need [consensus](/learn/consensus).
+Put simply, <mark>quorums give you overlap, not agreement</mark>. When nodes must agree on one order of events you need [consensus](/learn/distributed/consensus).
 
 ## Strict and sloppy quorums
 
@@ -86,7 +86,7 @@ Hinted handoff covers short outages, read repair covers hot keys, anti-entropy c
 
 <ComparisonItem title="Last-write-wins (LWW)">
 
-Each write carries a timestamp; the highest survives and the rest are discarded. Simple, convergent, no application code. It silently loses concurrent writes and trusts wall clocks that disagree (see [Clocks, time and ordering](/learn/time-and-ordering)). Fine for write-once keys, such as events stored under a UUID, or when only the latest sample matters, such as a driver's current location.
+Each write carries a timestamp; the highest survives and the rest are discarded. Simple, convergent, no application code. It silently loses concurrent writes and trusts wall clocks that disagree (see [Clocks, time and ordering](/learn/distributed/time-and-ordering)). Fine for write-once keys, such as events stored under a UUID, or when only the latest sample matters, such as a driver's current location.
 
 </ComparisonItem>
 

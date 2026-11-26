@@ -34,7 +34,7 @@ final class CountingSet<E> implements Set<E> {
 }
 ```
 
-Now `inner.addAll(c)` calls `inner`'s own `add`, not yours, so the count is 3, and the wrapper works for any `Set`, not just a `HashSet`. Bloch calls this a **forwarding class**; it is the Decorator pattern from [structural patterns](/learn/design-patterns-structural) with the dullest possible decoration. The cost is the forwarding boilerplate, which is why he suggests writing one reusable forwarding class per interface.
+Now `inner.addAll(c)` calls `inner`'s own `add`, not yours, so the count is 3, and the wrapper works for any `Set`, not just a `HashSet`. Bloch calls this a **forwarding class**; it is the Decorator pattern from [structural patterns](/learn/lld/design-patterns-structural) with the dullest possible decoration. The cost is the forwarding boilerplate, which is why he suggests writing one reusable forwarding class per interface.
 
 ## Is-a versus has-a
 
@@ -62,7 +62,7 @@ final class Member {
 }
 ```
 
-In the notation of [Class relationships and UML](/learn/class-relationships-uml), the member has an association to the policy and each rule realises it:
+In the notation of [Class relationships and UML](/learn/lld/class-relationships-uml), the member has an association to the policy and each rule realises it:
 
 <Mermaid caption="Behaviour composed rather than inherited: Member holds a policy, new rules are new classes, and a member's rule can change at runtime." chart={`classDiagram
     class LateFeePolicy {
@@ -79,13 +79,13 @@ In the notation of [Class relationships and UML](/learn/class-relationships-uml)
     NoFee ..|> LateFeePolicy
 `} />
 
-`Member` is one class, each rule is one class, a rule can be swapped while the member is alive (a student graduates), and each rule is tested with no `Member` in sight. This is the Strategy pattern, covered in [behavioural patterns](/learn/design-patterns-behavioural): composition applied to behaviour instead of data.
+`Member` is one class, each rule is one class, a rule can be swapped while the member is alive (a student graduates), and each rule is tested with no `Member` in sight. This is the Strategy pattern, covered in [behavioural patterns](/learn/lld/design-patterns-behavioural): composition applied to behaviour instead of data.
 
 ## When inheritance is still right
 
 Composition is the default, not a ban. Inheritance earns its place when three things hold.
 
-- **It is a true subtype.** Every `B` is substitutable for an `A` everywhere, with no surprising methods (the Liskov principle, in [SOLID](/learn/solid)).
+- **It is a true subtype.** Every `B` is substitutable for an `A` everywhere, with no surprising methods (the Liskov principle, in [SOLID](/learn/lld/solid)).
 - **The parent was designed for it.** The class documents which of its methods call which (its self-use), marks hook methods `protected`, and promises to keep those contracts. Bloch's rule is blunt: design and document for inheritance, or prohibit it with `final`.
 - **Both sides are yours, or the parent is a framework contract.** Extending `AbstractList` to get a dozen methods from `get` and `size`, or a framework base class with documented hooks, is inheritance as intended; extending a library class whose next version you do not control is the risky case.
 
@@ -93,7 +93,7 @@ Inheritance of *type* is also fine: a `sealed` interface with records as leaves 
 
 ## The smell of over-doing it
 
-Composition has its own failure mode: dozens of one-line forwarding methods, objects that cannot be constructed without wiring five collaborators, and an interface with a single implementation for a behaviour that never varied. If a class forwards everything and adds nothing, you have paid the indirection and bought no flexibility. [Dependency injection](/learn/interfaces-abstractions-di) is how later lessons keep the wiring cost in one place.
+Composition has its own failure mode: dozens of one-line forwarding methods, objects that cannot be constructed without wiring five collaborators, and an interface with a single implementation for a behaviour that never varied. If a class forwards everything and adds nothing, you have paid the indirection and bought no flexibility. [Dependency injection](/learn/lld/interfaces-abstractions-di) is how later lessons keep the wiring cost in one place.
 
 <Callout type="interview" title={"Say \"compose\" with the reason attached"}>
 

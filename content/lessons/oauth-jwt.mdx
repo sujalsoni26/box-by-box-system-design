@@ -45,7 +45,7 @@ sequenceDiagram
 
 RFC 9700 (January 2025) says public clients MUST use PKCE and confidential clients SHOULD, authorization servers MUST support it, the implicit grant SHOULD NOT be used and the password grant MUST NOT.
 
-**Client credentials** covers service-to-service calls with no user: the client authenticates with its own secret or certificate (see [Secrets management](/learn/secrets-management)) and receives a token for itself. A **refresh token** obtains a new access token without involving the user; it goes only to the authorization server, never to a resource server, and public clients must rotate it on each use.
+**Client credentials** covers service-to-service calls with no user: the client authenticates with its own secret or certificate (see [Secrets management](/learn/security/secrets-management)) and receives a token for itself. A **refresh token** obtains a new access token without involving the user; it goes only to the authorization server, never to a resource server, and public clients must rotate it on each use.
 
 ## OpenID Connect: who logged in
 
@@ -75,7 +75,7 @@ Two historical bugs explain the stern rules: libraries that accepted `"alg": "no
 3. Verify the signature with an algorithm from your allow-list for that key.
 4. Check `iss` is the issuer you expect and `aud` includes you; a token minted for another API is not yours.
 5. Check `exp` and `nbf`, allowing a minute or two of clock skew.
-6. Only now read `sub` and `scope` and hand them to authorisation (see [Authorisation](/learn/authorization)).
+6. Only now read `sub` and `scope` and hand them to authorisation (see [Authorisation](/learn/security/authorization)).
 
 </Steps>
 
@@ -119,6 +119,6 @@ A valet key starts the engine but will not open the boot. You hand the valet (th
 
 <DeepDive title="Go deeper: where a browser app should keep tokens">
 
-A single-page app that stores tokens in `localStorage` hands them to any script that runs on the page, which is why OWASP's session guidance says not to. The usual cure is a **backend for frontend**: a thin server holds the tokens and gives the browser an ordinary HttpOnly session cookie (see [Authentication](/learn/authentication)), while the API behind it still receives standard bearer JWTs.
+A single-page app that stores tokens in `localStorage` hands them to any script that runs on the page, which is why OWASP's session guidance says not to. The usual cure is a **backend for frontend**: a thin server holds the tokens and gives the browser an ordinary HttpOnly session cookie (see [Authentication](/learn/security/authentication)), while the API behind it still receives standard bearer JWTs.
 
 </DeepDive>

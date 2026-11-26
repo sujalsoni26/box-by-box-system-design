@@ -1,6 +1,20 @@
 "use client";
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { CheckCircle2, Circle, Eye, EyeOff, KeyRound, UserRound, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LogOut,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   addPassword,
@@ -21,7 +35,7 @@ import {
 import { BASE_PASSWORD_RULES, passwordChecks, passwordProblems, type PasswordRules } from "@/lib/cloud/guards";
 import { welcomeSignedIn as welcome } from "@/lib/companion/reactions";
 import { cn } from "@/lib/utils";
-import { useAccountStore, type AccountUser, type AccountView } from "@/stores/account-store";
+import { useAccountStore, type AccountView } from "@/stores/account-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { ProfileForm } from "./profile-form";
 import { SyncStatusLine } from "./sync-status";
@@ -50,6 +64,7 @@ export function AccountDialog() {
   const open = useAccountStore((s) => s.openDialog);
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const user = useAccountStore((s) => s.user);
   const lastPhase = useRef(phase);
 
   // Signing in finishes the job: close the dialog and let Cache say hello. An email account that still has to
@@ -107,9 +122,22 @@ export function AccountDialog() {
       {view ? (
         <div className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="font-display text-xl font-bold leading-tight">
-              {TITLES[view]}
-            </h2>
+            <div className="flex min-w-0 items-center gap-1.5">
+              {(view === "profile" || view === "password") && (phase === "signed-in" || phase === "unverified") ? (
+                <button
+                  type="button"
+                  onClick={() => open("account")}
+                  aria-label="Back to your account"
+                  data-testid="account-back"
+                  className="-ml-2 grid size-8 shrink-0 place-items-center rounded-lg text-ink-3 hover:bg-surface-2 hover:text-ink"
+                >
+                  <ChevronLeft aria-hidden="true" className="size-5" />
+                </button>
+              ) : null}
+              <h2 id={titleId} className="font-display text-xl font-bold leading-tight">
+                {view === "password" && user ? (user.hasPassword ? "Change password" : "Set a password") : TITLES[view]}
+              </h2>
+            </div>
             <button
               type="button"
               onClick={close}
@@ -127,7 +155,9 @@ export function AccountDialog() {
             {view === "verify" ? <Verify /> : null}
             {view === "account" ? <Account /> : null}
             {view === "password" ? <PasswordView /> : null}
-            {view === "profile" ? <ProfileForm onDone={() => (phase === "signed-in" || phase === "unverified" ? open("account") : close())} /> : null}
+            {view === "profile" ? (
+              <ProfileForm inDialog onDone={() => (phase === "signed-in" || phase === "unverified" ? open("account") : close())} />
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -240,9 +270,9 @@ function GoogleButton({ onDone }: { onDone: (r: ActionResult) => void }) {
 }
 
 /** Google's four-colour "G", as Google's sign-in branding guidelines ask for on a "Continue with Google" button. */
-function GoogleLogo() {
+function GoogleLogo({ small = false }: { small?: boolean }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 48 48" className="size-5 shrink-0">
+    <svg aria-hidden="true" viewBox="0 0 48 48" className={cn("shrink-0", small ? "size-3" : "size-5")}>
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
       <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
@@ -465,10 +495,30 @@ function Verify() {
   );
 }
 
-function signInMethods(user: AccountUser): string {
-  if (user.hasGoogle && user.hasPassword) return "Sign in with Google, or with your email and password";
-  if (user.hasGoogle) return "Signed in with Google";
-  return "Signed in with email and password";
+/** A small pill for one way this account can sign in. */
+function MethodChip({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink-2">
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+/** One row in the account's list of settings: icon, label, a short hint and a chevron. */
+function SettingRow({ icon: Icon, label, hint, onClick, testId }: { icon: LucideIcon; label: string; hint: string; onClick: () => void; testId: string }) {
+  return (
+    <button type="button" onClick={onClick} data-testid={testId} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-surface-2">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-link">
+        <Icon aria-hidden="true" className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[0.92rem] font-bold text-ink">{label}</span>
+        <span className="block text-xs text-ink-3">{hint}</span>
+      </span>
+      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5" />
+    </button>
+  );
 }
 
 function Account() {
@@ -481,33 +531,38 @@ function Account() {
   const { busy, error, run } = useAction();
   if (!user) return null;
   const name = profileName || user.name;
+  const initial = (name || user.email || "?").trim().charAt(0).toUpperCase();
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        {name ? <p className="font-display text-lg font-bold text-ink">{name}</p> : null}
-        <p className={cn(name ? "text-ink-2" : "font-bold text-ink")}>{user.email}</p>
-        <p className="text-sm text-ink-3" data-testid="account-methods">
-          {signInMethods(user)}
-        </p>
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-3.5">
+        <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-accent-soft font-display text-lg font-bold text-link">
+          {initial}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-[1.05rem] font-bold leading-tight text-ink">{name || user.email}</p>
+          {name ? <p className="truncate text-sm text-ink-2">{user.email}</p> : null}
+          <div className="mt-1.5 flex flex-wrap gap-1.5" data-testid="account-methods" aria-label="Ways to sign in">
+            {user.hasGoogle ? <MethodChip icon={<GoogleLogo small />} label="Google" /> : null}
+            {user.hasPassword ? <MethodChip icon={<KeyRound aria-hidden="true" className="size-3" />} label="Email and password" /> : null}
+          </div>
+        </div>
       </div>
-      <SyncStatusLine />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Button variant="secondary" onClick={() => open("profile")} data-testid="account-edit-profile">
-          <UserRound aria-hidden="true" className="size-4" />
-          Edit profile
-        </Button>
-        <Button variant="secondary" onClick={() => open("password")} data-testid="account-password-view">
-          <KeyRound aria-hidden="true" className="size-4" />
-          {user.hasPassword ? "Change password" : "Set a password"}
-        </Button>
+      <div className="rounded-xl bg-surface-2 px-3.5 py-2.5">
+        <SyncStatusLine />
       </div>
-      {!user.hasPassword ? (
-        <p className="-mt-2 text-xs text-ink-3">
-          Add a password so you can still sign in with this email, and keep your progress, if Google sign-in ever stops working for you.
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+        <SettingRow icon={UserRound} label="Edit profile" hint="Your name, what Cache calls you, your goal" onClick={() => open("profile")} testId="account-edit-profile" />
+        <SettingRow
+          icon={KeyRound}
+          label={user.hasPassword ? "Change password" : "Set a password"}
+          hint={user.hasPassword ? "Update the password for this email" : "Also sign in with this email, not only Google"}
+          onClick={() => open("password")}
+          testId="account-password-view"
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
         <Button
+          size="sm"
           variant="secondary"
           data-testid="account-sign-out"
           onClick={async () => {
@@ -515,25 +570,27 @@ function Account() {
             close();
           }}
         >
+          <LogOut aria-hidden="true" className="size-3.5" />
           Sign out
         </Button>
         {!confirming ? (
-          <Button variant="danger" onClick={() => setConfirming(true)} data-testid="account-delete-start">
-            Delete account…
+          <Button size="sm" variant="danger-soft" onClick={() => setConfirming(true)} data-testid="account-delete-start">
+            <Trash2 aria-hidden="true" className="size-3.5" />
+            Delete account
           </Button>
         ) : null}
       </div>
-      <p className="text-xs text-ink-3">When you sign out, your progress stays in this browser for 5 days, then it&apos;s cleared here. Your account keeps it.</p>
       {confirming ? (
         <form
-          className="flex flex-col gap-3 rounded-xl border border-bad/40 bg-bad-soft p-4"
+          className="flex flex-col gap-3 rounded-xl border border-bad/25 bg-bad-soft p-4"
           onSubmit={async (e) => {
             e.preventDefault();
             const r = await run(() => deleteAccount(password));
             if (r.ok) close();
           }}
         >
-          <p className="text-sm text-ink">
+          <p className="font-bold text-ink">Delete your account?</p>
+          <p className="-mt-2 text-sm text-ink-2">
             This permanently deletes your account, its saved progress and notes, and clears them from this browser. It can&apos;t be undone.
           </p>
           {user.hasPassword ? (
@@ -550,12 +607,12 @@ function Account() {
             <p className="text-sm text-ink-2">You&apos;ll be asked to confirm with Google.</p>
           )}
           <Feedback error={error} note={null} />
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" variant="danger" disabled={busy} data-testid="account-delete-confirm">
-              {busy ? "Deleting…" : "Delete my account"}
-            </Button>
-            <Button variant="secondary" onClick={() => setConfirming(false)}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
               Cancel
+            </Button>
+            <Button size="sm" type="submit" variant="danger" disabled={busy} data-testid="account-delete-confirm">
+              {busy ? "Deleting…" : "Delete my account"}
             </Button>
           </div>
         </form>
@@ -567,7 +624,6 @@ function Account() {
 /** Set a password (Google-only accounts) or change it (accounts that have one). */
 function PasswordView() {
   const user = useAccountStore((s) => s.user);
-  const open = useAccountStore((s) => s.openDialog);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const { busy, error, note, run } = useAction();
@@ -580,7 +636,7 @@ function PasswordView() {
 
   return (
     <form
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4"
       noValidate
       onSubmit={async (e) => {
         e.preventDefault();
@@ -592,17 +648,21 @@ function PasswordView() {
         }
       }}
     >
-      {adding ? (
-        <p className="text-sm text-ink-2">
-          Your account signs in with Google. Add a password and you can also sign in with <strong className="text-ink">{user.email}</strong> and that
-          password, so you keep your progress even if you can&apos;t use Google sign-in later.
-          {user.hasGoogle ? " Google may ask you to confirm it's you." : null}
-        </p>
-      ) : (
-        <>
-          <p className="text-sm text-ink-2">
-            Sign in with <strong className="text-ink">{user.email}</strong> and this password{user.hasGoogle ? ", or keep using Google" : ""}.
+      <div className="flex gap-3 rounded-xl bg-surface-2 p-3.5 text-sm text-ink-2">
+        <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-link" />
+        {adding ? (
+          <p>
+            Add a password to sign in with <strong className="text-ink">{user.email}</strong> as well as Google, so you keep your progress even if
+            Google sign-in stops working for you.{user.hasGoogle ? " Google may ask you to confirm it's you." : null}
           </p>
+        ) : (
+          <p>
+            You sign in with <strong className="text-ink">{user.email}</strong> and this password{user.hasGoogle ? ", or with Google" : ""}.
+          </p>
+        )}
+      </div>
+      {adding ? null : (
+        <>
           <Field label="Current password">
             <PasswordInput value={current} onChange={setCurrent} autoComplete="current-password" testId="account-current-password" />
           </Field>
@@ -614,16 +674,11 @@ function PasswordView() {
         <PasswordInput value={next} onChange={setNext} autoComplete="new-password" describedBy={rulesId} testId="account-new-password" />
       </Field>
       <Feedback error={lock > 0 ? `Too many attempts. Try again in ${lock} seconds.` : error} note={note} />
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="primary" disabled={busy || lock > 0 || missing.length > 0 || (!adding && !current)} data-testid="account-password-submit">
-          {busy ? "Saving…" : adding ? "Set password" : "Change password"}
-        </Button>
-        <Button variant="secondary" onClick={() => open("account")}>
-          Back
-        </Button>
-      </div>
+      <Button type="submit" variant="primary" disabled={busy || lock > 0 || missing.length > 0 || (!adding && !current)} data-testid="account-password-submit">
+        {busy ? "Saving…" : adding ? "Set password" : "Change password"}
+      </Button>
       {!adding ? (
-        <p className="text-xs text-ink-3">
+        <p className="-mt-1 text-center text-xs text-ink-3">
           Forgot it? Sign out and use &ldquo;Forgot password?&rdquo; on the sign-in screen to get a reset link by email.
         </p>
       ) : null}

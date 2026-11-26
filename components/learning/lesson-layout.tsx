@@ -10,7 +10,7 @@ import type { LessonHeading } from "@/lib/lesson-headings";
 import type { Lesson } from "@/types/curriculum";
 import { BookmarkButton, CompletedChip, LessonVisitTracker, MarkCompleteButton, ReviewButton } from "./lesson-actions";
 import { LessonNavigation } from "./lesson-navigation";
-import { LessonNotesChip } from "./lesson-notes";
+import { LessonNotesChip, LessonNotesFocus } from "./lesson-notes";
 import { LessonSidePanels } from "./lesson-side-panels";
 import { LessonSidebar } from "./lesson-sidebar";
 import { OnThisPageCompact, ReadingProgress } from "./on-this-page";
@@ -27,6 +27,7 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
     <>
       <ReadingProgress />
       <LessonVisitTracker slug={lesson.slug} />
+      <LessonNotesFocus slug={lesson.slug} title={lesson.title} />
       <div className="mx-auto grid max-w-[90rem] gap-x-10 px-4 sm:px-6 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_13rem]">
         <aside data-companion-avoid="" className="sticky top-16 hidden h-[calc(100dvh-4rem)] overflow-y-auto py-8 pr-2 lg:block">
           <LessonSidebar moduleId={lesson.moduleId} currentSlug={lesson.slug} />

@@ -10,7 +10,7 @@ import {
   type MouseEvent,
   type SyntheticEvent,
 } from "react";
-import { ChevronDown, Copy, NotebookPen, X } from "lucide-react";
+import { ChevronDown, Copy, Maximize2, NotebookPen, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,8 @@ import { NOTE_MAX_LENGTH, useNotesHydrated, useNotesStore } from "@/stores/notes
  * - xl and up: <LessonNotesPanel> in the right column, under "On this page". <LessonSidePanels> decides
  *   which of the two is open (never both; Notes starts closed).
  * - Below xl: <LessonNotesChip> in the lesson header opens the same editor in a bottom sheet.
+ * - Any size: <LessonNotesFocus>, a large writing view (Expand in the panel or sheet, or the N key on a lesson);
+ *   Done or Escape closes it and the reader carries on where they were.
  */
 
 const SAVE_DELAY_MS = 400;
@@ -68,13 +70,67 @@ function legacyCopy(): boolean {
   }
 }
 
-type EditorVariant = "panel" | "sheet";
+type EditorVariant = "panel" | "sheet" | "focus";
+
+/* ------------------------------------------------------------------ the large writing view: open or closed */
+
+let focusOpen = false;
+const focusListeners = new Set<() => void>();
+function setFocusOpen(next: boolean) {
+  if (focusOpen === next) return;
+  focusOpen = next;
+  focusListeners.forEach((l) => l());
+}
+function subscribeFocus(listener: () => void) {
+  focusListeners.add(listener);
+  return () => {
+    focusListeners.delete(listener);
+  };
+}
+const focusSnapshot = () => focusOpen;
+const focusServerSnapshot = () => false;
+/** Open the large notes view (from the panel, the sheet or the N key). */
+export const openNotesFocus = () => setFocusOpen(true);
+
+/** Keep Tab inside a modal dialog (it would otherwise let focus reach the browser UI). */
+function trapTab(e: KeyboardEvent<HTMLDialogElement>) {
+  const dialog = e.currentTarget;
+  if (e.key !== "Tab" || (e.target as Element).closest("dialog") !== dialog) return;
+  const items = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => el.closest("dialog") === dialog && !el.matches(":disabled") && el.getClientRects().length > 0,
+  );
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (!first || !last) return;
+  const active = document.activeElement;
+  if (e.shiftKey && (active === first || active === dialog)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+/** Page scroll locked while a modal is open (keeps the scrollbar's space, so nothing shifts). Returns the undo. */
+function lockScroll(): () => void {
+  const root = document.documentElement;
+  const overflow = root.style.overflow;
+  const gutter = root.style.getPropertyValue("scrollbar-gutter");
+  if (window.innerWidth > root.clientWidth) root.style.setProperty("scrollbar-gutter", "stable");
+  root.style.overflow = "hidden";
+  return () => {
+    root.style.overflow = overflow;
+    if (gutter) root.style.setProperty("scrollbar-gutter", gutter);
+    else root.style.removeProperty("scrollbar-gutter");
+  };
+}
 
 /**
  * Plain-text editor for one lesson's note. Saves about 400 ms after typing stops, and straight away on
  * blur, unmount and when the page is hidden. Render it with `key={slug}` so each lesson starts fresh.
  */
-function NotesEditor({ slug, lessonTitle, variant }: { slug: string; lessonTitle: string; variant: EditorVariant }) {
+function NotesEditor({ slug, lessonTitle, variant, onExpand }: { slug: string; lessonTitle: string; variant: EditorVariant; onExpand?: () => void }) {
   const hydrated = useNotesHydrated();
   const stored = useNotesStore((s) => s.notes[slug]?.text ?? "");
   const setNote = useNotesStore((s) => s.setNote);
@@ -190,7 +246,7 @@ function NotesEditor({ slug, lessonTitle, variant }: { slug: string; lessonTitle
   const nearLimit = draft.length > NOTE_MAX_LENGTH * 0.9;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2", variant === "focus" && "min-h-0 flex-1")}>
       <label htmlFor={textareaId} className="sr-only">
         Your notes for {lessonTitle}
       </label>
@@ -211,9 +267,13 @@ function NotesEditor({ slug, lessonTitle, variant }: { slug: string; lessonTitle
         placeholder="Key ideas, questions, examples…"
         aria-describedby={`${hintId} ${countId}`}
         className={cn(
-          "block w-full resize-y rounded-lg border border-line bg-surface-2 px-3 py-2 leading-relaxed text-ink transition-colors placeholder:text-ink-3 hover:border-line-strong focus:border-accent disabled:opacity-60",
+          "block w-full rounded-lg border border-line bg-surface-2 text-ink transition-colors placeholder:text-ink-3 hover:border-line-strong focus:border-accent disabled:opacity-60",
           // Phones need 16px text, or iOS zooms in on focus.
-          variant === "panel" ? "h-[clamp(9rem,34dvh,18rem)] min-h-24 text-sm" : "h-[min(18rem,40dvh)] min-h-24 text-base",
+          variant === "panel"
+            ? "h-[clamp(9rem,34dvh,18rem)] min-h-24 resize-y px-3 py-2 text-sm leading-relaxed"
+            : variant === "sheet"
+              ? "h-[min(18rem,40dvh)] min-h-24 resize-y px-3 py-2 text-base leading-relaxed"
+              : "min-h-48 flex-1 resize-none px-4 py-3 text-base leading-7 sm:px-5 sm:text-[1.05rem]",
         )}
       />
       <p id={hintId} className="sr-only">
@@ -256,6 +316,20 @@ function NotesEditor({ slug, lessonTitle, variant }: { slug: string; lessonTitle
             onConfirm={clear}
           />
         </fieldset>
+        {onExpand ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn("ml-auto", variant === "panel" && "px-2")}
+            onClick={onExpand}
+            title="Write in a larger view (N)"
+            aria-label={variant === "panel" ? "Expand notes (N)" : undefined}
+            data-testid="notes-expand"
+          >
+            <Maximize2 aria-hidden="true" className="size-3.5" />
+            {variant === "panel" ? null : "Expand"}
+          </Button>
+        ) : null}
       </div>
       {/* Always rendered (even when empty) so screen readers announce Copy and Clear results. */}
       <p role="status" className="text-xs text-ink-2">
@@ -315,7 +389,7 @@ export function LessonNotesPanel({ slug, title, open, onToggle }: { slug: string
         </button>
       </h2>
       <div ref={regionRef} id={regionId} hidden={!open} data-testid="side-panel-notes" data-open={open ? "true" : "false"} className="mt-3">
-        {open && isXl ? <NotesEditor key={slug} slug={slug} lessonTitle={title} variant="panel" /> : null}
+        {open && isXl ? <NotesEditor key={slug} slug={slug} lessonTitle={title} variant="panel" onExpand={openNotesFocus} /> : null}
       </div>
     </section>
   );
@@ -343,15 +417,9 @@ export function LessonNotesChip({ slug, title }: { slug: string; title: string }
     if (!open || !dialog) return;
     if (!dialog.open) dialog.showModal();
     if (window.matchMedia("(pointer: fine)").matches) dialog.querySelector("textarea")?.focus();
-    const root = document.documentElement;
-    const overflow = root.style.overflow;
-    const gutter = root.style.getPropertyValue("scrollbar-gutter");
-    if (window.innerWidth > root.clientWidth) root.style.setProperty("scrollbar-gutter", "stable");
-    root.style.overflow = "hidden";
+    const unlock = lockScroll();
     return () => {
-      root.style.overflow = overflow;
-      if (gutter) root.style.setProperty("scrollbar-gutter", gutter);
-      else root.style.removeProperty("scrollbar-gutter");
+      unlock();
       if (dialog.open) dialog.close();
     };
   }, [open]);
@@ -374,26 +442,6 @@ export function LessonNotesChip({ slug, title }: { slug: string; title: string }
     if (e.target !== e.currentTarget) return;
     const r = e.currentTarget.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close();
-  };
-
-  // Keep Tab inside the sheet (a modal dialog would otherwise let focus reach the browser UI).
-  const onKeyDown = (e: KeyboardEvent<HTMLDialogElement>) => {
-    const dialog = e.currentTarget;
-    if (e.key !== "Tab" || (e.target as Element).closest("dialog") !== dialog) return;
-    const items = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-      (el) => el.closest("dialog") === dialog && !el.matches(":disabled") && el.getClientRects().length > 0,
-    );
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (!first || !last) return;
-    const active = document.activeElement;
-    if (e.shiftKey && (active === first || active === dialog)) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
   };
 
   return (
@@ -419,7 +467,7 @@ export function LessonNotesChip({ slug, title }: { slug: string; title: string }
         data-companion-avoid=""
         onClose={onClose}
         onClick={onBackdropClick}
-        onKeyDown={onKeyDown}
+        onKeyDown={trapTab}
         className="m-0 mt-auto w-full max-w-none overflow-hidden rounded-t-2xl border border-b-0 border-line-strong bg-surface p-0 text-ink shadow-[var(--shadow-lift)] backdrop:bg-ink/35 sm:mx-auto sm:mb-4 sm:max-w-xl sm:rounded-2xl sm:border-b"
       >
         {open ? (
@@ -440,10 +488,114 @@ export function LessonNotesChip({ slug, title }: { slug: string; title: string }
                 <X aria-hidden="true" className="size-5" />
               </button>
             </div>
-            <NotesEditor key={slug} slug={slug} lessonTitle={title} variant="sheet" />
+            <NotesEditor
+              key={slug}
+              slug={slug}
+              lessonTitle={title}
+              variant="sheet"
+              onExpand={() => {
+                close();
+                openNotesFocus();
+              }}
+            />
           </div>
         ) : null}
       </dialog>
     </>
+  );
+}
+
+/**
+ * The large writing view: a wide, tall editor over the lesson, for writing at length. Opens from Expand (panel or
+ * sheet) or the N key anywhere on the lesson (not while typing elsewhere); Done, Escape or a click outside closes it,
+ * and the page is exactly where the reader left it. Same note, saved the same way. Mount once per lesson page.
+ */
+export function LessonNotesFocus({ slug, title }: { slug: string; title: string }) {
+  const open = useSyncExternalStore(subscribeFocus, focusSnapshot, focusServerSnapshot);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const returnTo = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+
+  // N opens it (like the arrow keys for next/previous lesson: not while typing or inside another dialog).
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.repeat || e.key.toLowerCase() !== "n") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.closest("input, textarea, select, [contenteditable], [data-interactive], dialog, [role='slider']") || t.isContentEditable)) return;
+      if (document.querySelector("dialog[open]")) return;
+      e.preventDefault();
+      openNotesFocus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Leaving the lesson closes it.
+  useEffect(() => () => setFocusOpen(false), [slug]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
+    returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!dialog.open) dialog.showModal();
+    const textarea = dialog.querySelector("textarea");
+    if (textarea) {
+      textarea.focus();
+      // Carry on writing at the end of the note.
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+    const unlock = lockScroll();
+    return () => {
+      unlock();
+      if (dialog.open) dialog.close();
+    };
+  }, [open]);
+
+  const onClose = (e: SyntheticEvent<HTMLDialogElement>) => {
+    // The nested "Clear" confirmation's close event bubbles here too; ignore it.
+    if (e.target !== e.currentTarget) return;
+    setFocusOpen(false);
+    returnTo.current?.focus({ preventScroll: true });
+  };
+
+  const onBackdropClick = (e: MouseEvent<HTMLDialogElement>) => {
+    if (e.target !== e.currentTarget) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialogRef.current?.close();
+  };
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-modal="true"
+      aria-labelledby={titleId}
+      data-companion-avoid=""
+      data-testid="notes-focus"
+      onClose={onClose}
+      onClick={onBackdropClick}
+      onKeyDown={trapTab}
+      className="m-auto h-[min(48rem,calc(100dvh-2rem))] w-[min(56rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-[var(--shadow-lift)] backdrop:bg-ink/45 max-sm:h-dvh max-sm:w-screen max-sm:max-h-none max-sm:rounded-none max-sm:border-0"
+    >
+      {open ? (
+        <div className="flex h-full flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5">
+          <div className="mb-3 flex items-center gap-3">
+            <NotebookPen aria-hidden="true" className="size-5 shrink-0 text-ink-3" />
+            <div className="min-w-0 flex-1">
+              <h2 id={titleId} className="font-display text-lg font-bold leading-tight">
+                Notes
+              </h2>
+              <p className="truncate text-sm text-ink-3">{title}</p>
+            </div>
+            <span className="hidden text-xs text-ink-3 sm:inline">
+              <kbd className="rounded border border-line px-1 font-mono">Esc</kbd> to close
+            </span>
+            <Button size="sm" variant="secondary" onClick={() => dialogRef.current?.close()} data-testid="notes-focus-done">
+              Done
+            </Button>
+          </div>
+          <NotesEditor key={slug} slug={slug} lessonTitle={title} variant="focus" />
+        </div>
+      ) : null}
+    </dialog>
   );
 }

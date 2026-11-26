@@ -6,7 +6,7 @@ import { CaseStudyWorkspace } from "@/components/case-studies/case-study-workspa
 import { CompletedChip, ReviewButton } from "@/components/learning/lesson-actions";
 import { Chip, LevelChip } from "@/components/ui/chip";
 import { caseStudies, caseStudiesFor, getCaseStudy } from "@/lib/case-studies";
-import { getLesson } from "@/lib/curriculum";
+import { getLesson, lessonHref } from "@/lib/curriculum";
 
 interface CaseStudyPageProps {
   params: Promise<{ slug: string }>;
@@ -81,7 +81,7 @@ export default async function CaseStudyPage({ params }: CaseStudyPageProps) {
               {concepts.map((c) => (
                 <li key={c.slug}>
                   <Link
-                    href={`/learn/${c.slug}`}
+                    href={lessonHref(c.slug)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-sm text-ink-2 transition-colors hover:border-accent hover:text-link"
                   >
                     <span className="font-mono text-[0.7rem] text-ink-3">{c.number}</span>
@@ -103,7 +103,7 @@ export default async function CaseStudyPage({ params }: CaseStudyPageProps) {
         <p className="flex items-center gap-2 text-sm text-ink-3">
           <BookOpen aria-hidden="true" className="size-4" />
           Prefer to read first? The{" "}
-          <Link href={`/learn/${study.slug}`} className="font-semibold text-link underline underline-offset-2">
+          <Link href={lessonHref(study.slug)} className="font-semibold text-link underline underline-offset-2">
             full walkthrough
           </Link>{" "}
           has the diagrams and numbers.

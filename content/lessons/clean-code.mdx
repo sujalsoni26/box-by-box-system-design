@@ -41,7 +41,7 @@ Five loose parameters became two objects that belong together, the flag argument
 
 ## Cohesion and coupling
 
-**Cohesion** is how strongly the parts of a class belong together: a class is cohesive when most of its methods use most of its fields. **Coupling** is how much one piece must know about another to work. Good design has high cohesion and low coupling, the goal the single-responsibility principle and interfaces pursue too (see [SOLID principles](/learn/solid) and [Interfaces, abstractions and dependency injection](/learn/interfaces-abstractions-di)). Two clusters of methods that never touch each other's fields are two classes. A method that reaches through three objects, `order.getCustomer().getAddress().getCity()`, is coupled to all three and has broken the encapsulation from [the OOP pillars](/learn/oop-pillars).
+**Cohesion** is how strongly the parts of a class belong together: a class is cohesive when most of its methods use most of its fields. **Coupling** is how much one piece must know about another to work. Good design has high cohesion and low coupling, the goal the single-responsibility principle and interfaces pursue too (see [SOLID principles](/learn/lld/solid) and [Interfaces, abstractions and dependency injection](/learn/lld/interfaces-abstractions-di)). Two clusters of methods that never touch each other's fields are two classes. A method that reaches through three objects, `order.getCustomer().getAddress().getCity()`, is coupled to all three and has broken the encapsulation from [the OOP pillars](/learn/lld/oop-pillars).
 
 ## Comments that explain why
 
@@ -77,7 +77,7 @@ Martin Fowler defines **refactoring** as changing the internal structure of code
 
 </Steps>
 
-Step 1's tests are the subject of [Unit testing and designing for extensibility](/learn/testing-extensibility).
+Step 1's tests are the subject of [Unit testing and designing for extensibility](/learn/lld/testing-extensibility).
 
 <Callout type="warning" title="Clean is not the same as tiny">
 

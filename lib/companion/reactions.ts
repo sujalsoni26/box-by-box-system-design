@@ -1,5 +1,5 @@
 import { catMeows } from "@/data/cat-meows";
-import { getLesson, getModule, lessons, nextIncompleteLesson, overallProgress } from "@/lib/curriculum";
+import { getLesson, getModule, lessons, nextIncompleteLesson, overallProgress, lessonHref } from "@/lib/curriculum";
 import { formatPercent } from "@/lib/utils";
 import { DEFAULT_CALL_ME, usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
@@ -67,7 +67,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
           s.say({
             title: "Course complete",
             text: `All ${lessons.length} lessons learned. You grew the whole system, box by box. Lock it in with the Test yourself deck.`,
-            actions: [{ label: "Test yourself", href: "/learn/test-yourself", primary: true }, { label: "Yay" }],
+            actions: [{ label: "Test yourself", href: lessonHref("test-yourself"), primary: true }, { label: "Yay" }],
             mood: "celebrating",
             solicited: true,
           });
@@ -77,7 +77,7 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
         const m = getModule(lesson.moduleId);
         s.react("celebrating", 2800);
         const actions: BubbleAction[] = next
-          ? [{ label: `Next: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, { label: "Later" }]
+          ? [{ label: `Next: ${next.title}`, href: lessonHref(next.slug), primary: true }, { label: "Later" }]
           : [{ label: "Nice" }];
         if (canRespond())
           s.say({
@@ -265,7 +265,7 @@ export function maybeGreet(currentSlug: string | undefined, now: number): void {
   }
   s.say({
     text: `${line("greetBack")}${countdown} Next up: ${next.number} ${next.title}.${reviewText}`,
-    actions: [{ label: `Continue: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, ...reviewAction, { label: "Later" }],
+    actions: [{ label: `Continue: ${next.title}`, href: lessonHref(next.slug), primary: true }, ...reviewAction, { label: "Later" }],
     mood: "happy",
   });
 }
@@ -315,7 +315,7 @@ export function reactToFocusEvent(event: FocusEvent, now: number): void {
   const { completed, lastVisited } = useProgressStore.getState();
   const next = nextIncompleteLesson(completed, lastVisited);
   const actions: BubbleAction[] = [{ label: `Start ${focus.focusMinutes} min`, primary: true, onSelect: () => useFocusStore.getState().start(Date.now()) }];
-  if (next) actions.push({ label: `Open ${next.title}`, href: `/learn/${next.slug}` });
+  if (next) actions.push({ label: `Open ${next.title}`, href: lessonHref(next.slug) });
   actions.push({ label: "Later" });
   s.say({ title: "Break over", text: line("breakDone"), actions, mood: "happy", solicited: true });
 }

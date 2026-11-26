@@ -8,7 +8,7 @@ In HTTP, idempotent is not the same as safe:
 - **Idempotent** means a repeat changes nothing *more*, even if the first request changed something: `PUT /users/42` with the same body, or `DELETE /users/42`. A second DELETE may return 404 instead of 204, but the state is the same: user 42 is gone. So PUT and DELETE are idempotent without being safe.
 - **POST is neither** by default. HTTP promises nothing, so a retried POST can create a second order unless the server makes it idempotent, which is what the key below does.
 
-The full method table is in [REST APIs](/learn/rest).
+The full method table is in [REST APIs](/learn/communication/rest).
 
 ## The fix: an idempotency key
 
@@ -54,7 +54,7 @@ sequenceDiagram
 
 <Interactive name="idempotency" />
 
-Making a chain of queues and consumers behave as if each message were handled once is [Delivery semantics and exactly-once](/learn/delivery-semantics); undoing earlier steps when a later one fails is [Sagas and compensating actions](/learn/sagas).
+Making a chain of queues and consumers behave as if each message were handled once is [Delivery semantics and exactly-once](/learn/streaming/delivery-semantics); undoing earlier steps when a later one fails is [Sagas and compensating actions](/learn/distributed/sagas).
 
 <Callout type="warning" title="Not the same as double booking">
 

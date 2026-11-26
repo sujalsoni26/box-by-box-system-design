@@ -37,7 +37,7 @@ Accounts are off unless the Firebase variables are set (`NEXT_PUBLIC_FIREBASE_AP
 ## Project layout
 
 ```
-app/              routes: dashboard, /learn, /learn/[slug], /case-studies, /case-studies/[slug], /practice, /progress, /glossary
+app/              routes: dashboard, /learn, /learn/[module]/[slug] (old /learn/<slug> URLs redirect), /case-studies, /case-studies/[slug], /practice, /progress, /glossary
 content/lessons/  lesson bodies (MDX)
 data/             curriculum, quizzes, case studies, flashcards, glossary, lesson guides
 components/       UI, lesson layout, diagrams, quiz, glossary, companion

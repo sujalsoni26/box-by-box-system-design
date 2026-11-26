@@ -31,6 +31,6 @@ Name the shape before you open the answer column. Several are mixed; the point i
 
 <DeepDive title="Go deeper: why write-heavy systems love append-only logs">
 
-Recall the latency table (see [Latency, throughput and the numbers to know](/learn/latency)): one disk seek costs about as much as reading half a megabyte sequentially. Appending every write to the end of a log turns random writes into sequential ones, which is why Kafka and LSM-tree databases (Cassandra, RocksDB) handle enormous write rates on ordinary disks.
+Recall the latency table (see [Latency, throughput and the numbers to know](/learn/foundations/latency)): one disk seek costs about as much as reading half a megabyte sequentially. Appending every write to the end of a log turns random writes into sequential ones, which is why Kafka and LSM-tree databases (Cassandra, RocksDB) handle enormous write rates on ordinary disks.
 
 </DeepDive>

@@ -1,4 +1,4 @@
-When millions open the same celebrity post (say, Virat Kohli's), re-querying the database each time wastes work and slows everyone down. A **cache** keeps hot data in RAM, about <mark>1,000× faster than SSD</mark> (see [Latency, throughput and the numbers to know](/learn/latency)). The usual tools are Redis and Memcached; one Redis node handles roughly 100k operations per second.
+When millions open the same celebrity post (say, Virat Kohli's), re-querying the database each time wastes work and slows everyone down. A **cache** keeps hot data in RAM, about <mark>1,000× faster than SSD</mark> (see [Latency, throughput and the numbers to know](/learn/foundations/latency)). The usual tools are Redis and Memcached; one Redis node handles roughly 100k operations per second.
 
 Caches exist at every layer: browser → CDN → app memory → Redis → the database's own memory. Each layer catches some reads so fewer reach the slow layer below it.
 
@@ -74,7 +74,7 @@ Three techniques, usually combined:
 
 <Callout type="idea" title="When to cache">
 
-Caching pays off for read-heavy data that changes rarely. For sizing, start at about 20% of the daily read volume (the 80/20 rule; see [The formulas](/learn/estimation-formulas)).
+Caching pays off for read-heavy data that changes rarely. For sizing, start at about 20% of the daily read volume (the 80/20 rule; see [The formulas](/learn/practice/estimation-formulas)).
 
 </Callout>
 

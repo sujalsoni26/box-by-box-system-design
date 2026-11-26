@@ -1,6 +1,6 @@
 **Autoscaling** adds and removes capacity automatically in response to a signal. The mechanics are simple; the whole subject is the **lag** between the signal changing and new capacity actually serving requests, and the mistakes made trying to hide that lag.
 
-[Scaling](/learn/scaling) covered why you scale out and that machines take time to boot; [Capacity planning](/learn/capacity-planning) gives you a forecast. Autoscaling handles the gap between the forecast and the day: an IPL final where traffic doubles in the ten minutes before the toss, a Flipkart sale opening at midnight, a quiet Sunday when half the fleet is idle.
+[Scaling](/learn/scaling/scaling) covered why you scale out and that machines take time to boot; [Capacity planning](/learn/operations/capacity-planning) gives you a forecast. Autoscaling handles the gap between the forecast and the day: an IPL final where traffic doubles in the ten minutes before the toss, a Flipkart sale opening at midnight, a quiet Sunday when half the fleet is idle.
 
 ## Reactive, scheduled and predictive
 
@@ -30,7 +30,7 @@ Below, raise the traffic and add a server: the new box must boot and pass a heal
 
 <Interactive name="scaling-compare" />
 
-Headroom is the only cure for lag. If a new instance needs three minutes and traffic can double in three minutes, the fleet must run far enough below capacity to survive the gap; when a spike outruns the autoscaler anyway, shed load rather than fall over ([Backpressure and load shedding](/learn/backpressure)).
+Headroom is the only cure for lag. If a new instance needs three minutes and traffic can double in three minutes, the fleet must run far enough below capacity to survive the gap; when a spike outruns the autoscaler anyway, shed load rather than fall over ([Backpressure and load shedding](/learn/reliability/backpressure)).
 
 ## Stabilisation, cooldowns and flapping
 

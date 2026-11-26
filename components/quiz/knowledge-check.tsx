@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, CircleHelp, Flag, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { emitCompanionEvent } from "@/lib/companion-events";
-import { getLesson } from "@/lib/curriculum";
+import { getLesson, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
@@ -80,7 +80,7 @@ function Question({
             {!correct && review ? (
               <>
                 {" "}
-                <Link href={`/learn/${review.slug}`} className="font-bold text-link underline underline-offset-2">
+                <Link href={lessonHref(review.slug)} className="font-bold text-link underline underline-offset-2">
                   Review {review.title}
                 </Link>
               </>

@@ -2,7 +2,7 @@
 
 ## Sharded SQL or distributed SQL?
 
-[Partitioning and rebalancing](/learn/partitioning-internals) explained how data is split, moved and found. Sharding middleware applies that to a database that knows nothing about it: Vitess, created at YouTube in 2010, accepts MySQL-protocol connections at its VTGate proxy and routes each query to an independent MySQL shard with its own replication; Citus is a PostgreSQL extension in which a coordinator node sends each query to the worker holding that row's distribution column. Both scale reads and writes, and both keep a hard edge where the shards meet: a transaction that touches two shards, a unique constraint across shards or a join without the shard key is forbidden, slow or left to the application.
+[Partitioning and rebalancing](/learn/internals/partitioning-internals) explained how data is split, moved and found. Sharding middleware applies that to a database that knows nothing about it: Vitess, created at YouTube in 2010, accepts MySQL-protocol connections at its VTGate proxy and routes each query to an independent MySQL shard with its own replication; Citus is a PostgreSQL extension in which a coordinator node sends each query to the worker holding that row's distribution column. Both scale reads and writes, and both keep a hard edge where the shards meet: a transaction that touches two shards, a unique constraint across shards or a join without the shard key is forbidden, slow or left to the application.
 
 Distributed SQL moves that edge inside the database. The unit of distribution is small and chosen by the system, every unit is replicated by consensus rather than by a primary and its replicas, and a transaction across units is the normal case rather than the exception.
 
@@ -16,7 +16,7 @@ Distributed SQL moves that edge inside the database. The unit of distribution is
 
 ## Ranges replicated by Raft
 
-The storage unit is a contiguous slice of the key space. CockroachDB calls it a **range** and splits one when it passes 512 MiB by default; TiKV, the storage layer beneath TiDB, calls it a **Region** and splits at 256 MiB (96 MiB before version 8.4); Spanner calls it a **split**. Each is copied to three nodes by default, placed in different zones, and each copy set runs its own instance of the protocol from [Consensus](/learn/consensus): Raft in CockroachDB and TiKV, Paxos in Spanner. One replica leads, and a write is acknowledged once a majority has appended it. A 10 TB database is therefore on the order of 20,000 independent consensus groups, and a dead node triggers 20,000 small elections rather than one anxious failover.
+The storage unit is a contiguous slice of the key space. CockroachDB calls it a **range** and splits one when it passes 512 MiB by default; TiKV, the storage layer beneath TiDB, calls it a **Region** and splits at 256 MiB (96 MiB before version 8.4); Spanner calls it a **split**. Each is copied to three nodes by default, placed in different zones, and each copy set runs its own instance of the protocol from [Consensus](/learn/distributed/consensus): Raft in CockroachDB and TiKV, Paxos in Spanner. One replica leads, and a write is acknowledged once a majority has appended it. A 10 TB database is therefore on the order of 20,000 independent consensus groups, and a dead node triggers 20,000 small elections rather than one anxious failover.
 
 <Mermaid caption="One SQL endpoint, many consensus groups. Any node parses the query, a coordinator runs the transaction across the ranges it touches, and each range is its own Raft group spread over three zones. The clock service orders the commits." chart={`flowchart TB
     C["Clients speaking SQL"] --> G["SQL layer: stateless, any node answers"]
@@ -36,11 +36,11 @@ The storage unit is a contiguous slice of the key space. CockroachDB calls it a 
 
 ## Transactions across ranges
 
-A transaction that writes rows in two ranges is two-phase commit with each range's consensus group as a participant, the layering [Distributed transactions](/learn/distributed-transactions) described for Spanner. CockroachDB writes each value first as a **write intent**, a provisional version that points at a **transaction record** holding the transaction's status; commit flips the record, and *parallel commits* writes the intents and the record in the same round, so a commit costs one round of consensus rather than two. TiDB follows Google's Percolator: two-phase commit over TiKV with one row's lock as the commit point, and pessimistic locking by default for clusters created since version 3.0.8. Serializable isolation is the default in Spanner and CockroachDB; TiDB implements snapshot isolation and reports it as REPEATABLE READ for MySQL compatibility.
+A transaction that writes rows in two ranges is two-phase commit with each range's consensus group as a participant, the layering [Distributed transactions](/learn/distributed/distributed-transactions) described for Spanner. CockroachDB writes each value first as a **write intent**, a provisional version that points at a **transaction record** holding the transaction's status; commit flips the record, and *parallel commits* writes the intents and the record in the same round, so a commit costs one round of consensus rather than two. TiDB follows Google's Percolator: two-phase commit over TiKV with one row's lock as the commit point, and pessimistic locking by default for clusters created since version 3.0.8. Serializable isolation is the default in Spanner and CockroachDB; TiDB implements snapshot isolation and reports it as REPEATABLE READ for MySQL compatibility.
 
 ## Who says what time it is
 
-Serializable transactions across machines need an order of commits, and [Time and ordering](/learn/time-and-ordering) explained why wall clocks cannot supply one. Each system buys its order differently.
+Serializable transactions across machines need an order of commits, and [Time and ordering](/learn/distributed/time-and-ordering) explained why wall clocks cannot supply one. Each system buys its order differently.
 
 | | Time source | What it buys | What it costs |
 | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ Serializable transactions across machines need an order of commits, and [Time an
 
 ## Follower reads
 
-A read that may be a few seconds stale need not visit the leader. Spanner serves bounded- or exact-staleness reads from the closest replica that has caught up, and its documentation suggests 15 seconds of staleness for the full benefit; CockroachDB's `AS OF SYSTEM TIME follower_read_timestamp()` reads about 4.2 seconds in the past from the nearest replica; TiDB's `tidb_replica_read` variable sends reads to followers. The price is the one from [Consistency](/learn/consistency): the data is stale, so this is for dashboards and feeds, not for the balance you are about to debit.
+A read that may be a few seconds stale need not visit the leader. Spanner serves bounded- or exact-staleness reads from the closest replica that has caught up, and its documentation suggests 15 seconds of staleness for the full benefit; CockroachDB's `AS OF SYSTEM TIME follower_read_timestamp()` reads about 4.2 seconds in the past from the nearest replica; TiDB's `tidb_replica_read` variable sends reads to followers. The price is the one from [Consistency](/learn/data/consistency): the data is stale, so this is for dashboards and feeds, not for the balance you are about to debit.
 
 ## What it costs
 
@@ -62,7 +62,7 @@ A read that may be a few seconds stale need not visit the leader. Spanner serves
 
 ## When one PostgreSQL still wins
 
-The honest condition: if your data fits on one large machine with headroom, your write rate fits one primary, and you can live with a failover window of seconds to a minute, a single primary with [read replicas](/learn/replication) is faster per transaction, simpler to run and understood by every tool you own. Plenty of products with tens of millions of users never leave that shape. Distributed SQL earns its cost when one of three things is true: acknowledged writes must survive the loss of a zone or region, the dataset or write rate has outgrown one primary and hand-sharding would break the transactions the product depends on, or users on two continents need local reads with strong consistency.
+The honest condition: if your data fits on one large machine with headroom, your write rate fits one primary, and you can live with a failover window of seconds to a minute, a single primary with [read replicas](/learn/data/replication) is faster per transaction, simpler to run and understood by every tool you own. Plenty of products with tens of millions of users never leave that shape. Distributed SQL earns its cost when one of three things is true: acknowledged writes must survive the loss of a zone or region, the dataset or write rate has outgrown one primary and hand-sharding would break the transactions the product depends on, or users on two continents need local reads with strong consistency.
 
 <Callout type="analogy" title="One ledger in a vault, or a notarised page in three towns">
 

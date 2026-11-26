@@ -1,4 +1,4 @@
-**Capacity planning** is deciding how much of each resource to have, and when, so that peak demand meets its latency target with room left for growth and for failure. The [estimation formulas](/learn/estimation-formulas) gave the demand side: queries per second, bytes, requests in flight. This lesson is the supply side: how much headroom to keep, how to measure what one instance can really do, and how to turn a forecast into autoscaling rules and a cost per request.
+**Capacity planning** is deciding how much of each resource to have, and when, so that peak demand meets its latency target with room left for growth and for failure. The [estimation formulas](/learn/practice/estimation-formulas) gave the demand side: queries per second, bytes, requests in flight. This lesson is the supply side: how much headroom to keep, how to measure what one instance can really do, and how to turn a forecast into autoscaling rules and a cost per request.
 
 ## Why you cannot run at 100%
 
@@ -12,7 +12,7 @@ Utilisation is the share of time a server is busy, and the temptation is to push
 | 90% | 10× | 200 ms |
 | 95% | 20× | 400 ms |
 
-The curve has a **knee**: latency roughly doubles between 50% and 75%, then climbs almost vertically past 90%. Real systems have many servers and burstier arrivals than the model, which moves the knee but keeps the shape; this is why [latency](/learn/latency) warned that queues form near maximum throughput. Online services therefore target roughly 50–70% at peak; batch systems can run hotter because nobody is waiting on each job.
+The curve has a **knee**: latency roughly doubles between 50% and 75%, then climbs almost vertically past 90%. Real systems have many servers and burstier arrivals than the model, which moves the knee but keeps the shape; this is why [latency](/learn/foundations/latency) warned that queues form near maximum throughput. Online services therefore target roughly 50–70% at peak; batch systems can run hotter because nobody is waiting on each job.
 
 <Callout type="analogy" title="A motorway at 95%">
 
@@ -30,7 +30,7 @@ Three multipliers stack on top of the average:
 
 ## Little's law for pools
 
-Headroom applies to every bounded resource, and Little's law sizes them: items in the system = arrival rate × time in the system. A service doing 2,000 requests per second whose database calls take 20 ms holds 2,000 × 0.02 = 40 connections busy on average. A pool of 50 looks generous until the database slows to 60 ms, when it needs 120; the pool saturates, requests queue for a connection, and the latency users see is far worse than the 60 ms the database added. Size pools for the slow case you are willing to tolerate, put a short timeout on the wait for a slot, and shed when it expires (see [backpressure](/learn/backpressure)). The same arithmetic sizes thread pools, worker counts and the in-flight limit at a gateway.
+Headroom applies to every bounded resource, and Little's law sizes them: items in the system = arrival rate × time in the system. A service doing 2,000 requests per second whose database calls take 20 ms holds 2,000 × 0.02 = 40 connections busy on average. A pool of 50 looks generous until the database slows to 60 ms, when it needs 120; the pool saturates, requests queue for a connection, and the latency users see is far worse than the 60 ms the database added. Size pools for the slow case you are willing to tolerate, put a short timeout on the wait for a slot, and shed when it expires (see [backpressure](/learn/reliability/backpressure)). The same arithmetic sizes thread pools, worker counts and the in-flight limit at a gateway.
 
 <Interactive name="littles-law" />
 
@@ -53,7 +53,7 @@ Read a stress test as two curves against offered load: throughput rises linearly
 
 A **forecast** is last quarter's weekly peaks, a growth rate and the calendar of known events, extended far enough ahead to cover the lead time for capacity (cloud quotas, reserved instances, hardware). Plan to the forecast peak times the multipliers above, and revisit monthly.
 
-Autoscaling (see [autoscaling](/learn/autoscaling)) turns the plan into a rule rather than a number. A target-tracking policy holds utilisation at a set point, and that set point is the target from the first section, about 60% for a latency-sensitive service. Kubernetes' Horizontal Pod Autoscaler, for example, computes desired replicas as current replicas × current utilisation ÷ target, checks every 15 seconds, ignores changes within 10%, and waits five minutes before scaling down, so it follows a daily curve well and a one-minute spike badly. Spikes are handled by headroom, scheduled scaling before the sale, and shedding.
+Autoscaling (see [autoscaling](/learn/infrastructure/autoscaling)) turns the plan into a rule rather than a number. A target-tracking policy holds utilisation at a set point, and that set point is the target from the first section, about 60% for a latency-sensitive service. Kubernetes' Horizontal Pod Autoscaler, for example, computes desired replicas as current replicas × current utilisation ÷ target, checks every 15 seconds, ignores changes within 10%, and waits five minutes before scaling down, so it follows a daily curve well and a one-minute spike badly. Spikes are handled by headroom, scheduled scaling before the sale, and shedding.
 
 Cost per request closes the loop: instances × hourly price ÷ requests served per hour. At 60% utilisation each instance serves 60% of what it could, so headroom appears as a 40% premium on the ideal. That premium buys the latency curve and the surviving zone; the planning question is never "can we run hotter?" but "what does the next percentage point of utilisation cost in p99 and in risk?"
 
@@ -65,6 +65,6 @@ Cost per request closes the loop: instances × hourly price ÷ requests served p
 
 <DeepDive title="Go deeper: why overload reduces throughput">
 
-A server past its knee is not merely slow; it does less. Requests that have already timed out at the client are still being processed, retries add offered load on top of the original demand, memory for in-flight requests grows until garbage collection or swapping takes CPU from useful work, and health checks start to fail, which removes capacity exactly when it is needed. This is why the capacity number from a load test must be read at the knee and why load shedding, not more queueing, is the right response to a spike. The [bulkheads](/learn/bulkheads-degradation) and [failure modes](/learn/failure-modes) lessons describe how to make the resulting failure partial rather than total.
+A server past its knee is not merely slow; it does less. Requests that have already timed out at the client are still being processed, retries add offered load on top of the original demand, memory for in-flight requests grows until garbage collection or swapping takes CPU from useful work, and health checks start to fail, which removes capacity exactly when it is needed. This is why the capacity number from a load test must be read at the knee and why load shedding, not more queueing, is the right response to a spike. The [bulkheads](/learn/operations/bulkheads-degradation) and [failure modes](/learn/operations/failure-modes) lessons describe how to make the resulting failure partial rather than total.
 
 </DeepDive>

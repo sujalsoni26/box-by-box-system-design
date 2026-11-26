@@ -10,7 +10,7 @@ In plain HTTP only the client starts a conversation. So how does a chat app lear
 <Interactive name="polling-vs-ws" />
 
 - **Use for:** chat, collaborative editing, live dashboards, multiplayer games.
-- **Scaling cost:** each server holds many long-lived *stateful* connections. Delivering A's message to B means finding the server that holds B's connection, often through **Redis pub/sub**. At very large scale a registry of which server holds each user replaces the broadcast (see [Design WhatsApp](/learn/design-whatsapp)). Clients must reconnect after drops.
+- **Scaling cost:** each server holds many long-lived *stateful* connections. Delivering A's message to B means finding the server that holds B's connection, often through **Redis pub/sub**. At very large scale a registry of which server holds each user replaces the broadcast (see [Design WhatsApp](/learn/hld/design-whatsapp)). Clients must reconnect after drops.
 
 <Callout type="analogy" title="Calling back vs staying on the line">
 

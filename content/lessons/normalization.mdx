@@ -53,9 +53,9 @@ One table, one index, no join. The price moves to the write side.
 
 ## Keeping the copies honest
 
-- **A rename is a mass update.** Change `users.name`, then update `author_name` on every post by that user. Do it asynchronously through a queue (see [Message queues](/learn/message-queues)) and accept that a few posts show the old name for some seconds (see [Consistency: strong vs eventual](/learn/consistency)).
+- **A rename is a mass update.** Change `users.name`, then update `author_name` on every post by that user. Do it asynchronously through a queue (see [Message queues](/learn/reliability/message-queues)) and accept that a few posts show the old name for some seconds (see [Consistency: strong vs eventual](/learn/data/consistency)).
 - **A like is an atomic increment.** `UPDATE posts SET like_count = like_count + 1 WHERE id = …`, plus an occasional recount from `likes` to repair any drift.
-- **Measure first.** Before copying anything, confirm the join is the bottleneck: read the query plan (see [Database indexing](/learn/indexing)) and the slow-query log. An index often fixes what denormalization was about to paper over.
+- **Measure first.** Before copying anything, confirm the join is the bottleneck: read the query plan (see [Database indexing](/learn/data/indexing)) and the slow-query log. An index often fixes what denormalization was about to paper over.
 
 <Callout type="idea" title="Rule of thumb">
 

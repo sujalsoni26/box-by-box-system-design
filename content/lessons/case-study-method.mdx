@@ -1,4 +1,4 @@
-Every case study in this module is written to the same template, in the order the [interview playbook](/learn/playbook) uses. Learn the shape once and you can skim the routine parts of any design and slow down where the real difficulty lives.
+Every case study in this module is written to the same template, in the order the [interview playbook](/learn/practice/playbook) uses. Learn the shape once and you can skim the routine parts of any design and slow down where the real difficulty lives.
 
 ## The template
 
@@ -17,7 +17,7 @@ Every case study in this module is written to the same template, in the order th
 | 11 | Observability | The handful of metrics and the one trace that prove the system is healthy |
 | 12 | Trade-offs and bottlenecks | The next thing to break, and the alternatives not taken |
 | 13 | How it evolves | What changes at 10× and at 100× |
-| Deep dives | The two or three hardest problems | Each one gets its own section, as [Design a URL shortener](/learn/url-shortener) does |
+| Deep dives | The two or three hardest problems | Each one gets its own section, as [Design a URL shortener](/learn/hld/url-shortener) does |
 
 The order is not decoration. Each section's output is the next section's input: you cannot size servers before you know the traffic, and you cannot choose a database before you know the data and the queries. <mark>The numbers decide the boxes.</mark>
 
@@ -36,14 +36,14 @@ The order is not decoration. Each section's output is the next section's input: 
 
 1. Read the requirements, then **stop**. Write your own estimates and sketch a first diagram before reading on.
 2. Compare. Where you differed, ask whether the difference matters. Often two designs are both right under different assumptions, and the case study says which assumption decides.
-3. Change one assumption (ten times the users, objects a hundred times bigger) and work out which boxes change. The estimator in [The formulas](/learn/estimation-formulas) does the arithmetic.
+3. Change one assumption (ten times the users, objects a hundred times bigger) and work out which boxes change. The estimator in [The formulas](/learn/practice/estimation-formulas) does the arithmetic.
 4. Hunt for the word *because*. Every box has a sentence that earns it. A box you cannot justify is a box you should remove.
 
 </Steps>
 
 <Callout type="idea" title="Three shapes, one question">
 
-Before the API, name the shape (see [Three system shapes](/learn/system-shapes)): read-heavy with tiny objects, storage- and bandwidth-heavy, or a write-heavy stream. The shape tells you which sections will be routine and which will be the deep dives.
+Before the API, name the shape (see [Three system shapes](/learn/practice/system-shapes)): read-heavy with tiny objects, storage- and bandwidth-heavy, or a write-heavy stream. The shape tells you which sections will be routine and which will be the deep dives.
 
 </Callout>
 
@@ -63,7 +63,7 @@ Before the API, name the shape (see [Three system shapes](/learn/system-shapes))
 
 ## The order of the case studies
 
-The shortener comes first because it is small enough to hold in your head. The next few add one new dimension each: [Pastebin](/learn/design-pastebin) adds large objects, [a distributed rate limiter](/learn/design-rate-limiter) adds shared state across instances, [a notification system](/learn/design-notification-system) adds fan-out and retries. The later studies combine several tracks at once, which is why their prerequisites point into the advanced modules.
+The shortener comes first because it is small enough to hold in your head. The next few add one new dimension each: [Pastebin](/learn/hld/design-pastebin) adds large objects, [a distributed rate limiter](/learn/hld/design-rate-limiter) adds shared state across instances, [a notification system](/learn/hld/design-notification-system) adds fan-out and retries. The later studies combine several tracks at once, which is why their prerequisites point into the advanced modules.
 
 <Callout type="analogy" title="Recipes list ingredients before steps">
 

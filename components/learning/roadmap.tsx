@@ -5,7 +5,7 @@ import { Bookmark, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CircleHel
 import { LevelChip } from "@/components/ui/chip";
 import { ProgressRing } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { getModuleLessons, knowledgeCheckAfter, modules, moduleProgress, nextIncompleteLesson } from "@/lib/curriculum";
+import { getModuleLessons, knowledgeCheckAfter, modules, moduleProgress, nextIncompleteLesson, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn, formatHours } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
@@ -160,7 +160,7 @@ export function Roadmap() {
                   return (
                     <li key={l.slug} className={cn("border-b border-line last:border-b-0 transition-opacity", dim && "opacity-40")}>
                       <Link
-                        href={`/learn/${l.slug}`}
+                        href={lessonHref(l.slug)}
                         className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                       >
                         <span

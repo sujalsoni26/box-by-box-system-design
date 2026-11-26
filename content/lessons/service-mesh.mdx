@@ -2,7 +2,7 @@ A **service mesh** takes the networking concerns of service-to-service calls (en
 
 ## Sidecars and the two planes
 
-In a Kubernetes cluster (see [Kubernetes](/learn/kubernetes)) the mesh injects a proxy container, the **sidecar**, into every pod. Outbound calls from the app are redirected through its own sidecar; inbound calls arrive through the destination's sidecar. The proxies are the **data plane**: they carry the bytes and make the per-request decisions. The control plane never touches a request. It watches the cluster, turns your routing and policy objects into proxy configuration, pushes that configuration out, and acts as the certificate authority that gives every proxy an identity.
+In a Kubernetes cluster (see [Kubernetes](/learn/infrastructure/kubernetes)) the mesh injects a proxy container, the **sidecar**, into every pod. Outbound calls from the app are redirected through its own sidecar; inbound calls arrive through the destination's sidecar. The proxies are the **data plane**: they carry the bytes and make the per-request decisions. The control plane never touches a request. It watches the cluster, turns your routing and policy objects into proxy configuration, pushes that configuration out, and acts as the certificate authority that gives every proxy an identity.
 
 Istio's data plane is **Envoy**, an out-of-process proxy that works with any language and can be upgraded without touching application code; its control plane is one binary, `istiod`, doing discovery, configuration and certificates. Linkerd's control plane is a destination service (discovery, per-route retries and timeouts), an identity service (certificates) and a proxy injector; its data plane is `linkerd2-proxy`, a small single-purpose proxy written in Rust, chosen deliberately over Envoy.
 
@@ -28,9 +28,9 @@ Istio's data plane is **Envoy**, an out-of-process proxy that works with any lan
 | Encryption and identity | A TLS library per language, certificates managed by hand | Mutual TLS between proxies; certificates issued and rotated by the control plane |
 | Retries | Whatever each client library did | Declared per route; Istio retries twice by default, with a per-try timeout you set |
 | Timeouts | Library defaults, rarely tuned | Declared per route; Istio's HTTP timeout is off by default, so set one |
-| Circuit breaking | A resilience library per service (see [Circuit breaker](/learn/circuit-breaker)) | Connection and request limits, plus outlier detection that ejects a host after consecutive errors |
+| Circuit breaking | A resilience library per service (see [Circuit breaker](/learn/reliability/circuit-breaker)) | Connection and request limits, plus outlier detection that ejects a host after consecutive errors |
 | Canary traffic | Deployment tricks | Weighted routing between versions: 90/10, then 50/50 |
-| Telemetry | Instrument every service by hand | Metrics, access logs and trace spans from the proxies; the app only forwards trace headers (see [Tracing](/learn/tracing)) |
+| Telemetry | Instrument every service by hand | Metrics, access logs and trace spans from the proxies; the app only forwards trace headers (see [Tracing](/learn/operations/tracing)) |
 
 An Istio route that does three of these at once:
 
@@ -58,7 +58,7 @@ spec:
           weight: 10
 ```
 
-Two cautions. Retries stack: three attempts in the application times three in the mesh turn one user action into nine requests to a service that is already struggling; retry in one layer only and keep the operation idempotent (see [Idempotency](/learn/idempotency)). And Istio's mesh-wide mutual TLS defaults to PERMISSIVE, which accepts plain text alongside mTLS so that workloads can be migrated gradually; until you set STRICT, the encryption exists in the diagram but not necessarily on the wire.
+Two cautions. Retries stack: three attempts in the application times three in the mesh turn one user action into nine requests to a service that is already struggling; retry in one layer only and keep the operation idempotent (see [Idempotency](/learn/reliability/idempotency)). And Istio's mesh-wide mutual TLS defaults to PERMISSIVE, which accepts plain text alongside mTLS so that workloads can be migrated gradually; until you set STRICT, the encryption exists in the diagram but not necessarily on the wire.
 
 <Callout type="analogy" title="A receptionist at every office door">
 

@@ -13,14 +13,14 @@ A **movie ticket booking system** sells every seat of every show exactly once, e
 
 - No double booking, ever. Correctness beats availability: when in doubt the system refuses a hold rather than risk two tickets for one seat.
 - A hold must expire reliably even if the server that created it dies.
-- Confirming must be **idempotent** (see [Idempotency](/learn/idempotency)): gateway callbacks are retried and users double-click.
+- Confirming must be **idempotent** (see [Idempotency](/learn/reliability/idempotency)): gateway callbacks are retried and users double-click.
 - The seat map may be a few seconds stale; the hold, not the map, is where truth is enforced.
 
 **Assumptions and out of scope.** One show per booking; one currency; price depends only on seat category; the gateway owns card handling; a relational database is the source of truth. Search, recommendations, offers, food and loyalty are out of scope.
 
 ## Core entities and responsibilities
 
-The split that matters most is between a physical `Seat` and a `ShowSeat`. A seat is a fixed position in a screen; whether it is available is a fact about one *show*. This is the same move as book versus copy in [Library management](/learn/lld-library-management): the thing with identity and the thing with state are different objects.
+The split that matters most is between a physical `Seat` and a `ShowSeat`. A seat is a fixed position in a screen; whether it is available is a fact about one *show*. This is the same move as book versus copy in [Library management](/learn/lld-practice/lld-library-management): the thing with identity and the thing with state are different objects.
 
 | Entity | Responsibility |
 | --- | --- |
@@ -156,7 +156,7 @@ final class BookingService {
 }
 ```
 
-The status rules live in one place, a transition table on the enum. Six states with a handful of events do not justify one class per state; the [behavioural patterns lesson](/learn/design-patterns-behavioural) explains when the full State pattern would.
+The status rules live in one place, a transition table on the enum. Six states with a handful of events do not justify one class per state; the [behavioural patterns lesson](/learn/lld/design-patterns-behavioural) explains when the full State pattern would.
 
 ```java
 enum BookingStatus {
@@ -248,11 +248,11 @@ A restaurant holds your table for fifteen minutes after your reservation time; i
 | Hold expires a second before payment starts | `pay` checks the hold *before* charging and extends it, so money is never taken for a seat that may be resold mid-payment |
 | Clock skew across servers | Compare expiry with the database clock in SQL; inject `Clock` in code so tests control time |
 
-Domain failures are unchecked exceptions named from the domain, `SeatsUnavailable`, `HoldExpired`, `PaymentFailed`, `IllegalTransition`, thrown where the rule lives and translated to responses at the boundary, as the [error handling](/learn/error-handling) lesson recommends. `SeatsUnavailable` carries the list of seats, because the user's next action depends on it.
+Domain failures are unchecked exceptions named from the domain, `SeatsUnavailable`, `HoldExpired`, `PaymentFailed`, `IllegalTransition`, thrown where the rule lives and translated to responses at the boundary, as the [error handling](/learn/lld/error-handling) lesson recommends. `SeatsUnavailable` carries the list of seats, because the user's next action depends on it.
 
 ## Concurrency
 
-Two requests read E7 as free and both try to hold it. In one process the fix is the one from [Concurrency and thread safety](/learn/concurrency-basics): name the shared state, then guard the check-then-act with a lock. One lock per show, not one for the whole inventory, so a sold-out blockbuster does not slow the afternoon show next door.
+Two requests read E7 as free and both try to hold it. In one process the fix is the one from [Concurrency and thread safety](/learn/lld/concurrency-basics): name the shared state, then guard the check-then-act with a lock. One lock per show, not one for the whole inventory, so a sold-out blockbuster does not slow the afternoon show next door.
 
 ```java
 final class InMemorySeatInventory implements SeatInventory {
@@ -328,14 +328,14 @@ sequenceDiagram
 | Risk | Retry storms under heavy contention | Deadlock without a fixed lock order; long transactions if the app is slow |
 | Common form | JPA `@Version`, a conditional UPDATE | `SELECT ... FOR UPDATE`, JPA pessimistic write mode |
 
-Whichever you choose, add a backstop that needs no application code: a unique constraint on (show, seat) for booked seats. A bug can produce two holds; it cannot produce two committed bookings for one seat. Readers of the seat map never take locks; they read a snapshot (see [MVCC and isolation](/learn/mvcc-isolation)) that may be seconds stale.
+Whichever you choose, add a backstop that needs no application code: a unique constraint on (show, seat) for booked seats. A bug can produce two holds; it cannot produce two committed bookings for one seat. Readers of the seat map never take locks; they read a snapshot (see [MVCC and isolation](/learn/internals/mvcc-isolation)) that may be seconds stale.
 
 ## Extensibility and trade-offs
 
 - **Pricing**: a `PricingPolicy` strategy on `Show`, so weekend, premium and dynamic pricing are new classes, not new branches.
 - **Seat units**: recliners and couple seats that sell as one unit become a `SeatGroup` the inventory holds atomically; the hold is already a set.
 - **Cancellation policy**: refund percentage by time-to-show is a second strategy; `Confirmed` to `Cancelled` is already in the table.
-- **Scale**: the hold is per show, so shows shard cleanly; the [high-level ticket booking case study](/learn/design-ticket-booking) continues from here.
+- **Scale**: the hold is per show, so shows shard cleanly; the [high-level ticket booking case study](/learn/hld/design-ticket-booking) continues from here.
 
 | Decision | You gain | You pay |
 | --- | --- | --- |
@@ -352,7 +352,7 @@ Whichever you choose, add a backstop that needs no application code: a unique co
 
 <DeepDive title="Go deeper: the hold as a Redis key">
 
-An alternative to seat rows is to make the hold itself a key with a time to live: `SET hold:show42:E7 booking9001 NX EX 600` sets the key only if it does not exist and expires it after 600 seconds, atomically. The Redis documentation presents this command as a simple lock and recommends a random token as the value, released by a script that deletes the key only if the token still matches, so a slow client cannot release a hold that has passed to someone else. The costs: a multi-seat hold is several keys, so all-or-nothing needs a script; an expired key vanishes without telling your booking table; and a single Redis node that fails loses every hold in flight, which the documentation flags by pointing at Redlock (see [distributed locks](/learn/distributed-locks)). A common split is Redis for the fast "is it held?" check behind the seat map and the database for the booking that must survive.
+An alternative to seat rows is to make the hold itself a key with a time to live: `SET hold:show42:E7 booking9001 NX EX 600` sets the key only if it does not exist and expires it after 600 seconds, atomically. The Redis documentation presents this command as a simple lock and recommends a random token as the value, released by a script that deletes the key only if the token still matches, so a slow client cannot release a hold that has passed to someone else. The costs: a multi-seat hold is several keys, so all-or-nothing needs a script; an expired key vanishes without telling your booking table; and a single Redis node that fails loses every hold in flight, which the documentation flags by pointing at Redlock (see [distributed locks](/learn/distributed/distributed-locks)). A common split is Redis for the fast "is it held?" check behind the seat map and the database for the booking that must survive.
 
 </DeepDive>
 

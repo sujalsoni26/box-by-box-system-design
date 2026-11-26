@@ -2,11 +2,11 @@ A **storage engine** is the part of a database that turns rows into bytes on dis
 
 ## Pages: the unit of everything
 
-Databases do not read rows; they read **pages** (also called blocks), fixed-size chunks of a file. PostgreSQL uses 8 kB pages by default (the size is chosen when the server is compiled), InnoDB uses 16 kB (settable between 4 kB and 64 kB, only when the instance is initialised), and SQLite uses 4 kB. Asking for one 100-byte row still costs one page read, which is why the numbers in [Latency](/learn/latency) are quoted per random read, not per byte.
+Databases do not read rows; they read **pages** (also called blocks), fixed-size chunks of a file. PostgreSQL uses 8 kB pages by default (the size is chosen when the server is compiled), InnoDB uses 16 kB (settable between 4 kB and 64 kB, only when the instance is initialised), and SQLite uses 4 kB. Asking for one 100-byte row still costs one page read, which is why the numbers in [Latency](/learn/foundations/latency) are quoted per random read, not per byte.
 
-Inside a PostgreSQL page sit a 24-byte header, an array of 4-byte item pointers, free space, and the items themselves, which for a table are **tuples** (row versions). Each tuple carries a 23-byte header, including the transaction IDs that [MVCC](/learn/mvcc-isolation) uses to decide who may see it. A tuple cannot span pages; oversized values are compressed or sliced into a side table (PostgreSQL calls this TOAST).
+Inside a PostgreSQL page sit a 24-byte header, an array of 4-byte item pointers, free space, and the items themselves, which for a table are **tuples** (row versions). Each tuple carries a 23-byte header, including the transaction IDs that [MVCC](/learn/internals/mvcc-isolation) uses to decide who may see it. A tuple cannot span pages; oversized values are compressed or sliced into a side table (PostgreSQL calls this TOAST).
 
-A PostgreSQL table is a **heap file**: pages in no particular order, each tuple addressed by page number and item pointer, exposed as `ctid`. An insert goes to any page with room; an index entry (see [Indexing](/learn/indexing)) is just a key plus a `ctid`.
+A PostgreSQL table is a **heap file**: pages in no particular order, each tuple addressed by page number and item pointer, exposed as `ctid`. An insert goes to any page with room; an index entry (see [Indexing](/learn/data/indexing)) is just a key plus a `ctid`.
 
 InnoDB makes a different choice. The table *is* a B-tree ordered by primary key (the **clustered index**), so rows live in the leaf pages of the primary-key index, and every secondary index stores the primary-key value instead of a physical address. A secondary lookup therefore walks two trees, and a long primary key makes every secondary index bigger.
 
@@ -25,7 +25,7 @@ Reading from disk on every query would be unbearably slow, so the engine caches 
     L --> R
 `} />
 
-Eviction is some flavour of least-recently-used. InnoDB inserts newly read pages at the midpoint of its list, keeping the older three-eighths of the pool behind them, so a one-off table scan cannot flush the pages your transactions actually use. Writes go through the pool too: the page is changed in memory, marked dirty, logged to the [write-ahead log](/learn/wal), and written back later.
+Eviction is some flavour of least-recently-used. InnoDB inserts newly read pages at the midpoint of its list, keeping the older three-eighths of the pool behind them, so a one-off table scan cannot flush the pages your transactions actually use. Writes go through the pool too: the page is changed in memory, marked dirty, logged to the [write-ahead log](/learn/internals/wal), and written back later.
 
 <mark>The currency of database performance is page reads, and the cheapest page read is the one the buffer pool already holds.</mark> PostgreSQL shows the count directly: `EXPLAIN (ANALYZE, BUFFERS)` reports `shared hit` (found in the pool) and `read` (fetched from disk) for every plan node.
 
@@ -49,13 +49,13 @@ How columns are laid out on a page decides which workloads an engine suits.
 | Writes | Cheap single-row inserts and updates | Batched; single-row updates are awkward |
 | Examples | PostgreSQL, MySQL InnoDB, SQLite | ClickHouse, Parquet files, cloud warehouses |
 
-Flipkart placing an order wants a row store: fetch the customer, insert the order, update the stock, each touching a handful of rows. Finance asking for sales by category by day wants a column store: it reads the three columns involved and skips the other forty. Most companies run both, fed by batch loads or [change data capture](/learn/cdc).
+Flipkart placing an order wants a row store: fetch the customer, insert the order, update the stock, each touching a handful of rows. Finance asking for sales by category by day wants a column store: it reads the three columns involved and skips the other forty. Most companies run both, fed by batch loads or [change data capture](/learn/streaming/cdc).
 
 ## The engine is a pluggable part
 
 MySQL makes the abstraction visible: the server parses and plans, then hands storage to an engine chosen per table with an `ENGINE` clause. InnoDB is the default; MyISAM, Memory and others remain for narrow uses. MongoDB does the same beneath documents: its default engine, WiredTiger, provides document-level concurrency, a checkpoint every 60 seconds plus a journal for crash safety, and compression. RocksDB is only an engine: a C++ library, started at Facebook from LevelDB's code, embedded in other systems, from MyRocks (RocksDB under MySQL) to Pebble, the engine CockroachDB built in RocksDB's image.
 
-Two engines can speak identical SQL and differ by an order of magnitude on the same workload, because one keeps a B-tree and the other a log-structured tree: see [B-trees vs LSM trees](/learn/btree-vs-lsm).
+Two engines can speak identical SQL and differ by an order of magnitude on the same workload, because one keeps a B-tree and the other a log-structured tree: see [B-trees vs LSM trees](/learn/internals/btree-vs-lsm).
 
 <Callout type="interview" title="Talk in pages">
 

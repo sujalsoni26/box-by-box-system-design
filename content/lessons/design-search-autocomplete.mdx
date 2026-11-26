@@ -1,4 +1,4 @@
-Suggest the ten most likely completions of what a person has typed so far, and do it within the time it takes them to type the next character. **Autocomplete** is a read path with almost no tolerance for latency and a write path that never touches it: every keystroke is a lookup in an index built offline from millions of past searches and swapped in whole. This study assumes [Caching](/learn/caching), [CDN](/learn/cdn) and [Stream processing](/learn/stream-processing), and follows the order of [How to work a case study](/learn/case-study-method).
+Suggest the ten most likely completions of what a person has typed so far, and do it within the time it takes them to type the next character. **Autocomplete** is a read path with almost no tolerance for latency and a write path that never touches it: every keystroke is a lookup in an index built offline from millions of past searches and swapped in whole. This study assumes [Caching](/learn/reliability/caching), [CDN](/learn/scaling/cdn) and [Stream processing](/learn/streaming/stream-processing), and follows the order of [How to work a case study](/learn/hld/case-study-method).
 
 ## Requirements
 
@@ -28,7 +28,7 @@ Assume 10M daily search users making 10 searches a day, 10 suggestion requests p
 | Rebuild work | 5 × 10⁷ queries × 20 prefixes | 10⁹ heap inserts, minutes on a batch cluster, so hourly is affordable |
 | Budget on a CDN miss | 100 ms − 40 ms to the edge − 30 ms edge to origin | \~30 ms at the origin, of which the lookup may take 10 |
 
-→ <mark>Thirty thousand lookups a second against a 26 GB index that changes hourly, with about ten milliseconds each.</mark> In the terms of [Three system shapes](/learn/system-shapes) this is read-heavy with tiny objects, the URL shortener's shape, with a build pipeline behind it. Nothing on the hot path may touch a disk or a database.
+→ <mark>Thirty thousand lookups a second against a 26 GB index that changes hourly, with about ten milliseconds each.</mark> In the terms of [Three system shapes](/learn/practice/system-shapes) this is read-heavy with tiny objects, the URL shortener's shape, with a build pipeline behind it. Nothing on the hot path may touch a disk or a database.
 
 ## API
 
@@ -78,9 +78,9 @@ The score is a decayed sum, each day's distinct-user count halved per week of ag
 
 - **Client:** debounces keystrokes by about 50 ms and cancels the request for `vi` when `vir` is typed, so that fast typists cost one request per pause, not per letter, and stale answers never overwrite fresh ones.
 - **CDN edge:** caches `GET /v1/suggest` by URL for 60 seconds (longer for one- and two-character prefixes), so that the 48k short prefixes, which carry most of the traffic, rarely reach the origin.
-- **API gateway:** rate-limits per device and IP, because an unauthenticated endpoint that costs us a lookup per call is an invitation to scrape (see [Rate limiting](/learn/rate-limiting)).
+- **API gateway:** rate-limits per device and IP, because an unauthenticated endpoint that costs us a lookup per call is an invitation to scrape (see [Rate limiting](/learn/reliability/rate-limiting)).
 - **Suggest service:** stateless apart from the index it holds in RAM; looks up the prefix, applies the blocklist, merges the trending boost and the user's recents, so that one process answers in a few milliseconds with no network call.
-- **Kafka and the stream job:** count distinct users per query per minute and detect trending terms, because counting over a week of raw logs every minute would be absurd (see [Kafka architecture](/learn/kafka-architecture)).
+- **Kafka and the stream job:** count distinct users per query per minute and detect trending terms, because counting over a week of raw logs every minute would be absurd (see [Kafka architecture](/learn/streaming/kafka-architecture)).
 - **Hourly builder:** recomputes decayed scores and the top-10 for every prefix, writes one versioned snapshot to object storage, so that the index is immutable once published and every node serves the same version.
 - **Blocklist admin:** pushes removals to every node and purges the affected prefixes at the CDN, because a removal is the one change that cannot wait for the next build.
 
@@ -116,7 +116,7 @@ sequenceDiagram
 | Data | Where | Why |
 | --- | --- | --- |
 | Serving index | RAM on every suggest node, loaded from the latest snapshot | 26 GB fits; a disk read would spend the whole 10 ms budget |
-| Index snapshots | Object storage, one object per version | Immutable, replicated, loadable by any node in any region (see [Object storage](/learn/object-storage)) |
+| Index snapshots | Object storage, one object per version | Immutable, replicated, loadable by any node in any region (see [Object storage](/learn/data/object-storage)) |
 | Hot prefixes | CDN edge, key = URL, `max-age=60`, 300 s for one- and two-character prefixes | The tiny short-prefix set is most of the traffic; the TTL is the freshness trade (see *Trade-offs*) |
 | Query log | Kafka, 7 days, then a data lake | Replayable if the stream job needs rebuilding |
 | Counts and scores | A columnar or wide-column store partitioned by day | Appended by the stream job, scanned by the builder |
@@ -127,7 +127,7 @@ A stampede is built in: when a hot prefix expires at the edge, thousands of peop
 
 ## Scaling
 
-Replicate the index; do not shard it until it no longer fits one machine. Every node holds all 26 GB, so any node answers any prefix, there is no routing, and adding a node adds 20k lookups a second. When the index outgrows a box, shard by a hash of the first two characters rather than by the first letter, because `s` and `a` begin far more queries than `x` and `q` (see [Sharding](/learn/sharding)). The builder scales with the batch cluster; the stream job is partitioned by query hash, so one key's counts land on one task. Regions pull the same snapshot from object storage, so a build runs once and serves everywhere.
+Replicate the index; do not shard it until it no longer fits one machine. Every node holds all 26 GB, so any node answers any prefix, there is no routing, and adding a node adds 20k lookups a second. When the index outgrows a box, shard by a hash of the first two characters rather than by the first letter, because `s` and `a` begin far more queries than `x` and `q` (see [Sharding](/learn/data/sharding)). The builder scales with the batch cluster; the stream job is partitioned by query hash, so one key's counts land on one task. Regions pull the same snapshot from object storage, so a build runs once and serves everywhere.
 
 ## Consistency and availability
 
@@ -138,7 +138,7 @@ Replicate the index; do not shard it until it no longer fits one machine. Every 
 | Blocklist | Applied on every node within seconds; the CDN purged for touched prefixes | The exception: a removal is urgent |
 | Personal recents | Read your own writes, on the device | Never shared, never at the edge |
 
-In [CAP](/learn/cap) terms this is AP throughout, and the one strong rule is about the availability of *search*: the client treats a suggest call unanswered after 150 ms as "no suggestions" and lets the person keep typing, a circuit breaker in miniature (see [Circuit breaker](/learn/circuit-breaker)). When the origin is down the edge serves stale answers for hot prefixes and nothing for the rest, and nobody is prevented from searching.
+In [CAP](/learn/data/cap) terms this is AP throughout, and the one strong rule is about the availability of *search*: the client treats a suggest call unanswered after 150 ms as "no suggestions" and lets the person keep typing, a circuit breaker in miniature (see [Circuit breaker](/learn/reliability/circuit-breaker)). When the origin is down the edge serves stale answers for hot prefixes and nothing for the rest, and nobody is prevented from searching.
 
 <Callout type="analogy" title="The librarian's card">
 
@@ -163,14 +163,14 @@ A good librarian does not search the shelves when you say "books about Vir…"; 
 
 ## Security
 
-- **Abuse this design invites:** scraping the index one prefix at a time, and poisoning it. Rate limits per device and IP answer the first; distinct-user counting, per-user caps and a minimum audience answer the second (see [API security](/learn/api-security)).
+- **Abuse this design invites:** scraping the index one prefix at a time, and poisoning it. Rate limits per device and IP answer the first; distinct-user counting, per-user caps and a minimum audience answer the second (see [API security](/learn/security/api-security)).
 - **Privacy:** the query log is personal data. Store a bucketed user id, keep 90 days, and never suggest a query seen from fewer than a threshold of distinct users (assume 20), so one person's search for their own name or diagnosis cannot surface for anyone else. Personal recents are returned only with authentication and marked private.
 - **Content:** a blocklist for exact terms and patterns, a classifier for the categories the blocklist cannot enumerate, and a serve-time filter so that a removal is immediate. Google states that its autocomplete removes predictions that are sexually explicit, hateful, violent or dangerous, and that it removes closely related predictions when one is reported.
-- **Output:** suggestions are rendered as text, never as markup, because the index is built from what strangers typed (see [Security fundamentals](/learn/security-fundamentals)).
+- **Output:** suggestions are rendered as text, never as markup, because the index is built from what strangers typed (see [Security fundamentals](/learn/security/security-fundamentals)).
 
 ## Observability
 
-Six numbers prove the system is healthy (see [Metrics and monitoring](/learn/metrics-monitoring)): **p99 latency** at the edge and at the origin separately; **CDN hit ratio**, which decides how much the origin sees; **empty-result rate**, a quality and a coverage signal; **suggestion click-through**, the measure of ranking quality; **index age**, the freshness indicator that pages when a build is late; and **stream consumer lag**, which says whether trending is trending. The trace to keep (see [Distributed tracing](/learn/tracing)) is one keystroke on a CDN miss, with spans for the edge, the gateway and the lookup, so that a slow p99 says which of the three ate the budget.
+Six numbers prove the system is healthy (see [Metrics and monitoring](/learn/operations/metrics-monitoring)): **p99 latency** at the edge and at the origin separately; **CDN hit ratio**, which decides how much the origin sees; **empty-result rate**, a quality and a coverage signal; **suggestion click-through**, the measure of ranking quality; **index age**, the freshness indicator that pages when a build is late; and **stream consumer lag**, which says whether trending is trending. The trace to keep (see [Distributed tracing](/learn/operations/tracing)) is one keystroke on a CDN miss, with spans for the edge, the gateway and the lookup, so that a slow p99 says which of the three ate the budget.
 
 ## Trade-offs and bottlenecks
 

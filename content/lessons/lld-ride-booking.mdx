@@ -1,4 +1,4 @@
-Ride booking at code level is a matching problem wrapped around a lifecycle. The decision that carries the design: **the trip is an explicit state machine, and a driver is a resource that a trip claims with one compare-and-set before the driver is even asked**. Every other question, which driver, what fare, who is told, is a Strategy or a listener hung off those two facts. The city-scale version, with its sharded location index and regional matching services, is [Design Uber](/learn/design-uber); this lesson is the code inside one matching process.
+Ride booking at code level is a matching problem wrapped around a lifecycle. The decision that carries the design: **the trip is an explicit state machine, and a driver is a resource that a trip claims with one compare-and-set before the driver is even asked**. Every other question, which driver, what fare, who is told, is a Strategy or a listener hung off those two facts. The city-scale version, with its sharded location index and regional matching services, is [Design Uber](/learn/hld/design-uber); this lesson is the code inside one matching process.
 
 ## Requirements and assumptions
 
@@ -107,7 +107,7 @@ The trip is the only object that lives through the whole flow, so every edge cas
 
 ## Key interfaces and methods
 
-The trip's states and the transitions between them live in one enum. The [behavioural patterns lesson](/learn/design-patterns-behavioural) gave the condition for choosing this over State classes: when the behaviour per state is a transition check and one fee rule, a table is lighter and just as clear; when each state grows its own logic, promote the constants to classes.
+The trip's states and the transitions between them live in one enum. The [behavioural patterns lesson](/learn/lld/design-patterns-behavioural) gave the condition for choosing this over State classes: when the behaviour per state is a transition check and one fee rule, a table is lighter and just as clear; when each state grows its own logic, promote the constants to classes.
 
 ```java
 enum TripState {
@@ -170,7 +170,7 @@ final class NearestDriver implements MatchingStrategy {
 }
 ```
 
-The service claims the driver *before* sending the offer, and arms a timeout as a one-shot job on the [task scheduler](/learn/lld-task-scheduler) from the previous case study:
+The service claims the driver *before* sending the offer, and arms a timeout as a one-shot job on the [task scheduler](/learn/lld-practice/lld-task-scheduler) from the previous case study:
 
 ```java
 private void offerNext(Trip trip, Deque<DriverCandidate> ranked) {

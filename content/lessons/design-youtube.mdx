@@ -1,4 +1,4 @@
-Upload a video from a phone, and minutes later let anyone press play on a 2G connection or a fibre line without stalling, while the count of who watched stays roughly right. The design is an **asynchronous transcoding pipeline** that turns one upload into a ladder of **renditions** cut into short **segments**, a player that picks a rendition per segment (**adaptive bitrate streaming**) and a **CDN** that serves almost every byte, because no origin serves ninety terabits a second. It assumes [Object storage](/learn/object-storage), [CDN](/learn/cdn) and [Message queues](/learn/message-queues), and follows the order of [How to work a case study](/learn/case-study-method).
+Upload a video from a phone, and minutes later let anyone press play on a 2G connection or a fibre line without stalling, while the count of who watched stays roughly right. The design is an **asynchronous transcoding pipeline** that turns one upload into a ladder of **renditions** cut into short **segments**, a player that picks a rendition per segment (**adaptive bitrate streaming**) and a **CDN** that serves almost every byte, because no origin serves ninety terabits a second. It assumes [Object storage](/learn/data/object-storage), [CDN](/learn/scaling/cdn) and [Message queues](/learn/reliability/message-queues), and follows the order of [How to work a case study](/learn/hld/case-study-method).
 
 ## Requirements
 
@@ -7,7 +7,7 @@ Upload a video from a phone, and minutes later let anyone press play on a 2G con
 - **Non-functional:**
   - **Playback starts in under 2 s and does not stall**, because a stall is what viewers punish, so the player must drop quality mid-stream.
   - **An upload is never lost once the client sees "uploaded"** and is watchable within minutes at low quality, because creators publish against a clock.
-  - **Availability over consistency for counts and metadata**, because a view count minutes stale harms nobody (see [CAP](/learn/cap)).
+  - **Availability over consistency for counts and metadata**, because a view count minutes stale harms nobody (see [CAP](/learn/data/cap)).
   - **Egress is the budget**, because every byte that misses the CDN is paid for twice.
   - **Originals are durable for years**, because a creator's master may exist nowhere else.
 
@@ -33,7 +33,7 @@ Assume 500 hours of video uploaded every minute (the figure YouTube gave in 2021
 | View events | 10⁹ h ÷ 10 min = 6 × 10⁹ a day | 60k/s (peak \~180k/s), \~1.2 TB a day |
 | Metadata | 1.6 × 10⁹ videos × 2 KB | \~3 TB a year |
 
-→ <mark>Ninety terabits a second of egress, seven hundred times the ingress, is the number</mark>: a tenth of a petabit per second comes only from a CDN, so the origin's whole job is to make segments cacheable. Two more numbers set the other halves: 2.8 EB a year of storage, which makes tiering cold video a bill rather than a detail, and 300k cores of transcoding, which must be asynchronous because uploads are bursty and encoding is deferrable. In the terms of [Three system shapes](/learn/system-shapes): a bandwidth-heavy read side of large immutable objects and a compute-heavy write stream.
+→ <mark>Ninety terabits a second of egress, seven hundred times the ingress, is the number</mark>: a tenth of a petabit per second comes only from a CDN, so the origin's whole job is to make segments cacheable. Two more numbers set the other halves: 2.8 EB a year of storage, which makes tiering cold video a bill rather than a detail, and 300k cores of transcoding, which must be asynchronous because uploads are bursty and encoding is deferrable. In the terms of [Three system shapes](/learn/practice/system-shapes): a bandwidth-heavy read side of large immutable objects and a compute-heavy write stream.
 
 ## API
 
@@ -48,7 +48,7 @@ Assume 500 hours of video uploaded every minute (the figure YouTube gave in 2021
 | `PUT /v1/videos/{video_id}/like` · `DELETE` | – | 204 (idempotent) | 401 |
 | `POST /v1/channels/{channel_id}/subscribe` | – | 204 (idempotent) | 401 |
 
-Uploads are resumable because a 4 GB file over a phone network will be interrupted: the client asks how far the server got and continues from there (the chunking is borrowed from [Design Google Drive / Dropbox](/learn/design-file-storage)). The manifest and segment URLs are the player's real API: after the first metadata call the player never asks the application servers anything, which is what lets 36M concurrent viewers cost the origin nothing.
+Uploads are resumable because a 4 GB file over a phone network will be interrupted: the client asks how far the server got and continues from there (the chunking is borrowed from [Design Google Drive / Dropbox](/learn/hld/design-file-storage)). The manifest and segment URLs are the player's real API: after the first metadata call the player never asks the application servers anything, which is what lets 36M concurrent viewers cost the origin nothing.
 
 ## Data model
 
@@ -110,11 +110,11 @@ CREATE TABLE subscriptions (user_id BIGINT, channel_id BIGINT, PRIMARY KEY (user
     SP --> MDB
 `} />
 
-- **The upload API** creates the `videos` row and hands back a pre-signed, resumable URL, so 4 GB files go to object storage and never cross an application server (the pattern from [Object storage](/learn/object-storage)).
-- **The transcode queue** sits between upload and encoding because uploads are bursty and encoding is 300k cores of deferrable work: the queue turns a peak-sized fleet into an average-sized one, and priority lanes keep a premiere ahead of a three-hour unlisted upload (see [Message queues](/learn/message-queues)).
+- **The upload API** creates the `videos` row and hands back a pre-signed, resumable URL, so 4 GB files go to object storage and never cross an application server (the pattern from [Object storage](/learn/data/object-storage)).
+- **The transcode queue** sits between upload and encoding because uploads are bursty and encoding is 300k cores of deferrable work: the queue turns a peak-sized fleet into an average-sized one, and priority lanes keep a premiere ahead of a three-hour unlisted upload (see [Message queues](/learn/reliability/message-queues)).
 - **Transcoding workers** run a DAG of chunk-level jobs (deep dive 1) and write segments and manifests to object storage, so the output is immutable files rather than a running process.
 - **Object storage** holds originals and renditions because 2.8 EB a year with lifecycle rules is exactly what it is for; the two buckets tier differently (next section).
-- **The origin shield and the CDN** serve segments, because 90 Tbps comes only from thousands of edges, and the shield means a hot video reaches the origin a handful of times rather than once per edge (see [CDN architecture in depth](/learn/cdn-internals)).
+- **The origin shield and the CDN** serve segments, because 90 Tbps comes only from thousands of edges, and the shield means a hot video reaches the origin a handful of times rather than once per edge (see [CDN architecture in depth](/learn/infrastructure/cdn-internals)).
 - **Sharded SQL behind a cache** holds metadata because it is relational, small (3 TB a year) and read once per playback; the cache absorbs the viewers so the database sees only misses.
 - **The view service, event log and stream job** make a view a durable event first and a counter later, because 180k heartbeats a second must never be 180k row updates (deep dive 3).
 
@@ -174,15 +174,15 @@ sequenceDiagram
 | Counters | `video_stats` written by the stream job | A few writes a minute per video, reads served from cache |
 | View events | Append-only log, 7 days hot, then a warehouse | Source of truth for counts, payouts and fraud review |
 
-The storage bill is a tiering problem. Assume, as the order of magnitude public clouds publish, that an archive tier costs about a twentieth of the hot tier per byte, and that 90% of stored bytes belong to videos almost nobody watches. Moving those bytes makes the bill 0.1 × 1 + 0.9 × 0.05 = 0.145 of the all-hot figure, <mark>about 15%</mark>, but only if the cheap tier answers in milliseconds, because the deepest archive tiers answer in hours and a viewer will not wait: cold renditions go to an instant-access cold class, and only originals to the deep archive. The CDN is the other half of the bill: at 90 Tbps a 95% hit ratio still means 4.5 Tbps of origin egress, so every point of hit ratio is nearly a terabit (see [Caching](/learn/caching)).
+The storage bill is a tiering problem. Assume, as the order of magnitude public clouds publish, that an archive tier costs about a twentieth of the hot tier per byte, and that 90% of stored bytes belong to videos almost nobody watches. Moving those bytes makes the bill 0.1 × 1 + 0.9 × 0.05 = 0.145 of the all-hot figure, <mark>about 15%</mark>, but only if the cheap tier answers in milliseconds, because the deepest archive tiers answer in hours and a viewer will not wait: cold renditions go to an instant-access cold class, and only originals to the deep archive. The CDN is the other half of the bill: at 90 Tbps a 95% hit ratio still means 4.5 Tbps of origin egress, so every point of hit ratio is nearly a terabit (see [Caching](/learn/reliability/caching)).
 
 ## Scaling
 
 **The read side scales in the CDN.** Segment URLs are immutable, so edges cache them for a year and serve a hot segment to thousands of viewers from RAM, and the origin shield between edges and storage means a premiere with 2M viewers costs one origin read per segment per shield region rather than one per edge. Metadata scales by cache hit ratio and by sharding `videos` on `video_id`, the key every read has.
 
-**The write side scales in the queue.** Uploads are 130 Gbps straight into object storage, which scales itself. Transcoding is a worker pool draining a queue, and queue depth per priority lane is the autoscaling signal (see [Autoscaling](/learn/autoscaling)); chunking lets a two-hour upload use 200 cores at once instead of one core for twenty hours.
+**The write side scales in the queue.** Uploads are 130 Gbps straight into object storage, which scales itself. Transcoding is a worker pool draining a queue, and queue depth per priority lane is the autoscaling signal (see [Autoscaling](/learn/infrastructure/autoscaling)); chunking lets a two-hour upload use 200 cores at once instead of one core for twenty hours.
 
-**Counters scale in the log.** Heartbeats are partitioned by `video_id` so one stream task sees all of a video's events and can deduplicate them, with the hot-video exception in deep dive 3. [Sharding](/learn/sharding) by `video_id` for metadata and `user_id` for subscriptions is the usual two-key shape; what is unusual is that neither database is near the hot path.
+**Counters scale in the log.** Heartbeats are partitioned by `video_id` so one stream task sees all of a video's events and can deduplicate them, with the hot-video exception in deep dive 3. [Sharding](/learn/data/sharding) by `video_id` for metadata and `user_id` for subscriptions is the usual two-key shape; what is unusual is that neither database is near the hot path.
 
 ## Consistency and availability
 
@@ -195,7 +195,7 @@ The storage bill is a tiering problem. Assume, as the order of magnitude public 
 | Subscriptions | Strong per user (one row, one shard) | Subscribe then refresh must show the channel |
 | Payout counts | Batch from the event log | Money is computed from the audited log, never from the live counter |
 
-The model that matters most is the one nobody writes down: <mark>a published segment is immutable</mark>. Every rung's segment `n` covers the same seconds, so a player can switch rungs between segments and a CDN can cache forever, which holds only if the pipeline never rewrites a segment in place; a re-encode gets a new prefix and a new manifest (see [Consistency](/learn/consistency) for the models above).
+The model that matters most is the one nobody writes down: <mark>a published segment is immutable</mark>. Every rung's segment `n` covers the same seconds, so a player can switch rungs between segments and a CDN can cache forever, which holds only if the pipeline never rewrites a segment in place; a re-encode gets a new prefix and a new manifest (see [Consistency](/learn/data/consistency) for the models above).
 
 <Callout type="analogy" title="A bakery that pre-slices every loaf in six thicknesses">
 
@@ -208,26 +208,26 @@ Each video is baked once into six loaves of different richness, all sliced at th
 | Failure | What users see | How it heals |
 | --- | --- | --- |
 | Upload connection drops at 60% | A pause | The client asks the resumable URL how far it got and continues from that byte |
-| A transcoding worker dies mid-chunk | Nothing: the video stays "processing" | The chunk job is redelivered from the queue; outputs are written under a job-specific key so a half-written chunk is never published (see [Idempotency](/learn/idempotency)) |
+| A transcoding worker dies mid-chunk | Nothing: the video stays "processing" | The chunk job is redelivered from the queue; outputs are written under a job-specific key so a half-written chunk is never published (see [Idempotency](/learn/reliability/idempotency)) |
 | One rendition fails to encode (corrupt source range) | The video publishes without that rung | The manifest lists only ready rungs; the job dead-letters for inspection |
 | Transcoding backlog grows | New uploads take an hour to appear | Autoscale on queue depth per lane; the premiere lane drains first; long unlisted videos wait |
 | CDN edge outage in a region | A few seconds of rebuffering | DNS or anycast steers viewers to the next edge; players retry a segment and drop a rung |
 | Origin storage slow | Cache misses stall | The shield absorbs retries; players keep serving from their buffer and fall to a rung already cached |
-| Metadata database down | Playback of already-open videos continues; new plays fail | The cache serves hits; the database fails over to a replica (see [Replication](/learn/replication)) |
+| Metadata database down | Playback of already-open videos continues; new plays fail | The cache serves hits; the database fails over to a replica (see [Replication](/learn/data/replication)) |
 | Stream job falls behind | Counts stale by minutes | The log retains events; the job catches up; nothing is lost |
 
 The design's structural luck is that <mark>the hot path has no database on it</mark>: a viewer in the middle of a video depends on the CDN and their own buffer, and almost nothing else.
 
 ## Security
 
-- **Authentication and authorisation:** creators and viewers sign in with tokens (see [Authentication](/learn/authentication)); private and unlisted videos get signed, expiring manifest and segment URLs, because a CDN cannot check a session, only a signature in the URL. Rented content adds **DRM**, encrypted segments and a licence fetch, the one case where "immutable public file" stops being enough.
+- **Authentication and authorisation:** creators and viewers sign in with tokens (see [Authentication](/learn/security/authentication)); private and unlisted videos get signed, expiring manifest and segment URLs, because a CDN cannot check a session, only a signature in the URL. Rented content adds **DRM**, encrypted segments and a licence fetch, the one case where "immutable public file" stops being enough.
 - **Uploads:** pre-signed URLs are scoped to one object and expire; the probe runs a hardened decoder in a sandboxed worker, because a crafted media file is the classic attack on a transcoder.
-- **Abuse the design invites:** view inflation by scripts and multi-tab playback, which is why the stream job verifies rather than counts (deep dive 3); hot-linking of segments, mitigated by signed URLs; and upload floods, mitigated by per-channel quotas (see [Rate limiting](/learn/rate-limiting)).
-- **Data protection:** watch history is personal data with a retention policy, and the event log is partitioned so it can be deleted per user (see [Logging at scale](/learn/logging)).
+- **Abuse the design invites:** view inflation by scripts and multi-tab playback, which is why the stream job verifies rather than counts (deep dive 3); hot-linking of segments, mitigated by signed URLs; and upload floods, mitigated by per-channel quotas (see [Rate limiting](/learn/reliability/rate-limiting)).
+- **Data protection:** watch history is personal data with a retention policy, and the event log is partitioned so it can be deleted per user (see [Logging at scale](/learn/operations/logging)).
 
 ## Observability
 
-Six numbers (see [Metrics and monitoring](/learn/metrics-monitoring)): **time to first frame p95** and **rebuffer ratio** from players, what the product is judged on; **CDN hit ratio and origin egress**, the bill; **upload-to-playable time per lane**, the pipeline's promise; **queue depth and oldest job age per lane**, the autoscaling signal; **segment error rate by edge and rung**, which finds a bad encode or a bad edge; and **stream job lag**, how stale the counts are. The trace to keep (see [Distributed tracing](/learn/tracing)): one upload through probe, every chunk job, stitch, package and publish, because when a premiere is late this is the only way to see which stage waited.
+Six numbers (see [Metrics and monitoring](/learn/operations/metrics-monitoring)): **time to first frame p95** and **rebuffer ratio** from players, what the product is judged on; **CDN hit ratio and origin egress**, the bill; **upload-to-playable time per lane**, the pipeline's promise; **queue depth and oldest job age per lane**, the autoscaling signal; **segment error rate by edge and rung**, which finds a bad encode or a bad edge; and **stream job lag**, how stale the counts are. The trace to keep (see [Distributed tracing](/learn/operations/tracing)): one upload through probe, every chunk job, stitch, package and publish, because when a premiere is late this is the only way to see which stage waited.
 
 ## Trade-offs and bottlenecks
 
@@ -257,9 +257,9 @@ The condition that decides: <mark>expected views times bandwidth saved, against 
 
 ## How it evolves
 
-At **10×** (5,000 hours a minute, a petabit a second at peak) the shape holds and three costs force changes: transcoding moves to hardware encoders, as YouTube's custom chip did; the ladder becomes per-title, so a talking head gets a lower bitrate than a football match at the same quality, trimming egress without a new codec; and the CDN grows into carriers' networks so the heaviest bytes never cross a backbone (see [Multi-region deployment](/learn/multi-region)).
+At **10×** (5,000 hours a minute, a petabit a second at peak) the shape holds and three costs force changes: transcoding moves to hardware encoders, as YouTube's custom chip did; the ladder becomes per-title, so a talking head gets a lower bitrate than a football match at the same quality, trimming egress without a new codec; and the CDN grows into carriers' networks so the heaviest bytes never cross a backbone (see [Multi-region deployment](/learn/infrastructure/multi-region)).
 
-At **100×** the pipeline runs live: the same segments are produced in real time from an incoming stream, with 2-second segments because 6 adds too much latency, manifests that grow every few seconds, and a CDN handling a manifest that changes under a million viewers. Recommendations become the real read-path problem, a feed per viewer like the one in [Design Instagram](/learn/design-instagram); the streaming-first version of this design, with a small catalogue and pre-positioned caches, is [Design Netflix](/learn/design-netflix).
+At **100×** the pipeline runs live: the same segments are produced in real time from an incoming stream, with 2-second segments because 6 adds too much latency, manifests that grow every few seconds, and a CDN handling a manifest that changes under a million viewers. Recommendations become the real read-path problem, a feed per viewer like the one in [Design Instagram](/learn/hld/design-instagram); the streaming-first version of this design, with a small catalogue and pre-positioned caches, is [Design Netflix](/learn/hld/design-netflix).
 
 ## Deep dive 1: the transcoding DAG
 
@@ -284,7 +284,7 @@ A two-hour 1080p upload must be watchable in minutes and end up as six rungs, tw
 
 1. **Probe.** Read the container: duration, frame rate, codec, resolution and the positions of keyframes. Everything downstream is sized from this.
 2. **Split at keyframes.** Cut the source into chunks of roughly ten seconds, each starting on a keyframe so it can be decoded alone. A two-hour video becomes about 720 chunks.
-3. **Encode chunks in parallel.** Each (chunk, rung, codec) is one queue job: 720 chunks × 6 rungs is 4,320 jobs for one codec, and with 200 workers the ladder takes minutes of wall-clock time instead of 20 core-hours in a row. Jobs write under a key that includes the job id, so a retry overwrites nothing published (see [Delivery semantics](/learn/delivery-semantics)).
+3. **Encode chunks in parallel.** Each (chunk, rung, codec) is one queue job: 720 chunks × 6 rungs is 4,320 jobs for one codec, and with 200 workers the ladder takes minutes of wall-clock time instead of 20 core-hours in a row. Jobs write under a key that includes the job id, so a retry overwrites nothing published (see [Delivery semantics](/learn/streaming/delivery-semantics)).
 4. **Stitch and package.** Concatenate a rung's chunks, cut into 6-second segments aligned across all rungs, and write the media playlist. 360p is scheduled first and published alone, so the video is playable while the rest encodes.
 5. **Publish incrementally.** Each finished rung is added to the manifest; the `renditions` row flips to ready. The manifest's short TTL during processing is what lets early viewers pick up new rungs.
 
@@ -306,7 +306,7 @@ A player cannot know the viewer's bandwidth in advance, and it changes mid-video
 1080p/index.m3u8
 ```
 
-The player measures the throughput of the last few segments and its buffered seconds, then chooses the rung for the next segment: more buffer and faster downloads earn a step up, a shrinking buffer forces a step down before it empties. The RFC says only that clients should switch variants to adapt; the policy is the player's. Three properties of the segments make this work. **Aligned**: segment `n` of every rung covers the same seconds, so a switch is seamless. **Short**: Apple's authoring guidance says 6 seconds, long enough that request overhead is small, short enough that a bandwidth drop is answered within one segment. **Immutable** with fixed URLs, so thousands of CDN edges cache them independently and the origin behind the shield serves a hot segment a handful of times (see [CDN](/learn/cdn)).
+The player measures the throughput of the last few segments and its buffered seconds, then chooses the rung for the next segment: more buffer and faster downloads earn a step up, a shrinking buffer forces a step down before it empties. The RFC says only that clients should switch variants to adapt; the policy is the player's. Three properties of the segments make this work. **Aligned**: segment `n` of every rung covers the same seconds, so a switch is seamless. **Short**: Apple's authoring guidance says 6 seconds, long enough that request overhead is small, short enough that a bandwidth drop is answered within one segment. **Immutable** with fixed URLs, so thousands of CDN edges cache them independently and the origin behind the shield serves a hot segment a handful of times (see [CDN](/learn/scaling/cdn)).
 
 Segment length is latency against efficiency: 6 seconds for on-demand video, where a 20-second player buffer hides everything; 2 seconds or less for live, where the buffer is the delay viewers see; never 30, because adapting would take half a minute. Ladder spacing is the next rung being noticeably different but reachable: Apple's example ladder steps about 1.3 to 1.5× per rung. <mark>The server's whole job in ABR is to be boring</mark>: static files, aligned cuts, honest bandwidth numbers in the manifest.
 
@@ -316,12 +316,12 @@ Sixty thousand heartbeats a second on average, 180k at peak, concentrated on a f
 
 <Steps>
 
-1. **Events, not updates.** A heartbeat is appended to a log partitioned by `video_id` (see [Kafka: a distributed log](/learn/kafka-architecture)); the view service does nothing else on the request path.
-2. **Deduplicate.** A stream job keeps, per video, the `session_id`s seen in the last few minutes and counts a view once per session after a watch-time threshold, so a reconnecting player or a replayed heartbeat adds nothing (see [Stream processing](/learn/stream-processing)).
+1. **Events, not updates.** A heartbeat is appended to a log partitioned by `video_id` (see [Kafka: a distributed log](/learn/streaming/kafka-architecture)); the view service does nothing else on the request path.
+2. **Deduplicate.** A stream job keeps, per video, the `session_id`s seen in the last few minutes and counts a view once per session after a watch-time threshold, so a reconnecting player or a replayed heartbeat adds nothing (see [Stream processing](/learn/streaming/stream-processing)).
 3. **Aggregate and write.** The job emits one counter delta per video per minute to `video_stats`, so the hottest video is 1 row write a minute, not 100k a second.
 4. **Verify.** A slower job scores sessions for fraud and revises counts downward; YouTube documents that counts may be slowed, frozen or changed while legitimacy is checked, and that full verification can take days.
 5. **Audit for money.** Payout counts are computed in batch from the retained log, never read from the live counter.
 
 </Steps>
 
-The hard case is the hot partition: a premiere puts 2M viewers' heartbeats, 67k a second, on one `video_id`, one partition, one stream task. The fix is the one from [Partitions, consumer groups and ordering](/learn/partitions-consumer-groups): key hot videos by `video_id` plus a small random suffix so sixteen tasks share the load, each deduplicating its slice of sessions, and sum the sixteen deltas at the aggregate step. The cost is that a session reconnecting onto a different suffix can be counted twice, which the verification job catches later. <mark>The counter you show and the counter you pay on are different numbers computed by different jobs from the same log</mark>, and which one a feature uses is decided by whether the number moves money.
+The hard case is the hot partition: a premiere puts 2M viewers' heartbeats, 67k a second, on one `video_id`, one partition, one stream task. The fix is the one from [Partitions, consumer groups and ordering](/learn/streaming/partitions-consumer-groups): key hot videos by `video_id` plus a small random suffix so sixteen tasks share the load, each deduplicating its slice of sessions, and sum the sixteen deltas at the aggregate step. The cost is that a session reconnecting onto a different suffix can be counted twice, which the verification job catches later. <mark>The counter you show and the counter you pay on are different numbers computed by different jobs from the same log</mark>, and which one a feature uses is decided by whether the number moves money.

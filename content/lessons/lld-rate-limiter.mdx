@@ -1,4 +1,4 @@
-[Rate limiting](/learn/rate-limiting) explained why an API says no to its hundredth request in a second and which algorithms decide when. This case study builds the component that says it: a library a gateway or a service calls on every request, with the algorithm as a replaceable part. The decision that carries the design is to **put each algorithm behind one small interface, keep its state per key, and refill that state lazily from an injected clock on every call**. No timer thread tops up buckets; the arithmetic happens when a request arrives. Per-key state lives in a `ConcurrentHashMap`, is created on first use and evicted when idle, and is updated atomically by its own lock or a compare-and-set loop, so hot keys never queue behind each other.
+[Rate limiting](/learn/reliability/rate-limiting) explained why an API says no to its hundredth request in a second and which algorithms decide when. This case study builds the component that says it: a library a gateway or a service calls on every request, with the algorithm as a replaceable part. The decision that carries the design is to **put each algorithm behind one small interface, keep its state per key, and refill that state lazily from an injected clock on every call**. No timer thread tops up buckets; the arithmetic happens when a request arrives. Per-key state lives in a `ConcurrentHashMap`, is created on first use and evicted when idle, and is updated atomically by its own lock or a compare-and-set loop, so hot keys never queue behind each other.
 
 ## Requirements and assumptions
 
@@ -12,7 +12,7 @@
 
 **Assumptions**, stated as numbers so they can be challenged: one process; up to a hundred thousand active keys; fifty thousand checks per second; limits from ten to a few thousand permits per minute. Different limits per tier are a map from tier to configuration, left to the caller.
 
-**Out of scope**: a limiter shared across servers, which changes where state lives and is the subject of [Design a rate limiter](/learn/design-rate-limiter); quotas over days; configuration reload.
+**Out of scope**: a limiter shared across servers, which changes where state lives and is the subject of [Design a rate limiter](/learn/hld/design-rate-limiter); quotas over days; configuration reload.
 
 **Non-functional**: a decision costs microseconds and, on the common path, allocates nothing. A denied request consumes no permits. Time comes from a monotonic source, so a clock correction never grants a free refill.
 
@@ -96,7 +96,7 @@ The two-level interface is the shape to notice. Callers see `RateLimiter`, which
 
 ## Key interfaces and methods
 
-Two records and three one-method interfaces. The clock returns monotonic nanoseconds rather than wall-clock time, for a reason in the edge cases; it plays the role `java.time.Clock` plays for dates, and the Java documentation's advice applies to both: inject it, so tests step time by hand instead of sleeping, as [Testing and extensibility](/learn/testing-extensibility) argued.
+Two records and three one-method interfaces. The clock returns monotonic nanoseconds rather than wall-clock time, for a reason in the edge cases; it plays the role `java.time.Clock` plays for dates, and the Java documentation's advice applies to both: inject it, so tests step time by hand instead of sleeping, as [Testing and extensibility](/learn/lld/testing-extensibility) argued.
 
 ```java
 record Limit(long capacity, double refillPerSecond, Duration window) {}
@@ -249,7 +249,7 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | Strategy | LimiterState with three implementations | The algorithm is the decision that changes between teams and endpoints; each is tested alone against a fake clock | One algorithm, forever |
 | Factory via Supplier | KeyedRateLimiter.newState | A new key needs a fresh state and the limiter must not know which class | States are stateless, which they never are here |
-| Chain of Responsibility | RateLimitFilter in the HTTP filter chain | The limiter is one handler among authentication and logging, as [Design patterns III](/learn/design-patterns-behavioural) describes | There is no chain to join |
+| Chain of Responsibility | RateLimitFilter in the HTTP filter chain | The limiter is one handler among authentication and logging, as [Design patterns III](/learn/lld/design-patterns-behavioural) describes | There is no chain to join |
 | Null Object | An AlwaysAllow state for allow-listed keys | No branch in the limiter for exempt clients | Nobody is exempt |
 
 Absent on purpose: a Singleton (one limiter per limit, injected), and metrics, which become a Decorator around `RateLimiter` counting allowed and denied the day someone asks.
@@ -257,12 +257,12 @@ Absent on purpose: a Singleton (one limiter per limit, injected), and metrics, w
 ## Edge cases and error handling
 
 - **Permits larger than capacity.** Can never be granted; reject at configuration time rather than deny forever with a retry-after that lies.
-- **The clock moves.** With wall-clock milliseconds a correction backwards makes `now - last` negative and a correction forwards grants a free full refill. `System.nanoTime` is monotonic within a process, so neither happens: the rule from [Time and ordering](/learn/time-and-ordering), measure durations with a monotonic clock, applies at code level too.
+- **The clock moves.** With wall-clock milliseconds a correction backwards makes `now - last` negative and a correction forwards grants a free full refill. `System.nanoTime` is monotonic within a process, so neither happens: the rule from [Time and ordering](/learn/distributed/time-and-ordering), measure durations with a monotonic clock, applies at code level too.
 - **A new key's first request.** Starting full permits a burst of `capacity`; starting empty makes the first request wait. Full is the common choice and what the simulation shows.
 - **Eviction races a request.** A thread holds a state while the sweeper removes it from the map; its decision lands on an orphan and the next request gets a fresh, full state. Choose the idle period to make this harmless: after `capacity / refillRate` seconds a bucket is full anyway, so an idle period at least that long means a recreated bucket equals the one evicted.
 - **Denied requests and the sliding log.** This design does not record denied requests, so a client hammering at the limit gets through as soon as the window frees up. Figma's log counted rejected requests too, which lengthens the lockout for abusive clients; either is defensible, say which.
 - **Retry-After rounding.** The header is whole seconds; round up and never send zero, or clients retry in a tight loop.
-- **Too many keys.** A hundred thousand buckets are a few megabytes; a million addresses from a scan are not nothing. Bound the map and evict the least recently used keys, which is the [in-memory cache](/learn/lld-in-memory-cache) design wearing a different hat.
+- **Too many keys.** A hundred thousand buckets are a few megabytes; a million addresses from a scan are not nothing. Bound the map and evict the least recently used keys, which is the [in-memory cache](/learn/lld-practice/lld-in-memory-cache) design wearing a different hat.
 
 <Callout type="analogy" title="A prepaid pass that refunds itself">
 
@@ -272,7 +272,7 @@ A token bucket is a travel card that gains one ride a minute, up to ten saved ri
 
 ## Concurrency
 
-Name the shared mutable state, as [Concurrency and thread safety](/learn/concurrency-basics) asks: the map of keys, and inside each state two numbers that must change together. The map is a `ConcurrentHashMap`, whose `computeIfAbsent` is atomic; the function must be short and must not touch the map, and `newState.get()` is both. The sweeper's `removeIf` runs while requests arrive and only ever removes entries that are, by definition, not being used.
+Name the shared mutable state, as [Concurrency and thread safety](/learn/lld/concurrency-basics) asks: the map of keys, and inside each state two numbers that must change together. The map is a `ConcurrentHashMap`, whose `computeIfAbsent` is atomic; the function must be short and must not touch the map, and `newState.get()` is both. The sweeper's `removeIf` runs while requests arrive and only ever removes entries that are, by definition, not being used.
 
 The per-key state is the interesting part, because tokens and last-refill time are compound state: refilling reads both, computes, writes both, and two threads interleaving that sequence double-spend. There are two correct answers.
 
@@ -304,7 +304,7 @@ The loop retries when another thread changed the state between the read and the 
 - **A new algorithm.** One class implementing `LimiterState` and a different supplier. The sliding window counter in the deep dive is the pragmatic middle: two numbers and no boundary leak worth worrying about.
 - **Blocking acquire and warm-up.** An `acquire()` that sleeps for the returned wait and then takes the permit, for callers that would rather wait than be refused, and a bucket that ramps its rate up from cold; Guava's `RateLimiter` offers both.
 - **Weighted costs, composite keys.** `permits` already exists on the interface, so an expensive endpoint asks for five; the key is a string, so `clientId + ":" + route` is a per-route limit with no change to the limiter.
-- **Shared across servers.** Three things change and nothing else. State moves out of the process into a store such as Redis, so the `ConcurrentHashMap` becomes a key namespace; refill-and-spend must stay atomic, so it runs as a script on the store rather than as Java on the client; and the clock becomes the store's clock, so servers with drifting time agree. Idle eviction becomes key expiry. The algorithms are unchanged, which is why they were kept free of keys and threads. [Rate limiting](/learn/rate-limiting) covers the algorithms at that level and [Design a rate limiter](/learn/design-rate-limiter) covers the store, the script and what to do when the store is down.
+- **Shared across servers.** Three things change and nothing else. State moves out of the process into a store such as Redis, so the `ConcurrentHashMap` becomes a key namespace; refill-and-spend must stay atomic, so it runs as a script on the store rather than as Java on the client; and the clock becomes the store's clock, so servers with drifting time agree. Idle eviction becomes key expiry. The algorithms are unchanged, which is why they were kept free of keys and threads. [Rate limiting](/learn/reliability/rate-limiting) covers the algorithms at that level and [Design a rate limiter](/learn/hld/design-rate-limiter) covers the store, the script and what to do when the store is down.
 
 | Choice made | What it buys | What it costs |
 | --- | --- | --- |

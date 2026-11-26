@@ -11,7 +11,7 @@ Images, videos and PDFs are large binary blobs that bloat a relational database.
 posts(id, user_id, caption, image_key = 'photos/123.jpg')
 ```
 
-- A CDN in front of the storage serves the files (see [CDN](/learn/cdn)).
+- A CDN in front of the storage serves the files (see [CDN](/learn/scaling/cdn)).
 
 ## Trade-offs
 
@@ -21,7 +21,7 @@ posts(id, user_id, caption, image_key = 'photos/123.jpg')
 
 <Callout type="interview" title="Say all three parts">
 
-Pre-signed URL upload, a metadata row that stores only the key, and a CDN in front for reads. Interviewers listen for all three, and for the reason the bytes never touch your API servers. A full design that builds on this: [Design Google Drive / Dropbox](/learn/design-file-storage).
+Pre-signed URL upload, a metadata row that stores only the key, and a CDN in front for reads. Interviewers listen for all three, and for the reason the bytes never touch your API servers. A full design that builds on this: [Design Google Drive / Dropbox](/learn/hld/design-file-storage).
 
 </Callout>
 

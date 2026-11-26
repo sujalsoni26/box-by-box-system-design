@@ -1,9 +1,9 @@
 import { getLesson, lessons } from "@/lib/curriculum";
 import type { Lesson } from "@/types/curriculum";
 
-const LESSON_PATH = /^\/learn\/([^/?#]+)\/?$/;
+const LESSON_PATH = /^\/learn\/[^/?#]+\/([^/?#]+)\/?$/;
 
-/** The lesson shown at `/learn/<slug>`, if the pathname is a lesson page. */
+/** The lesson shown at `/learn/<module>/<slug>`, if the pathname is a lesson page. */
 export function lessonFromPath(pathname: string | null | undefined): Lesson | undefined {
   const match = pathname ? LESSON_PATH.exec(pathname) : null;
   if (!match) return undefined;

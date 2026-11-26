@@ -6,11 +6,11 @@ Starting from one user and one server, each problem added one building block. To
 
 <Steps>
 
-1. DNS finds the gateway (see [DNS](/learn/dns)).
-2. Static files come from the CDN, backed by object storage (see [CDN](/learn/cdn) and [Object storage](/learn/object-storage)).
-3. API calls pass the gateway (TLS, auth, rate limits) to stateless services (see [Monolith vs microservices](/learn/microservices) and [Rate limiting](/learn/rate-limiting)).
-4. Services read the cache before the database (see [Caching](/learn/caching)).
-5. Slow side effects go onto queues for workers (see [Message queues](/learn/message-queues)).
+1. DNS finds the gateway (see [DNS](/learn/foundations/dns)).
+2. Static files come from the CDN, backed by object storage (see [CDN](/learn/scaling/cdn) and [Object storage](/learn/data/object-storage)).
+3. API calls pass the gateway (TLS, auth, rate limits) to stateless services (see [Monolith vs microservices](/learn/communication/microservices) and [Rate limiting](/learn/reliability/rate-limiting)).
+4. Services read the cache before the database (see [Caching](/learn/reliability/caching)).
+5. Slow side effects go onto queues for workers (see [Message queues](/learn/reliability/message-queues)).
 
 </Steps>
 

@@ -1,4 +1,4 @@
-**API security** is the chain of checks a request passes between the edge and your business logic: who sent it, may they touch this object, is the input what you expect, was a browser tricked into sending it, have you seen it before. Most checks live at the API gateway (see [API gateway](/learn/api-gateway)) or in shared middleware; the ones that need data live in the service.
+**API security** is the chain of checks a request passes between the edge and your business logic: who sent it, may they touch this object, is the input what you expect, was a browser tricked into sending it, have you seen it before. Most checks live at the API gateway (see [API gateway](/learn/architecture/api-gateway)) or in shared middleware; the ones that need data live in the service.
 
 ## The OWASP API Security Top 10
 
@@ -17,7 +17,7 @@ OWASP's 2023 list is the shared vocabulary for API weaknesses.
 | API9 | Improper inventory management |
 | API10 | Unsafe consumption of APIs |
 
-API1, API3 and API5 are authorisation failures ([Authorisation](/learn/authorization)) and API2 is [Authentication](/learn/authentication); API9 is forgotten versions and debug endpoints left running, and API10 is trusting third-party responses blindly. The rest is this lesson.
+API1, API3 and API5 are authorisation failures ([Authorisation](/learn/security/authorization)) and API2 is [Authentication](/learn/security/authentication); API9 is forgotten versions and debug endpoints left running, and API10 is trusting third-party responses blindly. The rest is this lesson.
 
 <Mermaid caption="The checks a request passes, from the edge inwards. Everything the gateway can decide without data happens there; the checks that need the row happen in the service." chart={`flowchart LR
     C["Client"] --> E["Edge: TLS, per-IP limits, DDoS absorption"]
@@ -61,11 +61,11 @@ With a **parameterised query** the database receives the SQL structure and the v
 
 ## API keys, user tokens and scopes
 
-An **API key** identifies a calling application or tenant: long-lived, sent in a header, used for quotas, billing and attribution. A **user token** identifies a person and their consent, short-lived and scoped (see [OAuth 2.0, OpenID Connect and JWT](/learn/oauth-jwt)). **Scopes** such as `posts:read` limit what a token may do and are checked at the gateway; whether the caller may touch *this* post is the service's job. Treat keys as secrets: show once, store hashed, rotate (see [Secrets management](/learn/secrets-management)).
+An **API key** identifies a calling application or tenant: long-lived, sent in a header, used for quotas, billing and attribution. A **user token** identifies a person and their consent, short-lived and scoped (see [OAuth 2.0, OpenID Connect and JWT](/learn/security/oauth-jwt)). **Scopes** such as `posts:read` limit what a token may do and are checked at the gateway; whether the caller may touch *this* post is the service's job. Treat keys as secrets: show once, store hashed, rotate (see [Secrets management](/learn/security/secrets-management)).
 
 ## Limits, abuse and retries
 
-Rate limits (see [Rate limiting](/learn/rate-limiting)) answer API4: per key, per user and per IP, far tighter on login, OTP and password-reset endpoints. API6 needs limits on the business flow rather than the request: a booking API for an IPL final caps reservations per account and per payment instrument, not just requests per second. Retried writes need **idempotency keys** (see [Idempotency](/learn/idempotency)); store the key with a hash of the request so a reused key with a different body is rejected.
+Rate limits (see [Rate limiting](/learn/reliability/rate-limiting)) answer API4: per key, per user and per IP, far tighter on login, OTP and password-reset endpoints. API6 needs limits on the business flow rather than the request: a booking API for an IPL final caps reservations per account and per payment instrument, not just requests per second. Retried writes need **idempotency keys** (see [Idempotency](/learn/reliability/idempotency)); store the key with a hash of the request so a reused key with a different body is rejected.
 
 ## Webhooks: sign, timestamp, deduplicate
 

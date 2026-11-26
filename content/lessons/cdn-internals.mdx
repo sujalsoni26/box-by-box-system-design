@@ -1,8 +1,8 @@
-A CDN is a hierarchy of HTTP caches with a routing trick in front. Three decisions do all the work: the **cache key** says what counts as the same object, **Cache-Control** says how long a copy may live, and **anycast** decides which edge a user reaches. [CDN](/learn/cdn) covered why edges exist and how versioned file names work; this lesson is about the inside.
+A CDN is a hierarchy of HTTP caches with a routing trick in front. Three decisions do all the work: the **cache key** says what counts as the same object, **Cache-Control** says how long a copy may live, and **anycast** decides which edge a user reaches. [CDN](/learn/scaling/cdn) covered why edges exist and how versioned file names work; this lesson is about the inside.
 
 ## Anycast: reaching the nearest edge
 
-Every edge announces the *same* IP addresses. Under anycast a service address is reachable from many independent locations and the routing system delivers each packet to the one topologically closest to the user's network, which usually but not always means lowest latency. Unlike [DNS-based steering](/learn/dns) there is no TTL to wait out when a site fails (routers simply stop hearing its announcement), and attack traffic is spread across every site at once, which is why Cloudflare runs its network on anycast addresses.
+Every edge announces the *same* IP addresses. Under anycast a service address is reachable from many independent locations and the routing system delivers each packet to the one topologically closest to the user's network, which usually but not always means lowest latency. Unlike [DNS-based steering](/learn/foundations/dns) there is no TTL to wait out when a site fails (routers simply stop hearing its announcement), and attack traffic is spread across every site at once, which is why Cloudflare runs its network on anycast addresses.
 
 <Diagram name="cdn-edges" caption="The same hostname leads each user to a nearby edge. A hit is answered there; a miss travels up the hierarchy towards the origin." />
 
@@ -48,7 +48,7 @@ To serve a paid video or private download from a cache, the edge must check auth
 
 ## Request collapsing
 
-When an object expires on a busy edge, thousands of requests miss at once and, unprotected, all go to the origin: the stampede [Caching](/learn/caching) warns about. Edges **collapse** them: CloudFront forwards the first request, holds the identical ones (same cache key) until the response arrives and answers them all from it; Fastly uses the same term. Collapsing applies only to cacheable responses, so `private`, `no-store` or a zero TTL switches it off; the origin shield extends it across edges.
+When an object expires on a busy edge, thousands of requests miss at once and, unprotected, all go to the origin: the stampede [Caching](/learn/reliability/caching) warns about. Edges **collapse** them: CloudFront forwards the first request, holds the identical ones (same cache key) until the response arrives and answers them all from it; Fastly uses the same term. Collapsing applies only to cacheable responses, so `private`, `no-store` or a zero TTL switches it off; the origin shield extends it across edges.
 
 ## What gets hard
 

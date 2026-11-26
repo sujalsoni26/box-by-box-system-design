@@ -82,11 +82,11 @@ try {
 }
 ```
 
-Catch broadly in one place: the top-level boundary that turns any failure into a response or a dead-lettered message and logs it once. A `catch` in every layer that logs and rethrows produces five log lines for one failure and no new information. Thread pools swallow too: an exception inside a task passed to `submit()` is stored in its `Future` and vanishes unless someone calls `get()` (see [Concurrency and thread safety](/learn/concurrency-basics)).
+Catch broadly in one place: the top-level boundary that turns any failure into a response or a dead-lettered message and logs it once. A `catch` in every layer that logs and rethrows produces five log lines for one failure and no new information. Thread pools swallow too: an exception inside a task passed to `submit()` is stored in its `Future` and vanishes unless someone calls `get()` (see [Concurrency and thread safety](/learn/lld/concurrency-basics)).
 
 ## Retries and timeouts in code
 
-Every remote call needs a timeout, and only some deserve a retry. The system-level rules live in [Timeouts and retries](/learn/timeouts-retries) and [Circuit breaker](/learn/circuit-breaker); at code level they become three decisions at the call site:
+Every remote call needs a timeout, and only some deserve a retry. The system-level rules live in [Timeouts and retries](/learn/reliability/timeouts-retries) and [Circuit breaker](/learn/reliability/circuit-breaker); at code level they become three decisions at the call site:
 
 ```java
 for (int attempt = 1; ; attempt++) {
@@ -98,7 +98,7 @@ for (int attempt = 1; ; attempt++) {
 }
 ```
 
-Which failures are transient (a timeout, a 503) and which are not (a 400). How many attempts, with what backoff. And whether the operation is safe to repeat: a retried charge without an idempotency key is a double charge (see [Idempotency](/learn/idempotency)).
+Which failures are transient (a timeout, a 503) and which are not (a 400). How many attempts, with what backoff. And whether the operation is safe to repeat: a retried charge without an idempotency key is a double charge (see [Idempotency](/learn/reliability/idempotency)).
 
 | Situation | Represent it as | Example |
 | --- | --- | --- |
@@ -109,7 +109,7 @@ Which failures are transient (a timeout, a 503) and which are not (a 400). How m
 
 ## Logging context
 
-A log line is for the person debugging without you. Log once, at the boundary, with the identifiers that find the request again: order id, customer id, trace id, attempt number. Log the exception as an object so the stack trace and cause chain survive (see [Logging](/learn/logging) and [Tracing](/learn/tracing)).
+A log line is for the person debugging without you. Log once, at the boundary, with the identifiers that find the request again: order id, customer id, trace id, attempt number. Log the exception as an object so the stack trace and cause chain survive (see [Logging](/learn/operations/logging) and [Tracing](/learn/operations/tracing)).
 
 <Callout type="analogy" title="Airport security">
 

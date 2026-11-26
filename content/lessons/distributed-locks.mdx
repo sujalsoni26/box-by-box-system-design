@@ -1,4 +1,4 @@
-A **distributed lock** lets one process at a time act on a shared resource when the processes run on different machines: one worker per video to transcode. Inside one process a mutex does this; across machines the lock lives in a separate service, and every message to or from it can be late, lost or stale (see [What makes a system distributed](/learn/distributed-fundamentals)).
+A **distributed lock** lets one process at a time act on a shared resource when the processes run on different machines: one worker per video to transcode. Inside one process a mutex does this; across machines the lock lives in a separate service, and every message to or from it can be late, lost or stale (see [What makes a system distributed](/learn/distributed/distributed-fundamentals)).
 
 ## A lock in one Redis command
 
@@ -50,7 +50,7 @@ The token prevents the second failure: an expired holder running `DEL` would rem
 
 The expiry makes the lock safe against crashes and unsafe against slowness. A holder cannot tell that its lease has run out: a garbage-collection pause, a paused VM or a delayed packet look like nothing from the inside, and checking the clock just before writing only narrows the window. <mark>A lock alone cannot protect a resource from a holder that does not know it has lost the lock; the resource has to check too.</mark>
 
-The check is a **fencing token**: the lock service hands out a number that only increases, every write carries it, and the storage rejects any token lower than the highest it has seen. Above, A would carry token 33 and B token 34, so A's late write is refused. Tokens are the subject of [Leader election, split-brain and fencing](/learn/leader-election); here it is enough that a lock without one is a lock for *efficiency*, not for *correctness*.
+The check is a **fencing token**: the lock service hands out a number that only increases, every write carries it, and the storage rejects any token lower than the highest it has seen. Above, A would carry token 33 and B token 34, so A's late write is refused. Tokens are the subject of [Leader election, split-brain and fencing](/learn/distributed/leader-election); here it is enough that a lock without one is a lock for *efficiency*, not for *correctness*.
 
 <Callout type="analogy" title="A study room booked for thirty minutes">
 
@@ -66,7 +66,7 @@ In 2016 Martin Kleppmann argued that Redlock is neither a good efficiency lock n
 
 ## Locks on a consensus store
 
-Consensus-based coordination services (see [Consensus: Raft in one picture](/learn/consensus)) offer locks that survive node failures.
+Consensus-based coordination services (see [Consensus: Raft in one picture](/learn/distributed/consensus)) offer locks that survive node failures.
 
 | | ZooKeeper | etcd |
 | --- | --- | --- |
@@ -81,9 +81,9 @@ Every acquire is a majority-agreed replicated write, so the price is latency; an
 
 Most locks exist so that the *same* work does not happen twice; often something simpler gives that:
 
-- **Idempotency keys.** "At most once per key" needs only a store that remembers keys (see [Idempotency](/learn/idempotency)).
-- **Unique constraints.** Insert a claim row such as `(job, run_date)` under a unique index; the database picks exactly one winner (see [ACID transactions](/learn/acid)).
-- **Single-writer partitioning.** Route all operations on a key to one worker, as a partitioned log gives each partition one consumer (see [Partitions and consumer groups](/learn/partitions-consumer-groups)). The assignment is itself a lease.
+- **Idempotency keys.** "At most once per key" needs only a store that remembers keys (see [Idempotency](/learn/reliability/idempotency)).
+- **Unique constraints.** Insert a claim row such as `(job, run_date)` under a unique index; the database picks exactly one winner (see [ACID transactions](/learn/data/acid)).
+- **Single-writer partitioning.** Route all operations on a key to one worker, as a partitioned log gives each partition one consumer (see [Partitions and consumer groups](/learn/streaming/partitions-consumer-groups)). The assignment is itself a lease.
 
 <Callout type="interview" title="Say what the lock is for">
 

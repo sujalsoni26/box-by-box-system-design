@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { WidgetFrame, WidgetScroll } from "@/components/ui/widget-frame";
-import { lessons } from "@/lib/curriculum";
+import { lessons, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
@@ -168,7 +168,7 @@ export default function ArchitectureMap({ variant }: InteractiveProps) {
               const done = Boolean(completed[l.slug]);
               return (
                 <li key={l.slug}>
-                  <Link href={`/learn/${l.slug}`} className="group flex items-start gap-2 text-[0.92rem] text-ink hover:text-link">
+                  <Link href={lessonHref(l.slug)} className="group flex items-start gap-2 text-[0.92rem] text-ink hover:text-link">
                     <span
                       className={cn(
                         "mt-0.5 grid size-4 shrink-0 place-items-center rounded border-[1.5px]",

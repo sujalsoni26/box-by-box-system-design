@@ -13,7 +13,7 @@ Every line in a class diagram answers one question: how does an object of class 
 | Inheritance | B is-an A and inherits its implementation | Hollow triangle at A `<\|--` | `class Book extends Item` | `Book` and `Dvd` are `Item`s |
 | Realisation | B promises A's contract without inheriting code | Dashed line, hollow triangle `..\|>` | `class StandardPolicy implements LoanPolicy` | A policy implements an interface |
 
-Inheritance and realisation are the is-a relationships from [OOP pillars](/learn/oop-pillars); the other four are about knowing and owning. The two diamonds are the pair people confuse, and the test is lifetime: delete the whole, and do the parts survive? A shelf that is removed leaves its books intact (aggregation); a library that closes takes its shelves with it (composition). Fowler quotes Jim Rumbaugh describing aggregation as a modelling placebo; in an interview, say the lifetime rule in words rather than arguing about diamonds.
+Inheritance and realisation are the is-a relationships from [OOP pillars](/learn/lld/oop-pillars); the other four are about knowing and owning. The two diamonds are the pair people confuse, and the test is lifetime: delete the whole, and do the parts survive? A shelf that is removed leaves its books intact (aggregation); a library that closes takes its shelves with it (composition). Fowler quotes Jim Rumbaugh describing aggregation as a modelling placebo; in an interview, say the lifetime rule in words rather than arguing about diamonds.
 
 ## Multiplicity and visibility
 

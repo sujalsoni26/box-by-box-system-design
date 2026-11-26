@@ -48,7 +48,7 @@ You press a button and a drink appears. You cannot reach into the coin box (enca
 
 ## Inheritance: is-a, at a price
 
-`class SavingsAccount extends Account` says a savings account **is an** account: everything that accepts an `Account` must accept a `SavingsAccount`, and the subclass inherits fields and methods it can specialise. Use it only when that sentence is true in every context the parent is used, not merely because two classes share a few lines. A subclass is coupled to how its parent is written, not just to what it promises; [Composition over inheritance](/learn/composition-over-inheritance) shows how that breaks and what to do instead.
+`class SavingsAccount extends Account` says a savings account **is an** account: everything that accepts an `Account` must accept a `SavingsAccount`, and the subclass inherits fields and methods it can specialise. Use it only when that sentence is true in every context the parent is used, not merely because two classes share a few lines. A subclass is coupled to how its parent is written, not just to what it promises; [Composition over inheritance](/learn/lld/composition-over-inheritance) shows how that breaks and what to do instead.
 
 ## Polymorphism: replace the switch
 
@@ -110,6 +110,6 @@ A rule that holds up in interviews: start with an interface for the contract; ad
 
 <Callout type="interview" title="Name the invariant when you draw the class">
 
-When you add a class to the whiteboard (step four of the [LLD workflow](/learn/lld-intro)), say what it protects: "`Spot` owns `occupied`, and only `assign` and `release` change it, so two cars cannot be parked in one spot." That one sentence shows encapsulation, and it sets up the concurrency discussion before the interviewer asks.
+When you add a class to the whiteboard (step four of the [LLD workflow](/learn/lld/lld-intro)), say what it protects: "`Spot` owns `occupied`, and only `assign` and `release` change it, so two cars cannot be parked in one spot." That one sentence shows encapsulation, and it sets up the concurrency discussion before the interviewer asks.
 
 </Callout>

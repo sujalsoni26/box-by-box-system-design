@@ -5,7 +5,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Stat, StatGrid } from "@/components/ui/stat";
-import { knowledgeChecks, lessons, modules, moduleProgress, overallProgress } from "@/lib/curriculum";
+import { knowledgeChecks, lessons, modules, moduleProgress, overallProgress, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { usePreferencesStore, type ThemePreference } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
@@ -85,7 +85,7 @@ export function ProgressOverview({ afterSummary }: { afterSummary?: ReactNode })
                 return (
                   <tr key={c.id} className="border-t border-line">
                     <td className="px-4 py-2.5 font-bold text-ink">
-                      <Link href={`/learn/${c.afterLesson}`} className="hover:text-link">
+                      <Link href={lessonHref(c.afterLesson)} className="hover:text-link">
                         {c.title}
                       </Link>
                     </td>

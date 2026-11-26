@@ -8,7 +8,7 @@ import { ControlRow, WidgetFrame } from "@/components/ui/widget-frame";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Button } from "@/components/ui/button";
 import { recallDecks, type RecallDeckId } from "@/data/recall";
-import { getLesson } from "@/lib/curriculum";
+import { getLesson, lessonHref } from "@/lib/curriculum";
 import { useProgressStore } from "@/stores/progress-store";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { useReducedMotion } from "@/lib/hooks/use-motion-level";
@@ -144,7 +144,7 @@ function Card({ card, flipped, known, copy, direction, reduced, onFlip, ref }: C
           <Face tag={copy.back} text={card.a} back>
             {lesson ? (
               <Link
-                href={`/learn/${card.lessonSlug}`}
+                href={lessonHref(card.lessonSlug)}
                 onClick={(e) => e.stopPropagation()}
                 className="mt-auto inline-flex w-fit items-center gap-1.5 text-[0.86rem] font-bold text-link underline-offset-4 hover:underline"
               >
