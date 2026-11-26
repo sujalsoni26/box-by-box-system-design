@@ -39,7 +39,7 @@ export interface RecallPrompt {
   a: string;
 }
 
-/** Core lesson metadata (data/curriculum.ts). The lesson body lives in content/lessons/<slug>.mdx. */
+/** Core lesson metadata (data/curriculum/lessons/<module>.ts). The lesson body lives in content/lessons/<slug>.mdx. */
 export interface LessonMeta {
   slug: string;
   title: string;
@@ -58,7 +58,7 @@ export interface LessonMeta {
   archNodes: ArchNodeId[];
 }
 
-/** Teaching guidance authored per lesson (data/lesson-guides.ts). */
+/** Teaching guidance authored per lesson (data/lesson-guides/<module>.ts). */
 export interface LessonGuide {
   /** What breaks without this building block (1 sentence). */
   breaks: string;

@@ -1,0 +1,77 @@
+import type { LessonMeta } from "@/types/curriculum";
+
+/** Module 7: Distributed Systems. Bodies: content/lessons/<slug>.mdx; teaching guidance: data/lesson-guides/distributed.ts. */
+export const lessons: LessonMeta[] = [
+  {
+    slug: "distributed-fundamentals", title: "What makes a system distributed", moduleId: "distributed", level: "intermediate", minutes: 14,
+    problem: "Once the app runs on more than one machine, the network between them can lose, delay or duplicate messages, and no machine can tell a slow neighbour from a dead one.",
+    summary: "A distributed system is many machines that share nothing but an unreliable network. Design for partial failure: a timeout is a guess, clocks disagree, and every missing reply has at least three explanations.",
+    catTip: "I meow at the door. No answer. Are the humans out, asleep, or did my meow get lost on the way? I cannot tell. That is a distributed system, and I am its very small client.",
+    recall: { q: "What is partial failure, and why does it make distributed systems hard?", a: "Some machines or links fail while the rest keep working. Because the only signal is silence, no node can tell a crashed peer from a slow one, so every decision about failure is a timeout-based guess that can be wrong in either direction." },
+    archNodes: [],
+  },
+  {
+    slug: "time-and-ordering", title: "Clocks, time and ordering", moduleId: "distributed", level: "advanced", minutes: 16,
+    problem: "Two replicas accept writes to the same key a few milliseconds apart, their clocks disagree by more, and whichever ordering the system picks by timestamp quietly throws one write away.",
+    summary: "Wall clocks drift, jump and keep running while a process is paused, so they cannot order events across machines. Logical clocks (Lamport, vector, hybrid) order by causality instead, and Spanner's TrueTime makes physical time usable by bounding its error and waiting it out.",
+    catTip: "I nap on the rack and wake with no idea how long I was out. The servers around me have the same problem: a paused process trusts a clock that kept moving without it. Count messages, not minutes.",
+    recall: { q: "Two events on different machines carry Lamport timestamps 3 and 5. What can you conclude about their order, and what would a vector clock add?", a: "Only that the event stamped 5 did not happen before the one stamped 3; the two may be causally related or concurrent. A vector clock keeps one counter per node, so comparing the vectors tells you whether one happened before the other or whether they are concurrent and need conflict resolution." },
+    archNodes: [],
+  },
+  {
+    slug: "quorums", title: "Quorums and leaderless replication", moduleId: "distributed", level: "advanced", minutes: 16,
+    problem: "Without a leader every replica accepts writes, so a reader must decide how many copies to ask before trusting an answer, and replicas can hold different versions of one key.",
+    summary: "Leaderless stores write to N replicas and wait for W acknowledgements, read from R and keep the newest. R + W > N makes the sets overlap, hinted handoff and repair keep replicas converging, and version vectors catch conflicts that last-write-wins silently drops.",
+    catTip: "Three bowls, and the humans fill two of them each evening. If I check any two bowls I always find tonight's dinner in at least one. Unless the humans were sloppy and fed the neighbour's bowl instead.",
+    recall: { q: "A store runs N = 3, W = 2, R = 2. Why does a read normally see the latest write, and name two situations where it still returns stale data.", a: "Any two replicas share at least one node with any other two, so some replica in the read set holds the acknowledged write and the newest version wins. It can still be stale after a sloppy quorum wrote to stand-in nodes, after a write that failed before reaching W nodes but stayed on some, or when two writes were concurrent and last-write-wins picked the wrong one." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "consensus", title: "Consensus: Raft in one picture", moduleId: "distributed", level: "advanced", minutes: 19,
+    problem: "Several machines must agree on one leader and one order of writes while some crash or lose contact, and any two of them that decide differently corrupt the data.",
+    summary: "Consensus lets a cluster agree on a replicated log despite crashes and partitions. Raft elects a leader per numbered term with randomised timeouts and majority votes, and an entry is committed once a majority stores it, so any two decisions always share a witness.",
+    catTip: "Five cats, one sunbeam. We vote; three purrs and the sunbeam is decided for this term. If two of us wander off the other three still agree, and the wanderers learn from the term number when they return.",
+    recall: { q: "In a five-node Raft cluster, why is an entry committed only once three nodes hold it, and what happens to a leader stuck on the two-node side of a partition?", a: "Any two majorities of five share at least one node, so a committed entry is guaranteed to be in the log of every future leader (leader completeness). The minority-side leader can accept entries but never gets enough acknowledgements to commit them; when the partition heals it sees the higher term from the new leader, steps down, and its uncommitted entries are overwritten." },
+    archNodes: ["db"],
+  },
+  {
+    slug: "leader-election", title: "Leader election, split-brain and fencing", moduleId: "distributed", level: "advanced", minutes: 14,
+    problem: "A leader pauses for a long garbage collection, its lease expires and a new leader is elected, then the old one wakes and keeps writing as if nothing happened.",
+    summary: "Leader election rents leadership with a lease: hold a time-limited key, renew it, and let the next candidate take over when it lapses. A paused leader cannot know its lease expired, so the storage it writes to checks a fencing token and rejects it.",
+    catTip: "I was the only cat allowed on the warm laptop, then I dozed off on the stairs. When I came back another cat had the lease and the laptop lid, sensibly, checked whose turn it was. Fencing, not feelings.",
+    recall: { q: "A leader holding a 15-second lease stops for a 30-second GC pause. Walk through what happens and what stops the damage.", a: "The coordination service expires the lease and elects a new leader while the old one is frozen; when it resumes it still believes it leads and sends its pending writes, so two leaders act at once (split-brain). A fencing token, a number that increases with every new leader, lets the storage reject the old leader's writes because they carry a lower token than the one it has already seen." },
+    archNodes: [],
+  },
+  {
+    slug: "distributed-locks", title: "Distributed locking", moduleId: "distributed", level: "advanced", minutes: 14,
+    problem: "Two workers on different machines both believe they hold the lock for the same job, and the one whose lease silently expired writes last.",
+    summary: "A distributed lock grants one holder at a time across machines, usually a TTL key in Redis or a consensus store. The TTL can expire under a slow holder, so a correct lock needs a fencing token the resource checks, or no lock at all.",
+    catTip: "I sit on the warm server and declare it mine, then nap for forty seconds. When I wake, another cat is sitting there too: my claim expired while I slept. A lock with a TTL is a lease, and a lease needs a fencing token.",
+    recall: { q: "A worker holding a Redis lock with a 30-second TTL pauses for 40 seconds and then writes. What goes wrong, and what prevents it?", a: "The key expired during the pause, another worker acquired the lock, and both write. The TTL makes the lock a lease whose expiry the holder cannot see; a fencing token checked by the storage rejects the late write, and a compare-and-delete release stops the first worker deleting the second worker's lock." },
+    archNodes: [],
+  },
+  {
+    slug: "distributed-transactions", title: "Distributed transactions and two-phase commit", moduleId: "distributed", level: "advanced", minutes: 16,
+    problem: "An order commits in one database while the stock decrement in another fails, and the first commit is already durable and cannot be taken back.",
+    summary: "Two-phase commit makes a change across several resources atomic: participants prepare and promise, a coordinator logs the decision, everyone applies it. The price is locks held while in doubt and blocking if the coordinator dies, which consensus-replicated coordinators fix and services avoid with sagas.",
+    catTip: "Two bowls, two rooms. I will not eat from one until both humans have promised to fill them, and then I wait, paws on both bowls, until the head human says go. If she wanders off, I sit there. Blocking is undignified.",
+    recall: { q: "In two-phase commit the coordinator crashes after every participant has voted yes. What state are the participants in, and why can they not resolve it themselves?", a: "They are in doubt: each has logged a prepared record and holds its locks, but cannot commit (another vote might have been no) or abort (the coordinator may have logged commit). Only the coordinator's log holds the decision, so they block until it recovers, which is why 2PC is a blocking protocol and why Spanner replicates the coordinator's log with Paxos." },
+    archNodes: [],
+  },
+  {
+    slug: "sagas", title: "Sagas and compensating actions", moduleId: "distributed", level: "intermediate", minutes: 12,
+    problem: "A checkout spans three services and three databases; payment is declined after stock was reserved, and nothing can roll back a transaction another service has already committed.",
+    summary: "A saga is a sequence of local transactions across services, each paired with a compensating transaction that undoes it. Coordinated by events (choreography) or a coordinator (orchestration), it replaces locks and two-phase commit with compensation and idempotent, retried steps.",
+    catTip: "I knock the vase off the shelf, then the lamp, then I think better of it. I cannot un-knock the vase, but I can push the lamp back and look innocent. That is a compensation, not a rollback.",
+    recall: { q: "Payment is declined after Inventory has reserved stock for an order. What does the saga do, and what must be true of that action?", a: "It runs the compensating transactions for the completed steps in reverse: release the reservation and mark the order CANCELLED. Compensations must be idempotent and retried until they succeed, because the messages that drive them arrive at least once and a compensation can itself fail." },
+    archNodes: [],
+  },
+  {
+    slug: "linearizability", title: "Linearizability, serializability and the consistency zoo", moduleId: "distributed", level: "advanced", minutes: 14,
+    problem: "Alice sees the final score, tells Bob, and Bob's refresh still shows the match in progress because his read hit a replica that had not caught up.",
+    summary: "Linearizability makes replicated data behave like one copy in real time; serializability makes concurrent transactions equivalent to some serial order; strict serializability is both. Reserve the top of the map for locks, uniqueness and leaders, because it costs round trips and availability.",
+    catTip: "One food bowl, one truth: when it is empty, it is empty for every cat, instantly. Two bowls that are usually the same are how the kitten eats twice. Linearizability is the one-bowl illusion, and it costs a walk to the kitchen.",
+    recall: { q: "What is the difference between linearizability and serializability, and what do you call having both?", a: "Linearizability is a single-object, single-operation guarantee that every operation appears to take effect instantly between its call and its return, so reads reflect real time. Serializability is a multi-object transaction guarantee of equivalence to some serial order, with no real-time requirement. Both together is strict serializability, which Spanner calls external consistency." },
+    archNodes: [],
+  },
+];

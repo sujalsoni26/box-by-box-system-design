@@ -1,0 +1,77 @@
+import type { LessonMeta } from "@/types/curriculum";
+
+/** Module 5: Performance and Reliability. Bodies: content/lessons/<slug>.mdx; teaching guidance: data/lesson-guides/reliability.ts. */
+export const lessons: LessonMeta[] = [
+  {
+    slug: "caching", title: "Caching", moduleId: "reliability", level: "intermediate", minutes: 11,
+    problem: "Millions of people open the same celebrity post, and re-querying the database for every one of them wastes work and slows everyone down.",
+    summary: "Keep hot data in RAM (Redis, Memcached), about 1,000× faster than SSD. Cache-aside is the default pattern; stale data, stampedes and hot keys are the traps.",
+    catTip: "I keep my favourite toy next to my bed, not in the toy box downstairs. That is caching. The hard part is noticing when someone swapped the toy. Purr.",
+    recall: { q: "In cache-aside, what do you do to the cache when the underlying data changes?", a: "Write the database, then delete (invalidate) the cache entry so the next read reloads fresh data." },
+    archNodes: ["cache"],
+  },
+  {
+    slug: "message-queues", title: "Message queues", moduleId: "reliability", level: "intermediate", minutes: 8,
+    problem: "A burst of a million photo uploads would crash the workers that process them, and a worker that crashes mid-job would lose its work.",
+    summary: "A broker buffers messages between producers and consumers. Consumers ack after processing, so a crash means redelivery. Queues absorb bursts, need idempotent consumers and a dead-letter queue.",
+    catTip: "A queue is the breakfast line at 7 a.m. Everyone gets served, just not all at once. If I knock my bowl over before finishing, the food comes back. That is redelivery.",
+    recall: { q: "Why must queue consumers be idempotent?", a: "Delivery is at-least-once: a message can be redelivered (for example after a crash before the ack), so processing it twice must have the same effect as once." },
+    archNodes: ["queue"],
+  },
+  {
+    slug: "pubsub", title: "Pub/sub and event-driven architecture", moduleId: "reliability", level: "intermediate", minutes: 8,
+    problem: "When a post is created, notifications, analytics, moderation and recommendations all care, and calling each one directly couples them all to the post service.",
+    summary: "The post service publishes one PostCreated event to a topic and every subscriber gets its own copy. Event-driven architecture builds whole systems from such past-tense facts.",
+    catTip: "When I knock a glass off the table, I do not tell each human separately. I make one crash, and everyone who cares comes running. That is pub/sub.",
+    recall: { q: "Queue vs pub/sub, one line each?", a: "Queue: each message goes to one consumer (work distribution). Pub/sub: each event goes to every subscriber (fan-out)." },
+    archNodes: ["post"],
+  },
+  {
+    slug: "availability", title: "Availability and the nines", moduleId: "reliability", level: "intermediate", minutes: 9,
+    problem: "At scale something is always broken, so you need a number for how much downtime is acceptable and a plan to stay up anyway.",
+    summary: "Availability = uptime ÷ (uptime + downtime). Each extra nine cuts allowed downtime 10× and costs far more engineering. Redundancy, failover and RPO/RTO targets make the number real.",
+    catTip: "I am available 99.9% of the time. The other 0.1%, about 8.76 hours a year, I am asleep in a cardboard box. Planned maintenance, obviously.",
+    recall: { q: "Two 99.9% services called in series: what is the combined availability?", a: "About 99.8% (0.999 × 0.999). Dependencies in series multiply; redundant copies in parallel raise availability." },
+    archNodes: ["gateway"],
+  },
+  {
+    slug: "timeouts-retries", title: "Timeouts and retries", moduleId: "reliability", level: "intermediate", minutes: 8,
+    problem: "A call to a stuck service can hang forever, and naive retries turn a small blip into a flood that finishes off the struggling service.",
+    summary: "Always set a timeout (a bit above the dependency's p99) with a fallback. Retry only transient errors on idempotent operations, with exponential backoff, jitter and a retry budget.",
+    catTip: "When my bowl is empty I do not yell every second. I meow, wait, meow louder, wait longer, and add a random pause so the humans cannot predict me. Backoff with jitter.",
+    recall: { q: "What makes retries safe?", a: "Exponential backoff plus jitter, a capped retry budget, retrying only transient errors (timeouts, 503), and only idempotent operations or ones with idempotency keys." },
+    archNodes: ["workers"],
+  },
+  {
+    slug: "circuit-breaker", title: "Circuit breaker", moduleId: "reliability", level: "intermediate", minutes: 8,
+    problem: "When a dependency is dead, every caller waiting on timeouts and retries ties up threads and spreads the outage: a cascading failure.",
+    summary: "A circuit breaker counts failures and, past a threshold, stops calling the dependency and fails fast with a fallback. After a cooldown, a few trial calls decide whether to close it again.",
+    catTip: "If the laser dot vanishes five times in a row, I stop pouncing and nap. Every so often I open one eye to check. The humans call that half-open.",
+    recall: { q: "What happens in the half-open state?", a: "After a cooldown, a few trial calls go through: success closes the breaker, failure reopens it." },
+    archNodes: ["workers"],
+  },
+  {
+    slug: "backpressure", title: "Backpressure and load shedding", moduleId: "reliability", level: "advanced", minutes: 11,
+    problem: "If producers outpace consumers for long, a queue only delays the crash: an unbounded queue grows until memory runs out.",
+    summary: "Backpressure lets an overloaded part tell upstream to slow down. Load shedding is its sharpest form: reject the excess cheaply with a 503, least important work first, while autoscaling catches up.",
+    catTip: "When my bowl is already full, I do not let you pour more. I knock the bag away. Rude? Perhaps. But the kitchen floor survives. Load shedding.",
+    recall: { q: "Traffic jumps faster than autoscaling: slow down for everyone or shed load? What goes first?", a: "Shed: return a fast 503 for the excess so accepted work stays fast, dropping the least critical work first (SHEDDABLE, then SHEDDABLE_PLUS)." },
+    archNodes: ["queue"],
+  },
+  {
+    slug: "rate-limiting", title: "Rate limiting", moduleId: "reliability", level: "intermediate", minutes: 11,
+    problem: "Bots, buggy scripts, brute-force logins, scrapers and one greedy tenant can starve everyone else and run up your bill.",
+    summary: "A rate limiter caps requests per client per time window and answers 429 with Retry-After. Token bucket is the common algorithm; local limits are fast, global limits are accurate. Not to be confused with load shedding (503).",
+    catTip: "I allow ten head pats per minute. Pat number eleven gets a polite 429 and a slow blink. Come back when my bucket refills.",
+    recall: { q: "One client gets a 429 and another gets a 503. What does each mean, and how should each retry?", a: "429: you used up your quota; wait until Retry-After. 503: the server is overloaded; retry with exponential backoff and jitter." },
+    archNodes: ["gateway"],
+  },
+  {
+    slug: "idempotency", title: "Idempotency", moduleId: "reliability", level: "intermediate", minutes: 9,
+    problem: "The server creates an order, the response is lost, the app retries, and now there are two orders or a double charge.",
+    summary: "An operation is idempotent if repeating it has the same effect as doing it once. Make POSTs safe to retry with an idempotency key: the client reuses one ID per action, and the server stores the key with the result and replays it.",
+    catTip: "Pressing the lift button five times does not summon five lifts. Pressing the treat button five times, sadly, also gives only one treat. Idempotent. I checked.",
+    recall: { q: "Does an idempotency key stop two users booking the same seat?", a: "No. It deduplicates the same request repeated. Two users competing is a concurrency problem: row locks, a unique constraint, optimistic locking or holds." },
+    archNodes: ["post"],
+  },
+];

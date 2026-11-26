@@ -1,0 +1,37 @@
+import type { KnowledgeCheck } from "@/types/quiz";
+
+/** Knowledge checks for Module 6: System Design Practice. */
+export const checks: KnowledgeCheck[] = [
+  { id: "check-estimation", title: "Estimation check", moduleId: "practice", afterLesson: "system-shapes", questions: [
+    { id: "check-estimation-1", lessonSlug: "estimation-numbers",
+      prompt: "500 million users each have a 2 KB profile record. Roughly how much data is that, and what does it imply?",
+      options: ["About 1 GB: it fits in one server's RAM", "About 1 TB: one database machine can hold it", "About 10 TB: it needs object storage", "About 1 PB: it must be split across many machines"],
+      answer: 1,
+      explanation: "5 × 10⁸ × 2 × 10³ B = 10¹² B = 1 TB, which a single database machine stores comfortably. Off-by-1,000 slips such as 1 GB or 1 PB are why you add the exponents out loud." },
+    { id: "check-estimation-2", lessonSlug: "estimation-formulas",
+      prompt: "A ticketing app has 20 million daily users, each making about 15 requests a day, and a big concert goes on sale next week. Which numbers should you design for?",
+      options: ["300 QPS average, about 1.5–3k during the sale", "3k QPS average, about 6–9k at peak", "3k QPS average, about 15–30k during the sale", "30k QPS average, about 60–90k at peak"],
+      answer: 2,
+      explanation: "2 × 10⁷ × 15 ÷ 10⁵ s ≈ 3k QPS on average. A ticket drop is a planned spike, so use 5–10× rather than the everyday 2–3×; a design for 6–9k falls over in the first minutes of the sale." },
+    { id: "check-estimation-3", lessonSlug: "estimation-formulas",
+      prompt: "A chat app stores 2 billion messages a day, about 1 KB each with metadata, kept for one year with three copies. Roughly how much storage is that?",
+      options: ["About 22 PB", "About 2.2 PB", "About 730 TB", "About 220 TB"],
+      answer: 1,
+      explanation: "2 × 10⁹ × 1 KB = 2 TB a day; × 365 ≈ 730 TB; × 3 copies ≈ 2.2 PB. Stopping at 730 TB forgets the replication factor, which is part of the honest storage number." },
+    { id: "check-estimation-4", lessonSlug: "estimation-formulas",
+      prompt: "Your estimate gives 600 writes a second on average, about 1,800 at peak, and 20 reads for every write, mostly of recent rows. What does that suggest for the database?",
+      options: ["Shard the writes now, since 1,800/s exceeds one node", "Add read replicas so they can share the write load", "Move to Cassandra, since SQL tops out near 1k writes/s", "One SQL primary copes; cache or replicate for reads"],
+      answer: 3,
+      explanation: "One PostgreSQL node handles roughly 1–5k writes a second, so 1,800 at peak fits and sharding can wait. The reads, about 36k a second at peak, are the real load, and caching or read replicas absorb them; replicas cannot share writes." },
+    { id: "check-estimation-5", lessonSlug: "estimation-examples",
+      prompt: "A link shortener expects 40 million new links a day, kept for five years. How many base-62 characters must its codes have?",
+      options: ["5, since 62⁵ is about 900 million", "6, since 62⁶ is about 57 billion", "7, since 62⁷ is about 3.5 trillion", "8, since 62⁸ is about 218 trillion"],
+      answer: 2,
+      explanation: "40M × 1,825 days ≈ 73 billion links, more than 62⁶ ≈ 57 billion, so six characters run out and seven are needed. Six is the trap: it sounds right until you multiply out the five years." },
+    { id: "check-estimation-6", lessonSlug: "system-shapes",
+      prompt: "A podcast platform adds 2 million episodes a year at about 60 MB each and serves 50 million plays a day. Searches over episode metadata are light. Which number dominates the design?",
+      options: ["Egress bandwidth: object storage behind a CDN", "Read QPS: cache the episode rows and add replicas", "Write rate: append-only logs and partitioning", "Transactions: one relational primary, strict isolation"],
+      answer: 0,
+      explanation: "500 plays a second × 60 MB is about 30 GB/s of egress, far more than app servers should carry, so the files live in object storage behind a CDN. 500 requests a second is modest QPS, and 2 million uploads a year is a trickle of writes." },
+  ] },
+];

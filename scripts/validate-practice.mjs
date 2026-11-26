@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Validate the practice data: knowledge checks (data/quizzes.ts) and case studies (data/case-studies.ts).
+// Validate the practice data: knowledge checks (data/quizzes/) and case studies (data/case-studies/).
 //
 //   node scripts/validate-practice.mjs
 //
@@ -16,30 +16,16 @@
 //   - concepts are existing lessons taught no later than the case itself;
 //   - 4–7 steps, each with prompt, hint and insight; 2–4 trade-offs; 2–4 follow-ups.
 // Exits 1 if anything is wrong. Reads only files inside this repository.
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import { appModule } from "./tests/support/load-app.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const problems = [];
 const warnings = [];
 const fail = (where, msg) => problems.push(`${where}: ${msg}`);
 
-/** Loads a data module that only has type imports, by transpiling it in memory. */
-async function loadData(file) {
-  const src = readFileSync(path.join(ROOT, file), "utf8");
-  const { outputText } = ts.transpileModule(src, {
-    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, verbatimModuleSyntax: false },
-    fileName: file,
-  });
-  if (/^\s*import\s/m.test(outputText)) throw new Error(`${file} has runtime imports; the validator expects type-only imports`);
-  return import(`data:text/javascript;base64,${Buffer.from(outputText).toString("base64")}`);
-}
-
-const { modules, lessonMeta } = await loadData("data/curriculum.ts");
-const { knowledgeChecks } = await loadData("data/quizzes.ts");
-const { caseStudies } = await loadData("data/case-studies.ts");
+// The data folders are loaded with the tests' TypeScript loader, which follows the imports between their files.
+const { modules, lessonMeta } = await appModule("data/curriculum/index.ts");
+const { knowledgeChecks } = await appModule("data/quizzes/index.ts");
+const { caseStudies } = await appModule("data/case-studies/index.ts");
 
 const order = modules.flatMap((m) => m.lessons);
 const indexOf = new Map(order.map((s, i) => [s, i]));

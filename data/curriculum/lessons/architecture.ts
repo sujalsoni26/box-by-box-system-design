@@ -1,0 +1,77 @@
+import type { LessonMeta } from "@/types/curriculum";
+
+/** Module 13: Architecture Patterns. Bodies: content/lessons/<slug>.mdx; teaching guidance: data/lesson-guides/architecture.ts. */
+export const lessons: LessonMeta[] = [
+  {
+    slug: "modular-monolith-soa", title: "Monolith, modular monolith, SOA and microservices", moduleId: "architecture", level: "intermediate", minutes: 12,
+    problem: "A codebase with no internal boundaries cannot be split without a rewrite, and a split made along the wrong lines produces services that share tables and fail together.",
+    summary: "A modular monolith keeps one deployment but enforces bounded contexts in code: one package per business capability, a small public interface, no shared tables. SOA's bus showed what happens when the middle gets smart; split only along boundaries already proven in the monolith.",
+    catTip: "I nap in one house with many rooms. I use the doors. The day I needed my own house was the day the humans kept stepping on my tail, not the day I read about houses.",
+    recall: { q: "What is a bounded context, and why is it the right unit for a module or a service?", a: "A bounded context is the boundary within which one model and one vocabulary apply, fixed in terms of team, code base and schema. Because the meaning of a term such as 'order' changes at that line, a module or service drawn along it can own its data and change without coordinating with the others." },
+    archNodes: [],
+  },
+  {
+    slug: "api-gateway", title: "API gateway and backend-for-frontend", moduleId: "architecture", level: "intermediate", minutes: 12,
+    problem: "Every client talks to every service directly, so TLS, authentication and rate limits are reimplemented per service and a phone needs five round trips to draw one screen.",
+    summary: "An API gateway is a reverse proxy that knows your API: it terminates TLS, authenticates, rate-limits, routes and aggregates, and keeps business rules out. A backend-for-frontend gives each client type its own gateway, owned by that client's team.",
+    catTip: "One door to the house, one human checking collars at it. Behind the door, a small flap sized for me and a big one for the dog. Nobody at the door decides what is for dinner.",
+    recall: { q: "Which jobs belong at an API gateway, what must stay out, and why have a BFF per client type?", a: "TLS termination, authentication, rate limiting, routing, aggregation and protocol translation belong there because they apply to every request and need no domain knowledge. Business rules stay in the owning service, or the gateway becomes a monolith nobody owns. A BFF per client lets each front-end team shape and aggregate for its own screens without queueing behind a central API team." },
+    archNodes: ["gateway"],
+  },
+  {
+    slug: "service-mesh", title: "Service mesh", moduleId: "architecture", level: "advanced", minutes: 12,
+    problem: "Forty services in five languages each implement TLS, retries, timeouts and metrics differently, and nobody can say which internal calls are actually encrypted.",
+    summary: "A service mesh runs a proxy beside every service and configures them from a control plane, so mTLS, retries, timeouts, circuit breaking, canary routing and telemetry leave application code. It costs two proxy hops per call, memory per pod and a control plane to run.",
+    catTip: "Every room now has a doorkeeper who checks collars, logs visitors and redials if the line drops. I never see them, which is the point, until I wonder why the hallway got longer.",
+    recall: { q: "What does a service mesh move out of application code, and what does it cost?", a: "Mutual TLS with managed certificates, retries, timeouts, circuit breaking, weighted canary routing and telemetry move into sidecar proxies (the data plane) configured by a control plane. The cost is two extra proxy hops on every call, CPU and memory per pod, and a control plane to operate and upgrade." },
+    archNodes: [],
+  },
+  {
+    slug: "cqrs", title: "CQRS", moduleId: "architecture", level: "intermediate", minutes: 11,
+    problem: "One model has to enforce the ordering rules and serve a hot list screen that joins five tables, so it does both badly and every read competes with every write.",
+    summary: "CQRS separates a write model that validates commands from read models (projections) shaped like the screens, fed by events or CDC. Reads scale and simplify, but they lag the writes, and the pattern only pays off in complex, collaborative contexts.",
+    catTip: "The kitchen decides whether my dinner is allowed. The board by my bowl says 'coming' a few seconds after the decision. I do not stare into the pan. Mostly.",
+    recall: { q: "In CQRS, what do the write model and the read models each do, and what new problem appears between them?", a: "The write model accepts commands, enforces the business rules and commits; read models are denormalised projections, one per screen, rebuilt from the events or CDC stream. Because projections update asynchronously, reads lag writes, so the UI must render from the command response or wait for the projection's version." },
+    archNodes: [],
+  },
+  {
+    slug: "event-sourcing", title: "Event sourcing", moduleId: "architecture", level: "advanced", minutes: 14,
+    problem: "A row overwritten in place cannot tell you why an order's total changed, what the cart looked like an hour ago, or who to believe when two systems disagree.",
+    summary: "Event sourcing keeps every change as an immutable domain event and derives state by replay, with snapshots for speed and projections for reads. It brings history, audit and rebuildable read models, and hard problems in versioning, erasure and consistency.",
+    catTip: "I do not remember being fed; I remember the sequence of events that ended in a full bowl. Replay it and you get the same bowl. Delete one event and the bowl is wrong, which is why nobody is allowed to.",
+    recall: { q: "How does an event-sourced system know an entity's current state, and how does it keep that fast and the invariants intact?", a: "It replays the entity's stream of immutable events from the start, folding each into state. Snapshots store the state at a version so only later events are replayed, and each append carries the version the writer read, so a concurrent writer is rejected and retries. Reads come from projections rebuilt from the same events." },
+    archNodes: [],
+  },
+  {
+    slug: "strangler-fig", title: "Migrating safely: strangler fig and friends", moduleId: "architecture", level: "intermediate", minutes: 12,
+    problem: "A rewrite freezes features for years and ends in one cut-over night, while the behaviour you must reproduce is written down nowhere but in the old code.",
+    summary: "Strangler fig puts a routing facade in front of a legacy system and moves one capability at a time, verified by parallel runs and switched by feature flags. Data moves by expand and contract with CDC keeping copies in step, never by dual writes.",
+    catTip: "I moved house one room at a time. New bed first, then the bowl, then the litter tray, each with a way back. Nobody picked me up and dropped me somewhere new all at once, which is how it should be.",
+    recall: { q: "How does a strangler-fig migration move a capability from an old system to a new one, and how is its data moved safely?", a: "A facade routes all traffic to the legacy system; one capability is rebuilt, verified with shadow traffic or a parallel run, and switched over with a feature flag, after which the old path is deleted. Data moves by expand and contract: add the new store, backfill and sync it by CDC, move readers then writers with one writer of record at a time, then remove the old store; dual writes are avoided because no transaction spans both." },
+    archNodes: [],
+  },
+  {
+    slug: "serverless", title: "Serverless architecture", moduleId: "architecture", level: "intermediate", minutes: 12,
+    problem: "A thumbnail job that runs for ten seconds a few hundred times a day still needs servers sized, patched and paid for around the clock.",
+    summary: "FaaS runs a handler per event on provider-managed environments that scale from zero and bill per request and GB-second; BaaS rents auth, storage and databases. Cold starts, timeouts, statelessness and the cost crossover at steady load are the design constraints.",
+    catTip: "I do not keep a human on standby. I meow, one appears, feeds me, and vanishes. The first meow of the morning takes longer to answer. That is a cold start, and I resent it.",
+    recall: { q: "What is a cold start, what makes it longer, and how do you reduce it for a latency-critical function?", a: "A cold start is the Init phase (download code, start the runtime, run initialisation code) running before a request because no warm environment existed, as after idleness, a scale-up or a deploy. Runtime choice, package size and initialisation work lengthen it. Trim dependencies and load lazily, use SnapStart where supported, or pay for provisioned concurrency to keep environments initialised." },
+    archNodes: [],
+  },
+  {
+    slug: "multi-tenancy", title: "Multi-tenant architecture", moduleId: "architecture", level: "advanced", minutes: 14,
+    problem: "One customer's nightly export slows every other customer, a bank demands its data stay in-country, and nobody knows what any tenant actually costs.",
+    summary: "Multi-tenancy is deciding what tenants share. Pool small tenants in one schema with a tenant id, row-level security and per-tenant limits; give regulated or very large tenants their own database or cell; route by a tenant catalogue and meter every tenant.",
+    catTip: "Eight cats, one house, one bowl rack: the pool. The greedy cat gets rationed, not evicted. The cat with the vet's letter gets her own room with the door shut: the silo. I keep the list of who lives where. Nobody moves without telling me.",
+    recall: { q: "When does a tenant get dedicated resources, and when does it share?", a: "Regulated or very large tenants get a silo: their own database or cell, often in a required region. The long tail of small tenants shares a pool: one schema with a tenant id on every row, row-level security and per-tenant limits. Most systems are a bridge of both." },
+    archNodes: ["gateway", "db"],
+  },
+  {
+    slug: "advanced-revision", title: "Revision: the advanced tracks", moduleId: "architecture", level: "basic", minutes: 12,
+    problem: "You have read seven advanced modules, and the next interviewer will name a problem, not a lesson.",
+    summary: "Flashcards for modules 7 to 13: each card names a problem from the distributed, database, streaming, reliability, security, infrastructure and architecture tracks. Answer with the building block, flip to check, and use the table to find the lesson to reread.",
+    catTip: "I revise the way I hunt: the problem appears, and the answer must already be in my paws. If I have to think about it, the mouse has left. Flip the card, then say the next one faster.",
+    recall: { q: "Problem: \"two nodes both believe they are the leader.\" Which building block, and what stops the old leader doing damage?", a: "Leader election with fencing: each new leader gets a higher token, and the storage layer rejects writes carrying an older one, so a stale leader cannot corrupt anything even if it keeps running." },
+    archNodes: [],
+  },
+];

@@ -57,7 +57,7 @@ Defence in depth; the server side is what actually enforces it.
 | App Check (reCAPTCHA v3) | Once enforced, the database only answers requests that come from this site, not from scripts using the public config. |
 | API key restrictions | The browser key only works from the site's domains and only for the Firebase APIs it needs. |
 | Client (`lib/cloud/guards.ts`) | After 3 failed attempts this browser waits 15 s, 30 s, 60 s … up to 15 minutes; verification and reset emails at most once a minute; messages never reveal whether an email has an account; password strength checked before sending. |
-| Headers (`next.config.ts`) | `X-Frame-Options: DENY` (no clickjacking of the sign-in form), `nosniff`, a strict referrer policy, HSTS and a restrictive permissions policy. Firebase's pages under `/__/` keep Firebase's own headers. |
+| Headers (`next.config.ts`) | A Content Security Policy (scripts, requests and frames only from this site and the Firebase/Google endpoints sign-in, sync and App Check use; no plugins, no framing, `base-uri` and `form-action` locked to this site), `X-Frame-Options: DENY` (no clickjacking of the sign-in form), `nosniff`, a strict referrer policy, HSTS and a restrictive permissions policy. Firebase's pages under `/__/` keep Firebase's own headers. If a new Google or Firebase feature is added (for example Analytics), add its hosts to the policy, or the browser blocks it. |
 
 The Firebase web config is public by design (it identifies the project); it is not a secret. Never put a service
 account key or admin credentials in this repository or in Netlify.

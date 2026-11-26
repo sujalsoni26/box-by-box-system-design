@@ -1,12 +1,39 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
 import path from "node:path";
-import { modules } from "./data/curriculum";
+import { modules } from "./data/curriculum/modules";
 
 /** Local MDX plugins must be absolute paths: @next/mdx resolves plugin strings relative to each MDX file. */
 const localPlugin = (file: string) => path.join(process.cwd(), "lib", "mdx", file);
 
 const firebaseProject = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
+const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Content Security Policy: everything comes from this site, except what Firebase sign-in and sync need.
+ * - Scripts: this site, Google's sign-in helper (apis.google.com) and reCAPTCHA for App Check (www.google.com,
+ *   www.gstatic.com). 'unsafe-inline' stays because the pages are prerendered (no per-request nonce) and Next.js
+ *   and the theme script run inline; dev also needs 'unsafe-eval' for React's dev tools and Turbopack.
+ * - Requests: Firebase Authentication, token refresh, Firestore and App Check (plus the dev reload socket).
+ * - Frames: Firebase's sign-in helper (on this site via /__/auth, or <project>.firebaseapp.com on localhost) and
+ *   reCAPTCHA. Nothing may frame this site.
+ * Firebase's own pages under /__/ are excluded (they keep Firebase's headers), like the other headers below.
+ */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://apis.google.com https://www.google.com https://www.gstatic.com`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  `connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com${isDev ? " ws: wss:" : ""}`,
+  "frame-src 'self' https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
 
 const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "mdx"],
@@ -40,6 +67,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path((?!__/).*)",
         headers: [
+          { key: "Content-Security-Policy", value: contentSecurityPolicy },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

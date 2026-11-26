@@ -1,0 +1,77 @@
+import type { LessonMeta } from "@/types/curriculum";
+
+/** Module 10: Reliability and Observability. Bodies: content/lessons/<slug>.mdx; teaching guidance: data/lesson-guides/operations.ts. */
+export const lessons: LessonMeta[] = [
+  {
+    slug: "failure-modes", title: "Fault tolerance: how systems fail", moduleId: "operations", level: "intermediate", minutes: 12,
+    problem: "Redundant copies that share a rack, a dependency or a deploy fail together, and a server that passes its health check while dropping packets keeps receiving traffic.",
+    summary: "Faults become errors become failures, and tolerance means breaking that chain. Spread copies across failure domains they do not share, pick a redundancy shape for the failure you expect, keep the blast radius small, and detect the grey failures that health checks miss.",
+    catTip: "Two naps in the same sunbeam are not redundancy. When the cloud rolls in, both naps fail at once. I keep a spare nap spot by the radiator in a different room, and I test it on Tuesdays.",
+    recall: { q: "What is a failure domain, and how should redundancy relate to it?", a: "A failure domain is a set of things that fail together: a host, a rack, an availability zone, a region, or everything behind one deploy. Redundant copies only protect against failures of domains they do not share, so place them across the domain you want to survive." },
+    archNodes: [],
+  },
+  {
+    slug: "bulkheads-degradation", title: "Bulkheads and graceful degradation", moduleId: "operations", level: "intermediate", minutes: 12,
+    problem: "One slow dependency eats every thread, one poisonous customer takes down everyone on their shard, and under load the site dies whole instead of dropping what does not matter.",
+    summary: "Bulkheads give each dependency, tenant or feature its own bounded pool: thread pools inside a process, cells and shuffle shards across a service. Kill switches and degraded modes decide in advance what fails first.",
+    catTip: "Eight food bowls, two per cat, dealt at random. The greedy cat empties his two, but every other cat still has a bowl he never touched. That is shuffle sharding, and I approve of it on principle.",
+    recall: { q: "What does a bulkhead isolate, and how do cells and shuffle sharding extend the idea?", a: "A bulkhead caps the resources any one dependency, tenant or feature can consume, such as a per-dependency thread pool. Cells apply it to a whole service by giving each group of customers an independent copy; shuffle sharding deals each customer its own random subset of workers, so a poison customer fully affects only the few who share the identical subset." },
+    archNodes: [],
+  },
+  {
+    slug: "slos-error-budgets", title: "SLIs, SLOs and error budgets", moduleId: "operations", level: "intermediate", minutes: 14,
+    problem: "Without a user-facing target and an agreed budget for failure, teams page on noise, sleep through slow bleeds, and argue about whether the service is reliable enough.",
+    summary: "SLIs measure what users feel, an SLO sets a target for them over a rolling window, and the gap to 100% is an error budget that burn-rate alerts protect and a written policy spends.",
+    catTip: "I allow myself 43 minutes of knocking things off shelves a month. Spend it slowly on small experiments, or blow it in one glorious afternoon. Either way the budget is the budget, and it does not roll over.",
+    recall: { q: "What is an error budget, and how does burn rate relate to it?", a: "The error budget is 1 minus the SLO over the window: the failures you are allowed. Burn rate is how fast you are spending it relative to the SLO; a burn rate of 1 exhausts the budget exactly at the end of the window, and 14.4 spends 2% of a 30-day budget in one hour." },
+    archNodes: [],
+  },
+  {
+    slug: "metrics-monitoring", title: "Metrics and monitoring", moduleId: "operations", level: "intermediate", minutes: 14,
+    problem: "Dashboards full of averages and host graphs hide the slow tail, page people on CPU spikes nobody can act on, and fall over when someone adds a user-id label.",
+    summary: "Counters, gauges and histograms are the three instruments; RED describes a service and USE a resource. Keep labels bounded, pull rather than push where you can, and page on symptoms users feel rather than on causes.",
+    catTip: "I count every mouse I see (counter), weigh myself after dinner (gauge), and sort my naps into buckets by length (histogram). Averaging my nap p99 with the dog's would be nonsense; add the buckets instead.",
+    recall: { q: "Why can you not average per-instance p99 values to get a service-wide p99, and what should you do instead?", a: "A percentile is a position in a distribution, not an additive quantity, so averaging twenty p99s gives a meaningless number. Histogram bucket counts do add: sum each bucket across instances and estimate the quantile from the combined cumulative counts." },
+    archNodes: [],
+  },
+  {
+    slug: "logging", title: "Logging at scale", moduleId: "operations", level: "intermediate", minutes: 12,
+    problem: "Free-text log lines from fifty services cannot be searched by request, cost more to store than the database they describe, and quietly leak card numbers and tokens.",
+    summary: "Write structured JSON events with levels and a correlation id, ship them through an agent and a broker to a searchable store, control cost with sampling, dynamic levels and retention tiers, and redact personal data at the source.",
+    catTip: "My diary used to say 'ate something, felt odd'. Now every entry has fields: time, bowl, food, outcome. Searching for outcome equals hairball takes a second. I keep three days close by and a year in the attic.",
+    recall: { q: "What makes a log line structured, and which one field should every line carry in a distributed system?", a: "A structured line is a record with named fields (timestamp, level, event name, attributes) instead of a sentence, so it can be filtered and aggregated without regular expressions. Every line should carry the correlation id, in practice the trace id, so one request's lines can be pulled from every service it touched." },
+    archNodes: [],
+  },
+  {
+    slug: "tracing", title: "Distributed tracing", moduleId: "operations", level: "intermediate", minutes: 12,
+    problem: "A checkout takes two seconds across nine services and nobody can say which hop or query spent the time, because each service sees only its own slice.",
+    summary: "A trace is the tree of spans one request creates across services, joined by a trace id carried in the W3C traceparent header. OpenTelemetry produces it, sampling keeps it affordable, and the waterfall view shows where the time went.",
+    catTip: "Every room my mouse runs through gets the same tracking number scratched on the floor. Afterwards I read the trail like a map: which room cost the most time, and where it went round in forty tiny circles.",
+    recall: { q: "How does a span in the payment service end up in the same trace as the gateway's span?", a: "The gateway sends a traceparent header carrying the trace id, its own span id and a sampled flag. The payment service reads it, creates a child span with that span id as parent and the same trace id, and forwards a new traceparent downstream; the backend stitches the spans together by trace id." },
+    archNodes: [],
+  },
+  {
+    slug: "disaster-recovery", title: "Disaster recovery and backups", moduleId: "operations", level: "advanced", minutes: 16,
+    problem: "The region hosting the primary database is gone, or a migration has just deleted the orders table in every replica, and the team discovers the backups have never been restored.",
+    summary: "Disaster recovery covers what high availability cannot: a lost region or lost data. Set RPO and RTO per tier, pick one of four strategies, keep backups you have actually restored, and rehearse the failover before you need it.",
+    catTip: "I keep a second bed in another house, pre-warmed. If the lights go out here, I walk over: the walk is my RTO, and the treats I left behind are my RPO. I rehearse the walk every month, treats in paw.",
+    recall: { q: "Name the four DR strategies in order of cost, and say what each keeps running in the recovery region.", a: "Backup and restore (nothing running; copies of data and images, rebuilt on demand; RPO hours, RTO up to a day), pilot light (data replicated live, compute switched off; RPO minutes, RTO tens of minutes), warm standby (a scaled-down working copy; RPO seconds, RTO minutes), and multi-site active/active (full copies serving traffic; RPO and RTO near zero)." },
+    archNodes: [],
+  },
+  {
+    slug: "capacity-planning", title: "Capacity planning and load testing", moduleId: "operations", level: "intermediate", minutes: 14,
+    problem: "Servers run at 95% to save money until the IPL final, when queues form, latency explodes, autoscaling arrives five minutes late and losing one zone overloads the rest.",
+    summary: "Plan supply against peak demand with headroom: keep utilisation below the queueing knee, size for losing a zone, use Little's law for pools, measure capacity with load tests, and turn the forecast into autoscaling targets and a cost per request.",
+    catTip: "A food bowl queue at 95% full is a brawl. I plan my bowls for the dinner rush, keep one spare in case a bowl breaks, and once a quarter I invite the neighbourhood over to find out where the kitchen falls apart.",
+    recall: { q: "Why can a service not run near 100% utilisation, and what target follows from that?", a: "Queueing: with random arrivals, time in the system grows as service time ÷ (1 − utilisation), so latency has doubled by 50% and climbs almost vertically past 90%. Latency-sensitive services target roughly 50–70% at peak, and lower still per zone when they must also absorb a lost zone." },
+    archNodes: [],
+  },
+  {
+    slug: "incident-response", title: "Incidents, postmortems and chaos engineering", moduleId: "operations", level: "intermediate", minutes: 14,
+    problem: "The pager fires at 3 a.m., three engineers debug the same thing in three chats, nobody updates customers, and the same outage returns next quarter.",
+    summary: "Incident response runs an outage with severity levels, an incident commander who delegates operations and communications, a live timeline and a status page, then learns from it with a blameless postmortem whose action items buy back the error budget.",
+    catTip: "When the fish tank overflows, one cat commands, one cat mops and one cat tells the humans. Afterwards nobody blames the cat who knocked the pump; we ask why the pump could be knocked. Then we practise knocking it on purpose.",
+    recall: { q: "Who runs an incident and what does each role own?", a: "The incident commander owns the overall picture and every role not delegated; the operations lead owns the fix; the communications lead owns updates to the status page and stakeholders. The live incident document holds the timeline, which becomes the postmortem." },
+    archNodes: [],
+  },
+];

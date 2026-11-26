@@ -33,25 +33,38 @@ const fail = (where, msg) => problems.push(`${where}: ${msg}`);
 // ---------------------------------------------------------------------------------------------
 // Sources of truth
 // ---------------------------------------------------------------------------------------------
-const curriculumSrc = read("data", "curriculum.ts");
+// The course: modules in data/curriculum/modules.ts, each module's lessons in data/curriculum/lessons/<module>.ts.
+const curriculumSrc = read("data", "curriculum", "modules.ts");
+const lessonFiles = readdirSync(path.join(ROOT, "data", "curriculum", "lessons")).filter((f) => f.endsWith(".ts"));
+const lessonsSrc = lessonFiles.map((f) => read("data", "curriculum", "lessons", f)).join("\n");
 const moduleIds = [...curriculumSrc.matchAll(/\{\s*id:\s*"([a-z0-9-]+)",\s*number:/g)].map((m) => m[1]);
 const moduleSlugs = [...curriculumSrc.matchAll(/lessons:\s*\[([^\]]*)\]/g)].flatMap((m) =>
   [...m[1].matchAll(/"([a-z0-9-]+)"/g)].map((s) => s[1]),
 );
 // Which module each lesson belongs to (lesson URLs are /learn/<module>/<slug>). Modules and their lesson lists
-// appear in the same order in data/curriculum.ts.
+// appear in the same order in data/curriculum/modules.ts.
 const moduleOfSlug = new Map(
   [...curriculumSrc.matchAll(/lessons:\s*\[([^\]]*)\]/g)].flatMap((m, i) => [...m[1].matchAll(/"([a-z0-9-]+)"/g)].map((s) => [s[1], moduleIds[i]])),
 );
-const metaSlugs = [...curriculumSrc.matchAll(/\bslug:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
+const metaSlugs = [...lessonsSrc.matchAll(/\bslug:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
 
-if (moduleIds.length === 0 || moduleSlugs.length === 0) fail("data/curriculum.ts", "could not read modules or lessons");
+if (moduleIds.length === 0 || moduleSlugs.length === 0) fail("data/curriculum", "could not read modules or lessons");
+// Each lessons file holds exactly its own module's lessons, and every module has one.
+for (const f of lessonFiles) {
+  const id = f.replace(/\.ts$/, "");
+  if (!moduleIds.includes(id)) fail(`data/curriculum/lessons/${f}`, "is not named after a module");
+  for (const m of read("data", "curriculum", "lessons", f).matchAll(/\bslug:\s*"([a-z0-9-]+)"[^}]*?\bmoduleId:\s*"([a-z0-9-]+)"/gs)) {
+    if (m[2] !== id) fail(`data/curriculum/lessons/${f}`, `"${m[1]}" has moduleId "${m[2]}"`);
+    else if (moduleOfSlug.get(m[1]) !== id) fail(`data/curriculum/lessons/${f}`, `"${m[1]}" is listed in module "${moduleOfSlug.get(m[1])}"`);
+  }
+}
+for (const id of moduleIds) if (!lessonFiles.includes(`${id}.ts`)) fail("data/curriculum/lessons", `no file for module "${id}"`);
 for (const [label, list] of [["modules[].lessons", moduleSlugs], ["lessonMeta", metaSlugs]]) {
   const dupes = list.filter((s, i) => list.indexOf(s) !== i);
-  if (dupes.length) fail("data/curriculum.ts", `duplicate slugs in ${label}: ${[...new Set(dupes)].join(", ")}`);
+  if (dupes.length) fail("data/curriculum", `duplicate slugs in ${label}: ${[...new Set(dupes)].join(", ")}`);
 }
-for (const s of moduleSlugs) if (!metaSlugs.includes(s)) fail("data/curriculum.ts", `"${s}" is in a module but has no lessonMeta entry`);
-for (const s of metaSlugs) if (!moduleSlugs.includes(s)) fail("data/curriculum.ts", `lessonMeta "${s}" is not in any module`);
+for (const s of moduleSlugs) if (!metaSlugs.includes(s)) fail("data/curriculum", `"${s}" is in a module but has no lessonMeta entry`);
+for (const s of metaSlugs) if (!moduleSlugs.includes(s)) fail("data/curriculum", `lessonMeta "${s}" is not in any module`);
 const slugs = new Set([...moduleSlugs, ...metaSlugs]);
 
 const registrySrc = read("components", "diagrams", "interactive-registry.tsx");
