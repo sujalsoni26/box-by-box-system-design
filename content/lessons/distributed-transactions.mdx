@@ -1,4 +1,4 @@
-An **atomic commit** across two systems means a change lands on both or on neither, even if one crashes in the middle. Inside one database the transaction log provides this (see [ACID transactions](/learn/acid)). Once the two sides are different systems, two shards, a database and a broker, two services' databases, there is no shared log, and each side can commit or fail on its own.
+An **atomic commit** across two systems means a change lands on both or on neither, even if one crashes in the middle. Inside one database the transaction log provides this (see [ACID transactions](/learn/data/acid)). Once the two sides are different systems, two shards, a database and a broker, two services' databases, there is no shared log, and each side can commit or fail on its own.
 
 ## Why "commit both" is not enough
 
@@ -64,7 +64,7 @@ The X/Open **XA** specification (1991) standardised the conversation between a t
 
 ## 2PC on top of consensus
 
-Blocking is really a single-point-of-failure problem: the coordinator's log lives on one machine. Replicate it with consensus and the coordinator can fail without taking its decision with it (see [Consensus: Raft in one picture](/learn/consensus)).
+Blocking is really a single-point-of-failure problem: the coordinator's log lives on one machine. Replicate it with consensus and the coordinator can fail without taking its decision with it (see [Consensus: Raft in one picture](/learn/distributed/consensus)).
 
 Google's Spanner does exactly this. Data is split into Paxos groups, each with a leader. A client buffers its writes, picks one group as **coordinator**, and sends the commit request to every participant group's leader. Each participant leader takes write locks, chooses a prepare timestamp and logs a *prepare* record through Paxos; the coordinator leader collects the votes, chooses the commit timestamp and logs the *commit* record through Paxos; every participant then logs the outcome through Paxos. If the coordinator leader dies, its group's new leader has the same replicated log, so the decision survives. Each phase is a consensus write across datacentres: that is the latency cost.
 
@@ -79,11 +79,11 @@ Google's Spanner does exactly this. Data is split into Paxos groups, each with a
     CO -->|commit record via Paxos| R0["Coordinator group replicas"]
 `} />
 
-CockroachDB replicates its transaction record and provisional writes through Raft and heartbeats the record, so a dead coordinator's transaction can be aborted by whoever runs into it. Google's earlier Percolator (2010) ran a client-coordinated 2PC over Bigtable's single-row transactions, with a *primary lock* as the commit point. SQL across shards on these foundations is [Distributed SQL](/learn/distributed-sql).
+CockroachDB replicates its transaction record and provisional writes through Raft and heartbeats the record, so a dead coordinator's transaction can be aborted by whoever runs into it. Google's earlier Percolator (2010) ran a client-coordinated 2PC over Bigtable's single-row transactions, with a *primary lock* as the commit point. SQL across shards on these foundations is [Distributed SQL](/learn/internals/distributed-sql).
 
 ## Why services usually avoid it
 
-Between microservices 2PC is rare, and not only because few HTTP APIs can "prepare". Locks are held across network calls for the whole protocol, so the slowest participant sets the latency. Availability is coupled: the coordinator *and* every participant must be up at once, and a partition leaves rows locked inside otherwise healthy services. Spanner's authors argue the opposite inside one database, where the coordinator is replicated, and that is the right split: 2PC where the system beneath you replicates the coordinator; between independently deployed services, local transactions with compensations, a [saga](/learn/sagas).
+Between microservices 2PC is rare, and not only because few HTTP APIs can "prepare". Locks are held across network calls for the whole protocol, so the slowest participant sets the latency. Availability is coupled: the coordinator *and* every participant must be up at once, and a partition leaves rows locked inside otherwise healthy services. Spanner's authors argue the opposite inside one database, where the coordinator is replicated, and that is the right split: 2PC where the system beneath you replicates the coordinator; between independently deployed services, local transactions with compensations, a [saga](/learn/distributed/sagas).
 
 <Callout type="interview" title="Say where the locks are held">
 

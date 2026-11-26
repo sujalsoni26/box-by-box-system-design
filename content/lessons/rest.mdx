@@ -50,10 +50,10 @@ A good API uses the status code to say *what kind* of thing happened and the bod
 | 401 / 403 | Who are you? / You may not | Missing or invalid token / valid token, no permission |
 | 404 Not Found | No such resource | Wrong id, or hidden on purpose |
 | 409 Conflict | Clashes with the current state | Alias already taken, version mismatch |
-| 429 Too Many Requests | Quota used up | Rate limiting (see [Rate limiting](/learn/rate-limiting)) |
-| 500 / 503 | We broke / we are overloaded | Bugs / load shedding (see [Backpressure and load shedding](/learn/backpressure)) |
+| 429 Too Many Requests | Quota used up | Rate limiting (see [Rate limiting](/learn/reliability/rate-limiting)) |
+| 500 / 503 | We broke / we are overloaded | Bugs / load shedding (see [Backpressure and load shedding](/learn/reliability/backpressure)) |
 
-Clients branch on the class: 4xx means "fix the request, do not retry it as is"; 429 and most 5xx mean "retry later, carefully" (see [Timeouts and retries](/learn/timeouts-retries)).
+Clients branch on the class: 4xx means "fix the request, do not retry it as is"; 429 and most 5xx mean "retry later, carefully" (see [Timeouts and retries](/learn/reliability/timeouts-retries)).
 
 ## Idempotent by design
 
@@ -74,7 +74,7 @@ The two words answer different questions. *Safe*: does the request change server
 That decides how you shape an API:
 
 - Use `PUT /users/42/avatar` for "set it to this": a retry simply sets it again.
-- "Create one of these" needs help: an **idempotency key** turns a retried `POST` into a no-op (see [Idempotency](/learn/idempotency)).
+- "Create one of these" needs help: an **idempotency key** turns a retried `POST` into a no-op (see [Idempotency](/learn/reliability/idempotency)).
 - Deleting something that is already gone should return 204 or 404 consistently. Either is fine; flip-flopping is not.
 
 ## Errors a client can act on
@@ -94,7 +94,7 @@ Content-Type: application/problem+json
 }
 ```
 
-`type` identifies the kind of problem so clients can switch on it, `detail` explains this occurrence, and `status` repeats the HTTP code so the body makes sense on its own in a log. Validation, CORS, CSRF and webhook signing are in [API security](/learn/api-security).
+`type` identifies the kind of problem so clients can switch on it, `detail` explains this occurrence, and `status` repeats the HTTP code so the body makes sense on its own in a log. Validation, CORS, CSRF and webhook signing are in [API security](/learn/security/api-security).
 
 ## Versioning without breaking clients
 
@@ -106,7 +106,7 @@ Mobile apps live for years, so an API change must not break old clients.
 
 <Callout type="interview" title="Write the API as a table">
 
-List each endpoint with its method, path, request body, success response and error codes, as [Design a URL shortener](/learn/url-shortener) does. It forces the data model and the failure cases into the open before you draw a single box.
+List each endpoint with its method, path, request body, success response and error codes, as [Design a URL shortener](/learn/hld/url-shortener) does. It forces the data model and the failure cases into the open before you draw a single box.
 
 </Callout>
 

@@ -165,7 +165,7 @@ Two diagrams, because the catalogue and the order aggregate are one concern and 
 
 ## Key interfaces and methods
 
-Money first, because every other method depends on getting it right. Amounts are `long` paise, so sums and products are exact integer arithmetic that fails loudly on overflow. `BigDecimal` appears in exactly one place, where a fraction does: a percentage. The constructor refuses a negative amount, which is the fail-fast rule from [Error handling](/learn/error-handling) applied to the one type that must never be wrong.
+Money first, because every other method depends on getting it right. Amounts are `long` paise, so sums and products are exact integer arithmetic that fails loudly on overflow. `BigDecimal` appears in exactly one place, where a fraction does: a percentage. The constructor refuses a negative amount, which is the fail-fast rule from [Error handling](/learn/lld/error-handling) applied to the one type that must never be wrong.
 
 ```java
 record Money(long paise) implements Comparable<Money> {
@@ -208,7 +208,7 @@ tax       = round(taxable × taxRate)                      (the one rounding, ba
 total     = taxable + tax + deliveryFee + platformFee
 ```
 
-The order's states and transitions are an enum table, the same shape as the trip in [ride booking](/learn/lld-ride-booking):
+The order's states and transitions are an enum table, the same shape as the trip in [ride booking](/learn/lld-practice/lld-ride-booking):
 
 ```java
 enum OrderState {
@@ -349,7 +349,7 @@ Absent on purpose: a Builder for Order until instructions, tips and scheduled ti
 
 - **An item goes unavailable while it sits in the cart.** The cart never stored its price or availability, so `snapshot` re-reads both and reports a `CartProblem`; checkout returns `NeedsAttention` and the app shows the line to fix. The flag on `MenuItem` is `volatile`: one writer, many readers, visibility is all it needs. An Observer that pushes menu changes into open carts is right only when the screen must update live; polling at checkout is enough here.
 - **A price changes between cart and checkout.** The snapshot compares the price the customer last saw with the current one and reports a problem that needs confirmation. After placement the question cannot arise, because `OrderItem` copied the price.
-- **The payment call times out.** The outcome is unknown, so the service never charges again with a fresh key; it queries the gateway by the same key, or lets the customer's retry carry the same key, and the gateway returns the original result (see [Idempotency](/learn/idempotency)).
+- **The payment call times out.** The outcome is unknown, so the service never charges again with a fresh key; it queries the gateway by the same key, or lets the customer's retry carry the same key, and the gateway returns the original result (see [Idempotency](/learn/reliability/idempotency)).
 - **Charged, then the process dies before the order is saved.** A reconciler job compares captured payments with orders and refunds the orphans, which only works if the payment intent was persisted with its key before the gateway call.
 - **Restaurant rejects after payment.** `reject` moves the order and schedules `RefundPayment`. If the refund fails five times it is `Failed` on the scheduler and lands in an operator queue; the customer is told, and the money is never silently forgotten.
 - **Restaurant is silent for 3 minutes.** `AutoReject` runs `moveTo(REJECTED)`; if the restaurant accepted meanwhile, the transition is illegal and the job treats that specific exception as "nothing to do".
@@ -373,7 +373,7 @@ Double charging is prevented twice. Inside the process, `ordersByKey` is a `Conc
 
 - **A new coupon.** One record implementing `Coupon`. Stacking two coupons is a `CompositeCoupon` that applies them in a stated order, not a flag.
 - **A new payment provider.** One `PaymentGateway` implementation. The idempotency key is ours, so the adapter translates it into whatever the provider calls theirs.
-- **Each party as its own service.** Payment, restaurant and delivery each become a service, and the compensations above become a saga with the order service as orchestrator. That is [Sagas](/learn/sagas), and the condition for crossing into it is when one process no longer owns all three.
+- **Each party as its own service.** Payment, restaurant and delivery each become a service, and the compensations above become a saga with the order service as orchestrator. That is [Sagas](/learn/distributed/sagas), and the condition for crossing into it is when one process no longer owns all three.
 
 | Choice made | What it buys | What it costs |
 | --- | --- | --- |

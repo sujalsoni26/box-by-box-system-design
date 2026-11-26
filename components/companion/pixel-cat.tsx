@@ -932,10 +932,11 @@ function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising 
         </clipPath>
       </defs>
       <motion.g style={pivot(66, 106)} initial={false} {...bodyMotion}>
-        {/* Legs are drawn crisp (outside the mosaic): thin parts that rotate every frame would otherwise be
-            re-pixelated each frame and flicker between blocks, which makes the walk look jerky. */}
+        {/* Legs go through the same mosaic as the body, on the same grid (the filter sits on this unrotated group,
+            so its blocks line up with the body's): they read as part of the same pixel cat, and a stride steps from
+            block to block like pixel art. */}
         {/* far legs, behind the body */}
-        <g>
+        <g filter={fur}>
           {LEGS.filter((l) => l.far).map((l) => (
             <SideLeg key={l.x} {...l} mode={mode} gait={gait} rising={rising} animated={animated} />
           ))}
@@ -988,7 +989,7 @@ function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising 
           />
         ) : null}
         {/* near legs, in front of the body */}
-        <g>
+        <g filter={fur}>
           {LEGS.filter((l) => !l.far).map((l) => (
             <SideLeg key={l.x} {...l} mode={mode} gait={gait} rising={rising} animated={animated} />
           ))}

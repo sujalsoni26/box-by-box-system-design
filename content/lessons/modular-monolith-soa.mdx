@@ -1,4 +1,4 @@
-A **modular monolith** is one deployable whose code is divided into modules with hard boundaries: each module owns its tables, exposes a small public interface, and nothing outside may reach past it. Most systems should keep this shape for years; it is also what a system needs *before* any split into services. The trade-off table for monolith versus microservices is in [Microservices](/learn/microservices); this lesson is about where the lines go and when to cut along them.
+A **modular monolith** is one deployable whose code is divided into modules with hard boundaries: each module owns its tables, exposes a small public interface, and nothing outside may reach past it. Most systems should keep this shape for years; it is also what a system needs *before* any split into services. The trade-off table for monolith versus microservices is in [Microservices](/learn/communication/microservices); this lesson is about where the lines go and when to cut along them.
 
 ## What SOA promised, and where it went wrong
 
@@ -25,7 +25,7 @@ Boundaries that live only in a diagram erode within a month. Make them mechanica
 1. **One package per module**, named for the business concept (`ordering`, `dispatch`), never for the layer (`controllers`, `utils`).
 2. **A small public interface** per module; everything else is package-private, and the build fails if another module imports it.
 3. **No shared tables.** Dispatch gets the drop-off address by calling Ordering's interface or by consuming an `OrderPlaced` event and keeping its own copy, never by joining Ordering's tables.
-4. **In-process events** for cross-module reactions, so the shape already resembles the pub/sub you would use between services (see [Pub/sub](/learn/pubsub)).
+4. **In-process events** for cross-module reactions, so the shape already resembles the pub/sub you would use between services (see [Pub/sub](/learn/reliability/pubsub)).
 5. **A check in CI.** Shopify relabelled about 6,000 classes of its Rails monolith by business domain and built a tool, Wedge, that traces calls during the test run and flags any that bypass a component's public interface.
 
 </Steps>
@@ -56,11 +56,11 @@ The test of a module: <mark>could you lift it out, with its tables, and change n
 
 ## The shared-database anti-pattern
 
-Two "services" that read and write the same tables are one system with a network in the middle. Every schema change needs every team that touches the table; a long transaction in one service holds locks that stall the other; one database must suit everyone's access patterns. You pay for distribution and get none of the independence. The fix is a database per service, with cross-service reads through the owner's API, events, or change data capture (see [CDC](/learn/cdc)); settle it inside the monolith, where the fix is a refactor rather than a migration.
+Two "services" that read and write the same tables are one system with a network in the middle. Every schema change needs every team that touches the table; a long transaction in one service holds locks that stall the other; one database must suit everyone's access patterns. You pay for distribution and get none of the independence. The fix is a database per service, with cross-service reads through the owner's API, events, or change data capture (see [CDC](/learn/streaming/cdc)); settle it inside the monolith, where the fix is a refactor rather than a migration.
 
 ## Signals that it is time to split
 
-- **Team size.** More engineers than can hold the codebase in their heads, a deploy queue, merge conflicts between teams that never speak; Conway's law (see [Microservices](/learn/microservices)) says structure follows teams either way.
+- **Team size.** More engineers than can hold the codebase in their heads, a deploy queue, merge conflicts between teams that never speak; Conway's law (see [Microservices](/learn/communication/microservices)) says structure follows teams either way.
 - **Independent scaling.** One module needs fifty instances or special hardware while the rest need two.
 - **Release coupling.** A module with weekly releases is blocked by another's audit freeze or forty-minute test suite.
 - **Isolation.** Payments must stay up when a bug in Ratings exhausts memory.
@@ -75,6 +75,6 @@ Not a signal: fashion. When you do split, cut along a boundary the code already 
 
 <DeepDive title="Go deeper: the ESB's afterlife">
 
-The bus's jobs did not vanish; they were handed to owners. Routing and edge policy went to API gateways and service meshes (see [API gateway and backend-for-frontend](/learn/api-gateway) and [Service mesh](/learn/service-mesh)); format translation into the consuming service, which DDD calls an anti-corruption layer; multi-step orchestration into sagas owned by the team whose process it is (see [Sagas](/learn/sagas)); publish/subscribe to brokers that do nothing but move bytes. Same functions, different ownership: that is what "smart endpoints" meant.
+The bus's jobs did not vanish; they were handed to owners. Routing and edge policy went to API gateways and service meshes (see [API gateway and backend-for-frontend](/learn/architecture/api-gateway) and [Service mesh](/learn/architecture/service-mesh)); format translation into the consuming service, which DDD calls an anti-corruption layer; multi-step orchestration into sagas owned by the team whose process it is (see [Sagas](/learn/distributed/sagas)); publish/subscribe to brokers that do nothing but move bytes. Same functions, different ownership: that is what "smart endpoints" meant.
 
 </DeepDive>

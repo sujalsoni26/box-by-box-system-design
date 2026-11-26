@@ -2,7 +2,7 @@
 
 ## What are we working on: the data-flow diagram
 
-Start with a **data-flow diagram** (DFD): external entities, processes, data stores, the flows between them, and **trust boundaries** drawn as zones where the level of trust changes (see [Security fundamentals](/learn/security-fundamentals)). The flows that cross a boundary are the candidates for attack.
+Start with a **data-flow diagram** (DFD): external entities, processes, data stores, the flows between them, and **trust boundaries** drawn as zones where the level of trust changes (see [Security fundamentals](/learn/security/security-fundamentals)). The flows that cross a boundary are the candidates for attack.
 
 <Mermaid caption="The course's Instagram-like app as a DFD with four boundaries: B1 internet to edge, B2 edge to services, B3 services to data, B4 our system to a third party." chart={`flowchart LR
     subgraph internet["Internet"]
@@ -67,7 +67,7 @@ Two boundaries from the diagram:
 | Denial of service | HTTP flood; a 100 MB upload | One tenant's hot query starving the pool |
 | Elevation of privilege | A regular user calling the admin route | Injection into a service connected as superuser |
 
-Each mitigation has its own lesson: MFA and session rotation ([Authentication](/learn/authentication)); object-level checks and row-level security ([Authorisation](/learn/authorization)); parameterised queries and signed webhooks ([API security](/learn/api-security)); mTLS identities and dynamic credentials, so that knowing the password stops being an identity ([Secrets management](/learn/secrets-management)); per-tenant keys for the backup ([Encryption](/learn/encryption)); request ids and audit logs ([Logging](/learn/logging)); quotas and bulkheads for the noisy tenant ([Bulkheads and graceful degradation](/learn/bulkheads-degradation)).
+Each mitigation has its own lesson: MFA and session rotation ([Authentication](/learn/security/authentication)); object-level checks and row-level security ([Authorisation](/learn/security/authorization)); parameterised queries and signed webhooks ([API security](/learn/security/api-security)); mTLS identities and dynamic credentials, so that knowing the password stops being an identity ([Secrets management](/learn/security/secrets-management)); per-tenant keys for the backup ([Encryption](/learn/security/encryption)); request ids and audit logs ([Logging](/learn/operations/logging)); quotas and bulkheads for the noisy tenant ([Bulkheads and graceful degradation](/learn/operations/bulkheads-degradation)).
 
 ## Abuse cases
 
@@ -85,9 +85,9 @@ Defend availability at the layer with the capacity to absorb the attack.
 
 | Layer | Attack | Defence |
 | --- | --- | --- |
-| Network and transport | Volumetric floods, UDP reflection, SYN floods | Anycast CDN or edge network: one address announced from many sites, so attack traffic is absorbed near its sources (see [CDN internals](/learn/cdn-internals)) |
-| Application protocol | HTTP floods, cache-busting query strings, slow requests | WAF rules, caching, per-key and per-IP rate limits (see [Rate limiting](/learn/rate-limiting)) |
-| Service | Expensive endpoints saturated | Load shedding and backpressure so the database survives (see [Backpressure and load shedding](/learn/backpressure)); autoscaling with a cost ceiling |
+| Network and transport | Volumetric floods, UDP reflection, SYN floods | Anycast CDN or edge network: one address announced from many sites, so attack traffic is absorbed near its sources (see [CDN internals](/learn/infrastructure/cdn-internals)) |
+| Application protocol | HTTP floods, cache-busting query strings, slow requests | WAF rules, caching, per-key and per-IP rate limits (see [Rate limiting](/learn/reliability/rate-limiting)) |
+| Service | Expensive endpoints saturated | Load shedding and backpressure so the database survives (see [Backpressure and load shedding](/learn/reliability/backpressure)); autoscaling with a cost ceiling |
 | Business | Bots exhausting a flow | Flow-level quotas, proof of humanity, the abuse cases above |
 
 Terabit floods are stopped only where there is terabit capacity: the edge, not your cluster.

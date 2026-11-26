@@ -10,10 +10,10 @@ import type { LessonHeading } from "@/lib/lesson-headings";
 import type { Lesson } from "@/types/curriculum";
 import { BookmarkButton, CompletedChip, LessonVisitTracker, MarkCompleteButton, ReviewButton } from "./lesson-actions";
 import { LessonNavigation } from "./lesson-navigation";
-import { LessonNotesChip } from "./lesson-notes";
+import { LessonNotesChip, LessonNotesFocus } from "./lesson-notes";
 import { LessonSidePanels } from "./lesson-side-panels";
 import { LessonSidebar } from "./lesson-sidebar";
-import { ReadingProgress } from "./on-this-page";
+import { OnThisPageCompact, ReadingProgress } from "./on-this-page";
 import { RecallCard } from "./recall-card";
 import { TeachingStrip } from "./teaching-strip";
 
@@ -27,12 +27,13 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
     <>
       <ReadingProgress />
       <LessonVisitTracker slug={lesson.slug} />
+      <LessonNotesFocus slug={lesson.slug} title={lesson.title} />
       <div className="mx-auto grid max-w-[90rem] gap-x-10 px-4 sm:px-6 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_13rem]">
         <aside data-companion-avoid="" className="sticky top-16 hidden h-[calc(100dvh-4rem)] overflow-y-auto py-8 pr-2 lg:block">
           <LessonSidebar moduleId={lesson.moduleId} currentSlug={lesson.slug} />
         </aside>
 
-        <article data-companion-avoid="" className="min-w-0 max-w-[46rem] py-8 sm:py-10">
+        <article data-companion-avoid="" data-lesson-article="" className="min-w-0 max-w-[46rem] py-8 sm:py-10">
           <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-x-2 font-mono text-[0.72rem] uppercase tracking-[0.08em] text-ink-3">
             <Link href="/learn" className="hover:text-link">
               Learn
@@ -64,6 +65,9 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
             <LessonSidebar moduleId={lesson.moduleId} currentSlug={lesson.slug} />
           </details>
 
+          {/* Below xl, where the right column is hidden: the same outline, folded, at the top of the lesson. */}
+          <OnThisPageCompact headings={headings} />
+
           {study ? (
             <aside aria-label="Interview practice" className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3">
               <PencilRuler aria-hidden="true" className="size-5 shrink-0 text-link" />
@@ -79,7 +83,9 @@ export function LessonLayout({ lesson, headings, children }: { lesson: Lesson; h
 
           <TeachingStrip lesson={lesson} />
 
-          <div className="text-[1.06rem] leading-[1.75] text-ink">{children}</div>
+          <div data-lesson-body="" className="text-[1.06rem] leading-[1.75] text-ink">
+            {children}
+          </div>
 
           <RecallCard recall={lesson.recall} hint={lesson.hint} />
           {check ? <KnowledgeCheck check={check} /> : null}

@@ -11,6 +11,9 @@ export interface AccountUser {
   email: string | null;
   name: string | null;
   provider: "google" | "password" | "other";
+  /** Ways this account can sign in (an account can have both, after "Set a password"). */
+  hasGoogle: boolean;
+  hasPassword: boolean;
   /** Google accounts are verified; email accounts after clicking the link. Only verified accounts sync. */
   verified: boolean;
 }
@@ -21,7 +24,7 @@ export interface AccountUser {
  */
 export type AccountPhase = "disabled" | "loading" | "signed-out" | "unverified" | "signed-in";
 
-export type AccountView = "sign-in" | "sign-up" | "reset" | "verify" | "account";
+export type AccountView = "sign-in" | "sign-up" | "reset" | "verify" | "account" | "password" | "profile";
 
 interface AccountState {
   phase: AccountPhase;

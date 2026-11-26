@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
 import path from "node:path";
+import { modules } from "./data/curriculum";
 
 /** Local MDX plugins must be absolute paths: @next/mdx resolves plugin strings relative to each MDX file. */
 const localPlugin = (file: string) => path.join(process.cwd(), "lib", "mdx", file);
@@ -12,6 +13,16 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // Lessons live at /learn/<module>/<slug>. The old /learn/<slug> addresses (bookmarks, shared links) redirect there
+  // permanently; /learn/<module> goes to that module on the roadmap. A slug that is also a module id (the "scaling"
+  // lesson in the "scaling" module) is a lesson first, as it always was.
+  async redirects() {
+    const lessonSlugs = new Set(modules.flatMap((m) => m.lessons));
+    return [
+      ...modules.flatMap((m) => m.lessons.map((slug) => ({ source: `/learn/${slug}`, destination: `/learn/${m.id}/${slug}`, permanent: true }))),
+      ...modules.filter((m) => !lessonSlugs.has(m.id)).map((m) => ({ source: `/learn/${m.id}`, destination: `/learn#${m.id}`, permanent: false })),
+    ];
+  },
   // Firebase's sign-in pages (Google pop-up, email links) served from this site, so networks that block
   // firebaseapp.com still allow sign-in. lib/cloud/config.ts points deployed sites here; docs/accounts.md.
   async rewrites() {

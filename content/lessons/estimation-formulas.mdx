@@ -20,7 +20,7 @@
 - **Peak = 2–3× average.** Traffic follows people's days: most of it lands in the waking hours of the busiest time zones, so the busiest hour carries two to three times the all-day average. Planned events (a match, a sale, a ticket drop) stack on top, which is where 5–10× comes from. Say which case you are sizing for.
 - **Cache ≈ 20% of daily reads.** The 80/20 rule is an observation, not a law: in most read-heavy systems a small share of keys gets most of the reads. Sizing the cache at a fifth of one day's read volume is a generous upper bound for that hot set. In production you measure the hit ratio and shrink or grow from there.
 - **Storage × 3.** Databases and object stores keep about three copies for durability and failover, so raw data × 3 is the honest storage number.
-- **Capacity per machine.** The per-server, per-database and per-Redis figures (see [Numbers to memorize](/learn/estimation-numbers)) are starting assumptions; a real service measures its own.
+- **Capacity per machine.** The per-server, per-database and per-Redis figures (see [Numbers to memorize](/learn/practice/estimation-numbers)) are starting assumptions; a real service measures its own.
 
 ## One example, start to finish
 

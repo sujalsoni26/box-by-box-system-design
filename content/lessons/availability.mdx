@@ -20,11 +20,11 @@
 | SLO | Your internal target | 99.95% of requests succeed each month |
 | SLA | The contractual promise to customers, with penalties | 99.9% or service credits are refunded |
 
-Choosing SLIs, setting targets and spending the error budget: [SLIs, SLOs and error budgets](/learn/slos-error-budgets).
+Choosing SLIs, setting targets and spending the error budget: [SLIs, SLOs and error budgets](/learn/operations/slos-error-budgets).
 
 ## High availability
 
-**High availability (HA)** means surviving failures without users noticing: no single point of failure, redundant servers behind load balancers, database replicas, several zones or regions, and **graceful degradation** (losing one of ten servers makes things slightly slower, not broken). **Failover** switches to a standby automatically, such as promoting a replica when the primary database dies (see [Database replication](/learn/replication)).
+**High availability (HA)** means surviving failures without users noticing: no single point of failure, redundant servers behind load balancers, database replicas, several zones or regions, and **graceful degradation** (losing one of ten servers makes things slightly slower, not broken). **Failover** switches to a standby automatically, such as promoting a replica when the primary database dies (see [Database replication](/learn/data/replication)).
 
 ## RPO and RTO
 
@@ -33,7 +33,7 @@ Choosing SLIs, setting targets and spending the error budget: [SLIs, SLOs and er
 - **RPO (recovery point objective):** how much data you can afford to lose, counted back from the failure to the last good copy (30 s, 1 hour). Asynchronous replication and rare backups widen it; synchronous replication pushes it toward zero.
 - **RTO (recovery time objective):** how long you can afford to be down before service returns (5 minutes, 1 hour). Automated failover and warm standbys shrink it.
 
-Backups that actually restore, recovery tiers and losing a whole region: [Disaster recovery and backups](/learn/disaster-recovery).
+Backups that actually restore, recovery tiers and losing a whole region: [Disaster recovery and backups](/learn/operations/disaster-recovery).
 
 <Callout type="warning" title="Reality check">
 

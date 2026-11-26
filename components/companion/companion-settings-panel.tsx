@@ -3,7 +3,6 @@ import { useId, useState, type ReactNode } from "react";
 import { Eye, LocateFixed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { playBlip } from "@/lib/companion/sound";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useCompanionStore } from "@/stores/companion-store";
@@ -38,7 +37,7 @@ interface CompanionSettingsPanelProps {
 }
 
 /**
- * Companion settings: on/off, physics, study tips, topic meows, focus length, sound and reset position.
+ * Companion settings: on/off, physics, study tips, topic meows, focus length and reset position.
  * Everything persists (preferences store; focus length with the focus timer). With the companion off,
  * only a small "Show companion" control remains. There is no animation-speed setting: Cache follows the
  * system's reduced-motion preference, and Try it blocks have their own local speed.
@@ -138,18 +137,6 @@ export function CompanionSettingsPanel({ compact = false, className }: Companion
         </Row>
         <Row title="Focus length" description="How long one focus block lasts. A 5-minute break follows." compact={compact}>
           <FocusLength compact={compact} />
-        </Row>
-        <Row title="Sound" description="Tiny, quiet blips. Off by default." compact={compact}>
-          <SegmentedControl<OnOff>
-            label="Sound"
-            options={ON_OFF}
-            value={onOff(settings.sound)}
-            onChange={(v) => {
-              setCompanion({ sound: v === "on" });
-              if (v === "on") playBlip("happy");
-            }}
-            size={size}
-          />
         </Row>
         <Row title="Position" description="Cache stays wherever you put her. Lost her behind something? Send her back to the corner." compact={compact}>
           <div className="flex items-center gap-2">

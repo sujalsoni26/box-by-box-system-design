@@ -1,4 +1,4 @@
-Every storage engine answers one question about a changed row: **update it in place**, or **append the change and merge later**? B-trees do the first, log-structured merge trees (LSM trees) do the second, and most of what you can measure about a database follows from that choice. This lesson assumes [Indexing](/learn/indexing) and the pages and buffer pool of [How a database stores data](/learn/storage-engines).
+Every storage engine answers one question about a changed row: **update it in place**, or **append the change and merge later**? B-trees do the first, log-structured merge trees (LSM trees) do the second, and most of what you can measure about a database follows from that choice. This lesson assumes [Indexing](/learn/data/indexing) and the pages and buffer pool of [How a database stores data](/learn/internals/storage-engines).
 
 ## B-trees: pages, splits and in-place updates
 
@@ -6,7 +6,7 @@ A B-tree (Bayer and McCreight, 1972) is a tree of fixed-size pages: a root, a fe
 
 If an insert finds its leaf full, it is **split** into two half-full pages and a separator is pushed into the parent; if the parent is full the split cascades, and splitting the root adds a level. PostgreSQL leaves 10% of each leaf empty when building an index (fillfactor 90) to absorb inserts before splits begin.
 
-The price is **write amplification**. Changing a 100-byte row rewrites a whole 8 or 16 kB page, plus one leaf in every secondary index, plus the log record, plus (in PostgreSQL) a full-page image after each checkpoint (see [Write-ahead logging](/learn/wal)). Each lives somewhere else on disk, so the writes are random; in exchange, reads are predictable and every key exists once.
+The price is **write amplification**. Changing a 100-byte row rewrites a whole 8 or 16 kB page, plus one leaf in every secondary index, plus the log record, plus (in PostgreSQL) a full-page image after each checkpoint (see [Write-ahead logging](/learn/internals/wal)). Each lives somewhere else on disk, so the writes are random; in exchange, reads are predictable and every key exists once.
 
 ## LSM trees: append, flush, merge
 

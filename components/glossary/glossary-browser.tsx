@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { glossary } from "@/data/glossary";
-import { getLesson } from "@/lib/curriculum";
+import { getLesson, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { usePreferencesStore } from "@/stores/preferences-store";
@@ -69,7 +69,7 @@ export function GlossaryBrowser() {
                 <p className="text-sm text-ink-2">
                   {g.note}{" "}
                   {lesson ? (
-                    <Link href={`/learn/${lesson.slug}`} className="font-bold text-link underline underline-offset-2">
+                    <Link href={lessonHref(lesson.slug)} className="font-bold text-link underline underline-offset-2">
                       Lesson {lesson.number}
                     </Link>
                   ) : null}

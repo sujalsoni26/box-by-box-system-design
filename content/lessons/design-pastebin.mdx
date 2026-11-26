@@ -1,4 +1,4 @@
-A pastebin stores a block of text and hands back a short URL; anyone with the URL reads the paste until it expires. It is the [URL shortener](/learn/url-shortener) with one change that rewrites half the design: the object behind each URL is a **10 KB text body that can grow to a few megabytes**, not a 500-byte row. Where the body lives, how it expires and how a hot paste is served are the problems worth the time.
+A pastebin stores a block of text and hands back a short URL; anyone with the URL reads the paste until it expires. It is the [URL shortener](/learn/hld/url-shortener) with one change that rewrites half the design: the object behind each URL is a **10 KB text body that can grow to a few megabytes**, not a 500-byte row. Where the body lives, how it expires and how a hot paste is served are the problems worth the time.
 
 ## Requirements
 
@@ -24,7 +24,7 @@ Assume 10M pastes a day, a 10 KB average body (a few MB is the tail), reads:writ
 | Metadata after five years | 1.8 × 10¹⁰ × 200 B | \~3.6 TB |
 | Daily read volume, for cache sizing | 10⁸ × 10 KB | 1 TB; 20% of it is 200 GB |
 
-→ The dominant number is <mark>180 TB of immutable text bodies</mark> at request rates one database would yawn at: the storage-heavy shape (see [Three system shapes](/learn/system-shapes)), not the shortener's. The shortener's whole dataset was 500 GB in one PostgreSQL instance; these bodies are 360× that, while the metadata is a few TB growing 2 GB a day. So <mark>bodies in object storage, metadata in SQL</mark>, and the 200 GB daily hot set is a CDN's job, not Redis's.
+→ The dominant number is <mark>180 TB of immutable text bodies</mark> at request rates one database would yawn at: the storage-heavy shape (see [Three system shapes](/learn/practice/system-shapes)), not the shortener's. The shortener's whole dataset was 500 GB in one PostgreSQL instance; these bodies are 360× that, while the metadata is a few TB growing 2 GB a day. So <mark>bodies in object storage, metadata in SQL</mark>, and the 200 GB daily hot set is a CDN's job, not Redis's.
 
 <Interactive name="estimator" />
 
@@ -39,7 +39,7 @@ Assume 10M pastes a day, a 10 KB average body (a few MB is the tail), reads:writ
 | `GET /raw/{paste_id}` | – | 200 `text/plain`, or 302 to the CDN URL | 404 · 410 |
 | `DELETE /pastes/{paste_id}` | owner's session or token | 204 | 401 · 403 · 404 |
 
-Two create paths, on purpose: at 1 MB/s of ingress the service proxies small bodies itself, one round trip and the common case, while the pre-signed path serves the few-megabyte tail (Deep dive 1). Creates take an `Idempotency-Key` header (see [Idempotency](/learn/idempotency)); 413 is RFC 9110's `413 Content Too Large`, and 410 Gone is exactly what an expired paste is.
+Two create paths, on purpose: at 1 MB/s of ingress the service proxies small bodies itself, one round trip and the common case, while the pre-signed path serves the few-megabyte tail (Deep dive 1). Creates take an `Idempotency-Key` header (see [Idempotency](/learn/reliability/idempotency)); 413 is RFC 9110's `413 Content Too Large`, and 410 Gone is exactly what an expired paste is.
 
 **Ids** are 8 random base-62 characters: 62⁸ ≈ 2.2 × 10¹⁴, about 10,000× the 1.8 × 10¹⁰ pastes ever held, so a fresh id collides about once in 12,000 inserts and the primary key sends the service back for another draw. Random, not a counter, because an unlisted paste's URL is its only protection and sequential ids can be walked. Custom URLs are 9 to 40 characters, so they cannot clash with generated ids; a race for one is settled by the unique constraint, one 201 and one 409.
 
@@ -63,7 +63,7 @@ CREATE INDEX pastes_expiry_idx ON pastes (expires_at) WHERE expires_at IS NOT NU
 CREATE INDEX pastes_owner_idx  ON pastes (owner_id, created_at DESC);
 ```
 
-The row decides existence, ownership and expiry; reads are one primary-key probe (see [Database indexing](/learn/indexing)). The partial index serves the sweeper, the owner index serves "my pastes". The body is not here: `body_key` points at it, and its prefix encodes the expiry class so lifecycle rules can delete by prefix (Deep dive 2).
+The row decides existence, ownership and expiry; reads are one primary-key probe (see [Database indexing](/learn/data/indexing)). The partial index serves the sweeper, the owner index serves "my pastes". The body is not here: `body_key` points at it, and its prefix encodes the expiry class so lifecycle rules can delete by prefix (Deep dive 2).
 
 ## High-level design
 
@@ -80,10 +80,10 @@ The row decides existence, ownership and expiry; reads are one primary-key probe
     LC["Lifecycle rules, one per prefix"] -.-> OS
 `} />
 
-- **CDN:** public bodies and pages from the edge, because a paste never changes and 30 MB/s of peak egress is cheap to offload (see [CDN](/learn/cdn)).
+- **CDN:** public bodies and pages from the edge, because a paste never changes and 30 MB/s of peak egress is cheap to offload (see [CDN](/learn/scaling/cdn)).
 - **Stateless paste service:** validation, ids, limits, writes, pre-signed URLs and rendering, so that any instance serves any request.
 - **PostgreSQL:** metadata, because existence, ownership and custom-URL uniqueness are relational questions with a unique constraint at their centre.
-- **Object storage:** bodies, because 180 TB of immutable blobs read whole is what it is priced for (see [Object storage](/learn/object-storage)).
+- **Object storage:** bodies, because 180 TB of immutable blobs read whole is what it is priced for (see [Object storage](/learn/data/object-storage)).
 - **Redis:** hot metadata and rate-limit counters, so that a viral paste costs the database nothing.
 - **Sweeper and lifecycle rules:** background deletion, because deletion is cleanup, not correctness (Deep dive 2).
 
@@ -132,9 +132,9 @@ sequenceDiagram
 | --- | --- | --- |
 | Bodies, 180 TB | Object storage, one object per paste, key prefixed by expiry class | Cheap per GB, eleven-nines durability, lifecycle deletion by prefix, CDN origin |
 | Metadata, 3.6 TB | PostgreSQL, primary plus replica, partitioned once it outgrows RAM | Point lookups, unique custom URLs, sweeper and owner indexes |
-| Hot metadata | Redis, `meta:{paste_id}`, TTL = the smaller of one day and the time left | Cache-aside, LRU (see [Caching](/learn/caching)) |
+| Hot metadata | Redis, `meta:{paste_id}`, TTL = the smaller of one day and the time left | Cache-aside, LRU (see [Caching](/learn/reliability/caching)) |
 | Hot public bodies | CDN, `s-maxage` capped at the time left | Immutable, so never stale except by deletion, which purges |
-| Rate-limit counters | Redis | Shared across instances (see [Rate limiting](/learn/rate-limiting)) |
+| Rate-limit counters | Redis | Shared across instances (see [Rate limiting](/learn/reliability/rate-limiting)) |
 
 Could bodies go in PostgreSQL? Both answers are defensible; the number decides. A `TEXT` column is fine while total body volume is around a terabyte; past tens of terabytes, every backup, replica and vacuum pays SQL prices for blobs the database never looks inside. <mark>Bodies in SQL under about a terabyte; object storage once they dominate the dataset.</mark> The same split sizes the caches: 200 GB of hot bodies a day go to the CDN, and Redis holds metadata only, about 10⁷ × 200 B = 2 GB for 10M distinct pastes read in a day.
 
@@ -146,16 +146,16 @@ The desk keeps a ledger (tag, owner, collection date); the bags sit on cheap she
 
 ## Scaling
 
-- **Paste service:** 3,000 peak reads/s ÷ about 1,000 QPS per server (see [Numbers to memorize](/learn/estimation-numbers)) is three servers; run five. Public pages cached at the CDN take most reads off the tier.
-- **PostgreSQL:** 300 writes/s at peak is far below a primary's few thousand; reads land in Redis and the CDN. Partition the table before it outgrows memory; if writes grew 10×, shard by hash of `paste_id`, because every hot query is a lookup by id (see [Sharding and partitioning](/learn/sharding)).
+- **Paste service:** 3,000 peak reads/s ÷ about 1,000 QPS per server (see [Numbers to memorize](/learn/practice/estimation-numbers)) is three servers; run five. Public pages cached at the CDN take most reads off the tier.
+- **PostgreSQL:** 300 writes/s at peak is far below a primary's few thousand; reads land in Redis and the CDN. Partition the table before it outgrows memory; if writes grew 10×, shard by hash of `paste_id`, because every hot query is a lookup by id (see [Sharding and partitioning](/learn/data/sharding)).
 - **Object storage** scales itself; **the CDN** absorbs spikes, since a viral public paste reaches the origin once per edge.
 
 ## Consistency and availability
 
-- **Reading:** eventual, since a body never changes. The exception is read-your-writes for the creator, so the service writes the metadata into Redis at creation rather than letting the first read race a replica (see [Consistency: strong vs eventual](/learn/consistency)).
+- **Reading:** eventual, since a body never changes. The exception is read-your-writes for the creator, so the service writes the metadata into Redis at creation rather than letting the first read race a replica (see [Consistency: strong vs eventual](/learn/data/consistency)).
 - **Custom URLs:** strong, by the unique constraint; no check-then-insert in the application.
 - **Expiry and deletion:** every origin read checks `expires_at` and `status`; Redis TTLs and `s-maxage` never exceed the remaining lifetime; a delete purges the CDN path and the Redis key. Physical deletion is eventual, and invisible.
-- **Availability:** with PostgreSQL down, cached pastes still read and creates return 503; with the object store down nothing works, which is why it is the component chosen for eleven nines. CAP (see [CAP and PACELC](/learn/cap)) barely applies: with no concurrent writes to one key, availability costs nothing.
+- **Availability:** with PostgreSQL down, cached pastes still read and creates return 503; with the object store down nothing works, which is why it is the component chosen for eleven nines. CAP (see [CAP and PACELC](/learn/data/cap)) barely applies: with no concurrent writes to one key, availability costs nothing.
 
 ## Failure and recovery
 
@@ -164,21 +164,21 @@ The desk keeps a ledger (tag, owner, collection date); the bags sit on cheap she
 | Body written, row insert fails | 500; the client retries with the same idempotency key | A daily inventory-versus-table job removes orphan bodies |
 | Pre-signed upload never completed | The URL returns 404 | A sweeper deletes pending rows older than an hour, and their objects |
 | Redis down | Slower reads; PostgreSQL takes 3,000 indexed reads/s | Replica promotion; the cache refills on demand |
-| PostgreSQL primary fails | Creates fail for tens of seconds; cached reads continue | Replica promotion (see [Database replication](/learn/replication)) |
+| PostgreSQL primary fails | Creates fail for tens of seconds; cached reads continue | Replica promotion (see [Database replication](/learn/data/replication)) |
 | CDN purge fails after a delete | A deleted public paste stays readable at edges until `s-maxage` runs out | Cap `s-maxage` at an hour; retry the purge |
-| Region outage | Reads fail unless data exists elsewhere | Cross-region bucket replication and a second-region replica (see [Multi-region deployment](/learn/multi-region)) |
+| Region outage | Reads fail unless data exists elsewhere | Cross-region bucket replication and a second-region replica (see [Multi-region deployment](/learn/infrastructure/multi-region)) |
 
 ## Security
 
-- Anyone creates and reads; delete needs the owner's session or token (see [Authentication](/learn/authentication)). Unlisted pastes are protected only by an unguessable URL, and the product should say so.
-- **The abuse the design invites** is free storage: caps per paste (1 MB inline, 10 MB direct) and per client (creates per hour per account and per IP, see [Rate limiting](/learn/rate-limiting)); a `content-length-range` condition on pre-signed uploads; rate-limited 404s so nobody scans the id space. The second abuse is hosting malware and leaked credentials: scanning is out of scope, but the `status` column is the hook, so a scanner can quarantine a paste and reads return 410 (see [API security](/learn/api-security)).
+- Anyone creates and reads; delete needs the owner's session or token (see [Authentication](/learn/security/authentication)). Unlisted pastes are protected only by an unguessable URL, and the product should say so.
+- **The abuse the design invites** is free storage: caps per paste (1 MB inline, 10 MB direct) and per client (creates per hour per account and per IP, see [Rate limiting](/learn/reliability/rate-limiting)); a `content-length-range` condition on pre-signed uploads; rate-limited 404s so nobody scans the id space. The second abuse is hosting malware and leaked credentials: scanning is out of scope, but the `status` column is the hook, so a scanner can quarantine a paste and reads return 410 (see [API security](/learn/security/api-security)).
 - Raw bodies are served as `text/plain` with `X-Content-Type-Options: nosniff` from a separate domain, so a paste that is really HTML cannot run script in the main site's origin.
-- The bucket is private and encrypted at rest (see [Encryption in transit and at rest](/learn/encryption)); pre-signed URLs are bearer tokens and live for minutes, not the seven days S3 allows.
+- The bucket is private and encrypted at rest (see [Encryption in transit and at rest](/learn/security/encryption)); pre-signed URLs are bearer tokens and live for minutes, not the seven days S3 allows.
 
 ## Observability
 
-- **SLIs:** p99 latency of page and raw reads; 5xx rate; create success rate; Redis and CDN hit ratios; **expiry lag**, meaning rows past `expires_at` still live; orphan count; storage growth against the 100 GB a day forecast; 429 rate (see [Metrics and monitoring](/learn/metrics-monitoring) and [SLIs, SLOs and error budgets](/learn/slos-error-budgets)).
-- **One trace:** `GET /{paste_id}` → Redis → PostgreSQL on a miss → object storage → response; the storage span dominates a cold read and is absent on an edge hit (see [Distributed tracing](/learn/tracing)).
+- **SLIs:** p99 latency of page and raw reads; 5xx rate; create success rate; Redis and CDN hit ratios; **expiry lag**, meaning rows past `expires_at` still live; orphan count; storage growth against the 100 GB a day forecast; 429 rate (see [Metrics and monitoring](/learn/operations/metrics-monitoring) and [SLIs, SLOs and error budgets](/learn/operations/slos-error-budgets)).
+- **One trace:** `GET /{paste_id}` → Redis → PostgreSQL on a miss → object storage → response; the storage span dominates a cold read and is absent on an edge hit (see [Distributed tracing](/learn/operations/tracing)).
 
 ## Trade-offs and bottlenecks
 
@@ -188,13 +188,13 @@ The desk keeps a ledger (tag, owner, collection date); the bags sit on cheap she
 
 ## How it evolves
 
-**At 10×** (100M pastes a day): 1,000 writes/s, 10k reads/s, 1 TB of bodies a day and 1.8 PB in five years. Object storage and the CDN barely notice; the 36 TB of metadata does, so shard PostgreSQL by `paste_id` hash or move metadata to a partitioned key-value store (see [Design a distributed key-value store](/learn/design-key-value-store)); Redis becomes a cluster.
+**At 10×** (100M pastes a day): 1,000 writes/s, 10k reads/s, 1 TB of bodies a day and 1.8 PB in five years. Object storage and the CDN barely notice; the 36 TB of metadata does, so shard PostgreSQL by `paste_id` hash or move metadata to a partitioned key-value store (see [Design a distributed key-value store](/learn/hld/design-key-value-store)); Redis becomes a cluster.
 
-**At 100×** (1B a day): 10k writes/s make metadata a stream problem: ids pre-allocated in batches, rows written through a log (see [Kafka: a distributed log](/learn/kafka-architecture)), partitions dropped rather than rows deleted. Bodies reach 10 TB a day, so cost rules: compress (text compresses several-fold, as a rule of thumb), deduplicate by `content_hash`, tier cold objects to cheaper classes.
+**At 100×** (1B a day): 10k writes/s make metadata a stream problem: ids pre-allocated in batches, rows written through a log (see [Kafka: a distributed log](/learn/streaming/kafka-architecture)), partitions dropped rather than rows deleted. Bodies reach 10 TB a day, so cost rules: compress (text compresses several-fold, as a rule of thumb), deduplicate by `content_hash`, tier cold objects to cheaper classes.
 
 ## Deep dive 1: where the body lives, and the two upload paths
 
-For the common case the service proxies: receive the body, hash it, write `pastes/ttl-7d/aB3dE9fG`, insert the row. For large pastes the client talks to storage directly, the pattern from [Object storage](/learn/object-storage):
+For the common case the service proxies: receive the body, hash it, write `pastes/ttl-7d/aB3dE9fG`, insert the row. For large pastes the client talks to storage directly, the pattern from [Object storage](/learn/data/object-storage):
 
 <Diagram name="presigned-upload" caption="A large paste: the service signs an upload URL, the bytes go straight to the bucket, the row only records the key." />
 
@@ -215,7 +215,7 @@ Two details make this safe. **Size:** a pre-signed PUT URL cannot by itself cap 
 
 Separate two jobs that are easy to conflate. **Correctness** is "never serve an expired paste", enforced on the read path: the origin checks `expires_at` on every lookup, Redis entries carry a TTL no longer than the remaining lifetime, and the CDN's `s-maxage` is capped the same way, so no copy anywhere outlives the paste. **Cleanup** is "reclaim 100 GB a day", and it may run late without anyone noticing.
 
-**Rows.** A sweeper finds due rows through the partial index and deletes a few thousand at a time; 10M rows a day is about 100 a second, far below one batch a second. At 1.8 × 10¹⁰ rows, bulk deletes become a bloat-and-vacuum problem (see [How a database stores data](/learn/storage-engines)), and the better tool is partitioning by `expires_at` week: expiring a week is `DROP TABLE`, which the PostgreSQL documentation calls far faster than a bulk `DELETE` and free of its vacuum overhead. The catch: a unique or primary key on a partitioned table must include the partition key, so `paste_id` alone can no longer be unique across partitions. Random ids make a cross-partition duplicate a one-in-12,000 event that a lookup before insert catches, and custom URLs move to a small `aliases` table with a plain unique constraint. Pick one: partition by time for cheap deletion, or by id for a simple unique key.
+**Rows.** A sweeper finds due rows through the partial index and deletes a few thousand at a time; 10M rows a day is about 100 a second, far below one batch a second. At 1.8 × 10¹⁰ rows, bulk deletes become a bloat-and-vacuum problem (see [How a database stores data](/learn/internals/storage-engines)), and the better tool is partitioning by `expires_at` week: expiring a week is `DROP TABLE`, which the PostgreSQL documentation calls far faster than a bulk `DELETE` and free of its vacuum overhead. The catch: a unique or primary key on a partitioned table must include the partition key, so `paste_id` alone can no longer be unique across partitions. Random ids make a cross-partition duplicate a one-in-12,000 event that a lookup before insert catches, and custom URLs move to a small `aliases` table with a plain unique constraint. Pick one: partition by time for cheap deletion, or by id for a simple unique key.
 
 **Bodies.** One lifecycle rule per key prefix expires objects after that many days: `ttl-1d/` after one, `ttl-7d/` after seven, and so on; `never/` has no rule. Deletion then costs no requests at all. Two documented facts shape this. Lifecycle expiry is asynchronous: S3 says objects satisfying a rule may not be removed for days or even weeks, although billing stops as soon as they become eligible. And it is not a deadline mechanism: AWS advises against relying on lifecycle alone for deletions that must complete by a fixed date. So a user's explicit delete or a legal takedown calls `DELETE` on the object directly, sets `status` to deleted, removes the Redis key and purges the CDN path; only routine expiry rides on lifecycle, and it needs no invalidation, because the TTL cap did that work in advance.
 
@@ -232,7 +232,7 @@ A paste linked from a busy forum thread draws thousands of reads a second for an
 <Diagram name="cdn-edges" caption="A public paste is served from the nearest edge; only the first read per edge reaches the bucket." />
 
 - **Edge.** For public pastes the raw body and the rendered page are both cacheable, with `s-maxage` capped at the remaining lifetime and a purge on delete. Bodies are immutable, so there is no staleness to manage, and the app tier leaves the hot path after the first miss per edge.
-- **Redis.** Metadata is cache-aside with LRU eviction, TTL jitter so pastes created together do not expire together, and single-flight on a miss so a stampede on a new viral paste reaches PostgreSQL once (see [Caching](/learn/caching)). Cache 404s for a minute too: an id that does not exist is the hottest key a scanner produces.
+- **Redis.** Metadata is cache-aside with LRU eviction, TTL jitter so pastes created together do not expire together, and single-flight on a miss so a stampede on a new viral paste reaches PostgreSQL once (see [Caching](/learn/reliability/caching)). Cache 404s for a minute too: an id that does not exist is the hottest key a scanner produces.
 - **Unlisted hot pastes** cannot sit in a public edge cache: either the service streams them and keeps bodies under 1 MB in Redis with a short TTL, or the CDN serves them through signed URLs the edge validates. Choose signed URLs when unlisted traffic is a large share of the hot set; otherwise streaming is simpler.
 
 <Callout type="interview" title="Lead with the number">

@@ -1,14 +1,14 @@
 import { catMeows } from "@/data/cat-meows";
-import { getLesson, getModule, lessons, nextIncompleteLesson, overallProgress } from "@/lib/curriculum";
+import { getLesson, getModule, lessons, nextIncompleteLesson, overallProgress, lessonHref } from "@/lib/curriculum";
 import { formatPercent } from "@/lib/utils";
-import { usePreferencesStore } from "@/stores/preferences-store";
+import { DEFAULT_CALL_ME, usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 import { useCompanionStore, useFocusStore, type BubbleAction, type FocusEvent } from "@/stores/companion-store";
 import type { AccessoryId, CompanionEvent } from "@/types/companion";
 import { ACCESSORIES, getAccessory, rewardContext, unlockedIds } from "./accessories";
-import { fill, line, LINES } from "./lines";
+import { fill, line, LINES, setYouSource } from "./lines";
+import { daysUntil } from "@/lib/learning/pace";
 import { markFactShown } from "./topic-facts";
-import { companionBlip } from "./sound";
 import { TIMING } from "./timing";
 
 /*
@@ -19,6 +19,9 @@ import { TIMING } from "./timing";
  */
 
 const companion = () => useCompanionStore.getState();
+
+// What Cache calls the learner: their answer in the profile, or "hooman".
+setYouSource(() => usePreferencesStore.getState().profile?.callMe || DEFAULT_CALL_ME);
 const focusActive = () => useFocusStore.getState().session?.phase === "focus";
 
 /** May Cache speak in response to something the learner just did? */
@@ -60,12 +63,11 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       const next = nextIncompleteLesson(completed, event.slug);
       if (event.courseCompleted) {
         s.react("celebrating", 3200);
-        companionBlip("chime");
         if (canRespond())
           s.say({
             title: "Course complete",
             text: `All ${lessons.length} lessons learned. You grew the whole system, box by box. Lock it in with the Test yourself deck.`,
-            actions: [{ label: "Test yourself", href: "/learn/test-yourself", primary: true }, { label: "Yay" }],
+            actions: [{ label: "Test yourself", href: lessonHref("test-yourself"), primary: true }, { label: "Yay" }],
             mood: "celebrating",
             solicited: true,
           });
@@ -74,9 +76,8 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       if (event.moduleCompleted && lesson) {
         const m = getModule(lesson.moduleId);
         s.react("celebrating", 2800);
-        companionBlip("chime");
         const actions: BubbleAction[] = next
-          ? [{ label: `Next: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, { label: "Later" }]
+          ? [{ label: `Next: ${next.title}`, href: lessonHref(next.slug), primary: true }, { label: "Later" }]
           : [{ label: "Nice" }];
         if (canRespond())
           s.say({
@@ -89,7 +90,6 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
         return;
       }
       s.react("happy", 1800);
-      companionBlip("happy");
       if (!canRespond()) return;
       const { done, total, fraction } = overallProgress(completed);
       const praise = fill(line("lessonDone"), { done, total, left: total - done, pct: formatPercent(fraction) });
@@ -99,7 +99,6 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
 
     case "quiz-answer": {
       s.react(event.correct ? "happy" : "thinking", event.correct ? 1300 : 1700);
-      companionBlip(event.correct ? "happy" : "soft");
       if (!canRespond() || now - lastQuizBubbleAt < TIMING.quizBubbleGapMs) return;
       // Encourage after every miss (rate-limited); praise only some of the time.
       if (!event.correct || Math.random() < 0.4) {
@@ -113,7 +112,6 @@ export function reactToEvent(event: CompanionEvent, now: number): void {
       const ratio = event.total ? event.score / event.total : 0;
       const perfect = event.total > 0 && event.score === event.total;
       s.react(perfect ? "celebrating" : ratio >= 0.6 ? "happy" : "thinking", perfect ? 2600 : 2000);
-      if (perfect) companionBlip("happy");
       if (!canRespond()) return;
       lastQuizBubbleAt = now;
       const template = perfect ? LINES.quizPerfect : ratio >= 0.6 ? LINES.quizGood : LINES.quizLow;
@@ -194,7 +192,6 @@ export function announceUnlocks(): boolean {
   if (!first) return true;
   const s = companion();
   s.react("celebrating", 2400);
-  companionBlip("chime");
   const wear = () => {
     usePreferencesStore.getState().equipAccessory(first.slot, first.id);
     useCompanionStore.getState().react("happy", 1400);
@@ -249,27 +246,44 @@ export function maybeGreet(currentSlug: string | undefined, now: number): void {
   const { completed, lastVisited, review } = useProgressStore.getState();
   const s = companion();
   if (!Object.keys(completed).length && !lastVisited) {
-    s.say({ text: LINES.greetNew, actions: [{ label: "Nice to meet you", primary: true }], mood: "happy" });
+    s.say({ text: fill(LINES.greetNew, {}), actions: [{ label: "Nice to meet you", primary: true }], mood: "happy" });
     return;
   }
   // Topics marked for review get a gentle reminder in the greeting (with a shortcut to the list).
   const toReview = Object.keys(review ?? {}).length;
   const reviewText = toReview ? ` ${toReview === 1 ? line("reviewWaitingOne") : fill(line("reviewWaiting"), { n: toReview })}` : "";
   const reviewAction: BubbleAction[] = toReview ? [{ label: "Review list", href: "/progress#review" }] : [];
+  const countdown = targetCountdown();
   const next = nextIncompleteLesson(completed, lastVisited);
   if (!next || next.slug === currentSlug) {
     s.say({
-      text: `${line("greetStudying")}${reviewText}`,
+      text: `${line("greetStudying")}${countdown}${reviewText}`,
       actions: toReview ? [...reviewAction, { label: "Later", primary: true }] : undefined,
       mood: "happy",
     });
     return;
   }
   s.say({
-    text: `${line("greetBack")} Next up: ${next.number} ${next.title}.${reviewText}`,
-    actions: [{ label: `Continue: ${next.title}`, href: `/learn/${next.slug}`, primary: true }, ...reviewAction, { label: "Later" }],
+    text: `${line("greetBack")}${countdown} Next up: ${next.number} ${next.title}.${reviewText}`,
+    actions: [{ label: `Continue: ${next.title}`, href: lessonHref(next.slug), primary: true }, ...reviewAction, { label: "Later" }],
     mood: "happy",
   });
+}
+
+/** " 12 days to your big day." when the profile has a date within the next two months (else ""). */
+function targetCountdown(): string {
+  const days = daysUntil(usePreferencesStore.getState().profile?.targetDate ?? null, new Date());
+  if (days === null || days < 0 || days > 60) return "";
+  if (days === 0) return " Today is your big day. You've got this.";
+  return ` ${days === 1 ? "1 day" : `${days} days`} to your big day.`;
+}
+
+/** Right after signing in (the dialog has closed): a short hello that uses the learner's name. */
+export function welcomeSignedIn(): void {
+  const s = companion();
+  s.react("happy", 1800);
+  if (!canRespond()) return;
+  s.say({ text: line("signedIn"), mood: "happy", ms: 4500, solicited: true });
 }
 
 /** After a long nap: a quiet welcome back with a general tip. */
@@ -283,7 +297,6 @@ export function reactToFocusEvent(event: FocusEvent, now: number): void {
   if (now - event.at > TIMING.focusEventFreshMs) return;
   const s = companion();
   const focus = useFocusStore.getState();
-  companionBlip("chime");
   if (event.kind === "focus-done") {
     s.react("happy", 2200);
     s.say({
@@ -302,7 +315,7 @@ export function reactToFocusEvent(event: FocusEvent, now: number): void {
   const { completed, lastVisited } = useProgressStore.getState();
   const next = nextIncompleteLesson(completed, lastVisited);
   const actions: BubbleAction[] = [{ label: `Start ${focus.focusMinutes} min`, primary: true, onSelect: () => useFocusStore.getState().start(Date.now()) }];
-  if (next) actions.push({ label: `Open ${next.title}`, href: `/learn/${next.slug}` });
+  if (next) actions.push({ label: `Open ${next.title}`, href: lessonHref(next.slug) });
   actions.push({ label: "Later" });
   s.say({ title: "Break over", text: line("breakDone"), actions, mood: "happy", solicited: true });
 }

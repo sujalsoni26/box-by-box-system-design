@@ -1,4 +1,4 @@
-**Encryption** turns data into ciphertext that only a key holder can read. The algorithms are solved; the design work is where keys live, who may use them, and which attacker each layer defeats. TLS itself is in [HTTP](/learn/http); this lesson is everything around it.
+**Encryption** turns data into ciphertext that only a key holder can read. The algorithms are solved; the design work is where keys live, who may use them, and which attacker each layer defeats. TLS itself is in [HTTP](/learn/foundations/http); this lesson is everything around it.
 
 ## Certificates and PKI in brief
 
@@ -8,7 +8,7 @@ TLS authenticates the server with an **X.509 certificate**: a signed document bi
 
 Ordinary TLS proves only the server's identity. **Mutual TLS** (mTLS) makes the client present a certificate too, so both ends know who they are talking to before any application data flows. Between services this gives encrypted east-west traffic plus a cryptographic identity per workload: the payments service *is* whoever holds the payments private key, whatever its IP address.
 
-By hand that means issuing, distributing and rotating certificates for every instance. A service mesh (see [Service mesh](/learn/service-mesh)) automates it: a sidecar beside each instance obtains a certificate for the workload's identity, rotates it before expiry and upgrades connections to mTLS without code changes.
+By hand that means issuing, distributing and rotating certificates for every instance. A service mesh (see [Service mesh](/learn/architecture/service-mesh)) automates it: a sidecar beside each instance obtains a certificate for the workload's identity, rotates it before expiry and upgrades connections to mTLS without code changes.
 
 ## Encryption at rest: name the attacker
 

@@ -1,12 +1,11 @@
 import { catMeows } from "@/data/cat-meows";
-import { lessons, nextIncompleteLesson } from "@/lib/curriculum";
+import { lessons, nextIncompleteLesson, lessonHref } from "@/lib/curriculum";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useProgressStore } from "@/stores/progress-store";
 import { useCompanionStore, useFocusStore, type BubbleAction, type BubbleInput } from "@/stores/companion-store";
 import type { Lesson } from "@/types/curriculum";
 import { fill, line, LINES } from "./lines";
 import { pickRevision, type RevisionSource } from "./lesson-context";
-import { companionBlip } from "./sound";
 
 /*
  * What each menu item does. Plain functions over the stores, so they can run from click handlers
@@ -14,7 +13,7 @@ import { companionBlip } from "./sound";
  */
 
 const ask = (input: BubbleInput) => useCompanionStore.getState().say({ solicited: true, focus: true, ...input });
-const lessonHref = (l: Lesson) => `/learn/${l.slug}`;
+const lessonUrl = (l: Lesson) => lessonHref(l.slug);
 const label = (l: Lesson) => `${l.number} ${l.title}`;
 
 function nextAfter(from?: string | null): Lesson | undefined {
@@ -31,7 +30,7 @@ const FEATURE_TEXT: Record<LessonFeature, string> = {
 export function needLesson(feature: LessonFeature): void {
   const next = nextAfter();
   const actions: BubbleAction[] = next
-    ? [{ label: `Open ${next.title}`, href: lessonHref(next), primary: true }, { label: "Later" }]
+    ? [{ label: `Open ${next.title}`, href: lessonUrl(next), primary: true }, { label: "Later" }]
     : [{ label: "Browse lessons", href: "/learn", primary: true }, { label: "Later" }];
   ask({
     title: "Open a lesson first",
@@ -93,10 +92,9 @@ function revealRevision(lesson: Lesson): void {
         primary: true,
         onSelect: () => {
           useCompanionStore.getState().react("happy", 1400);
-          companionBlip("happy");
         },
       },
-      { label: "Review lesson", href: lessonHref(lesson) },
+      { label: "Review lesson", href: lessonUrl(lesson) },
       { label: "Another", onSelect: quickRevision },
     ],
   });
@@ -109,7 +107,7 @@ export function suggestNext(current?: Lesson): void {
     ask({
       title: "Every lesson learned",
       text: `You have finished all ${lessons.length} lessons. Lock it in with the Test yourself deck.`,
-      actions: [{ label: "Test yourself", href: "/learn/test-yourself", primary: true }, { label: "Later" }],
+      actions: [{ label: "Test yourself", href: lessonHref("test-yourself"), primary: true }, { label: "Later" }],
       mood: "celebrating",
     });
     return;
@@ -120,7 +118,7 @@ export function suggestNext(current?: Lesson): void {
       title: "Next up",
       text: `Finish this one first: ${current.title}.${after ? ` After that, ${label(after)} (${after.minutes} min).` : " It is the last one left."}`,
       actions: after
-        ? [{ label: `Preview ${after.title}`, href: lessonHref(after) }, { label: "Keep reading", primary: true }]
+        ? [{ label: `Preview ${after.title}`, href: lessonUrl(after) }, { label: "Keep reading", primary: true }]
         : [{ label: "Keep reading", primary: true }],
       mood: "happy",
     });
@@ -129,7 +127,7 @@ export function suggestNext(current?: Lesson): void {
   ask({
     title: "Next up",
     text: `${label(next)} (${next.minutes} min). ${next.problem}`,
-    actions: [{ label: `Open ${next.title}`, href: lessonHref(next), primary: true }, { label: "Later" }],
+    actions: [{ label: `Open ${next.title}`, href: lessonUrl(next), primary: true }, { label: "Later" }],
     mood: "happy",
   });
 }
@@ -206,12 +204,10 @@ export function feedCache(): void {
   usePreferencesStore.getState().bumpCompanionStat("feeds");
   s.dismiss();
   s.react("eating", EATING_MS);
-  companionBlip("pop");
   window.clearTimeout(feedTimer);
   feedTimer = window.setTimeout(() => {
     const c = useCompanionStore.getState();
     c.react("happy", 1600);
-    companionBlip("happy");
     c.say({ text: line("nom"), mood: "happy", ms: 3000, solicited: true });
   }, EATING_MS);
 }
@@ -224,7 +220,6 @@ export function petCache(lesson?: Lesson, speak = true): void {
   const s = useCompanionStore.getState();
   usePreferencesStore.getState().bumpCompanionStat("pets");
   s.react("purring", 1900);
-  companionBlip("happy");
   if (!speak) return;
   // Mostly purrs; every third pet on a lesson page, the topic meow instead.
   petCount += 1;
@@ -252,7 +247,7 @@ export function toggleNap(): void {
 }
 
 /**
- * "Lamp nap" (desktop, motion allowed): a lamp pops up a few steps away; she walks over, leaps on, settles and
+ * "Lamp nap" (where it fits, phones included; motion allowed): a lamp pops up a few steps away; she walks over, leaps on, settles and
  * sleeps until woken on purpose. The companion component plays it out (lamp.tsx).
  */
 export function lampNap(): void {
@@ -261,7 +256,6 @@ export function lampNap(): void {
   if (s.napping) s.setNapping(false);
   s.dismiss();
   s.startActivity("lamp", "menu");
-  companionBlip("pop");
   s.say({ text: line("lampNap"), mood: "happy", ms: 2600, solicited: true });
 }
 
@@ -272,7 +266,6 @@ export function playWithCache(): void {
   const s = useCompanionStore.getState();
   s.dismiss();
   s.startActivity("play");
-  companionBlip("pop");
 }
 
 export function openWardrobe(): void {

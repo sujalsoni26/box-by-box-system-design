@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, CircleHelp, Flag, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { emitCompanionEvent } from "@/lib/companion-events";
-import { getLesson } from "@/lib/curriculum";
+import { getLesson, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
@@ -80,7 +80,7 @@ function Question({
             {!correct && review ? (
               <>
                 {" "}
-                <Link href={`/learn/${review.slug}`} className="font-bold text-link underline underline-offset-2">
+                <Link href={lessonHref(review.slug)} className="font-bold text-link underline underline-offset-2">
                   Review {review.title}
                 </Link>
               </>
@@ -128,7 +128,7 @@ export function KnowledgeCheck({ check, defaultOpen = false }: { check: Knowledg
   };
 
   return (
-    <section aria-labelledby={`${check.id}-title`} data-companion-avoid="" className="not-prose mt-12 overflow-hidden rounded-2xl border-[1.5px] border-violet bg-surface">
+    <section id="knowledge-check" data-toc="Knowledge check" data-toc-level="1" aria-labelledby={`${check.id}-title`} data-companion-avoid="" className="not-prose mt-12 scroll-mt-24 overflow-hidden rounded-2xl border-[1.5px] border-violet bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 bg-violet-soft px-5 py-4">
         <div className="flex items-start gap-3">
           <CircleHelp aria-hidden="true" className="mt-0.5 size-5 text-violet" />

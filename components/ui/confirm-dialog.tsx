@@ -1,5 +1,6 @@
 "use client";
 import { useRef, type ReactNode } from "react";
+import { useBackdropDismiss } from "@/lib/hooks/use-backdrop-dismiss";
 import { Button, type ButtonVariant } from "./button";
 
 interface ConfirmDialogProps {
@@ -12,7 +13,7 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
 }
 
-/** Native <dialog> confirmation: focus is trapped and Escape cancels. */
+/** Native <dialog> confirmation: focus is trapped; Escape or a click outside cancels. */
 export function ConfirmDialog({
   trigger,
   triggerVariant = "danger",
@@ -23,6 +24,7 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropDismiss(() => ref.current?.close());
   return (
     <>
       <Button variant={triggerVariant} onClick={() => ref.current?.showModal()}>
@@ -30,6 +32,7 @@ export function ConfirmDialog({
       </Button>
       <dialog
         ref={ref}
+        {...backdrop}
         aria-labelledby="confirm-title"
         data-companion-avoid=""
         className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-line-strong bg-surface p-6 text-ink shadow-[var(--shadow-lift)] backdrop:bg-ink/35"

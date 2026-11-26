@@ -62,7 +62,7 @@ interface CompanionMenuProps {
   animated: boolean;
   /** The cat button: focus returns here, and clicks on it do not count as "outside". */
   anchorRef: RefObject<HTMLElement | null>;
-  /** "Lamp nap" is offered where the lamp routine can run (desktop-sized viewport, motion allowed). */
+  /** "Lamp nap" is offered where the lamp routine can run (room beside her, motion allowed). */
   lampAvailable: boolean;
 }
 

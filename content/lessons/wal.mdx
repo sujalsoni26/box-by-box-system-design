@@ -1,8 +1,8 @@
-A **write-ahead log (WAL)** is an append-only file that receives a description of every change before the change may touch a data page. [ACID](/learn/acid) said durability is built on it; this lesson is the machinery beneath that sentence.
+A **write-ahead log (WAL)** is an append-only file that receives a description of every change before the change may touch a data page. [ACID](/learn/data/acid) said durability is built on it; this lesson is the machinery beneath that sentence.
 
 ## Why the log goes first
 
-A single `UPDATE` can dirty a heap page and a page in each of five indexes. Writing all six at commit means six random writes, and a half-updated database if the power fails halfway. Instead the engine appends one record describing the change to a sequential file, forces that file to disk, and acknowledges the commit. The pages stay dirty in the buffer pool (see [How a database stores data](/learn/storage-engines)) and are written whenever convenient.
+A single `UPDATE` can dirty a heap page and a page in each of five indexes. Writing all six at commit means six random writes, and a half-updated database if the power fails halfway. Instead the engine appends one record describing the change to a sequential file, forces that file to disk, and acknowledges the commit. The pages stay dirty in the buffer pool (see [How a database stores data](/learn/internals/storage-engines)) and are written whenever convenient.
 
 The rule has two halves: a dirty page may not be written until the log records describing its changes are on disk, and a commit may not be acknowledged until its commit record is. Each record carries a **log sequence number (LSN)**, its byte position in the log, and each page stores the LSN of the last record applied to it, so recovery can tell whether a page already contains a change.
 
@@ -49,7 +49,7 @@ Recovery follows the **ARIES** pattern (Mohan and colleagues, 1992):
 
 </Steps>
 
-InnoDB keeps a redo log (under `#innodb_redo`) and separate **undo logs** holding each changed row's previous version. PostgreSQL is redo-only: its [MVCC](/learn/mvcc-isolation) scheme leaves old row versions in the heap, so an aborted transaction's rows simply stay invisible once its status is recorded as not committed, and vacuum removes them later.
+InnoDB keeps a redo log (under `#innodb_redo`) and separate **undo logs** holding each changed row's previous version. PostgreSQL is redo-only: its [MVCC](/learn/internals/mvcc-isolation) scheme leaves old row versions in the heap, so an aborted transaction's rows simply stay invisible once its status is recorded as not committed, and vacuum removes them later.
 
 ## Torn pages
 
@@ -63,7 +63,7 @@ An accountant writes every transaction in a dated journal first and posts to the
 
 ## One log, many readers
 
-PostgreSQL's streaming replication ships WAL records to a standby, which replays them exactly as recovery would (see [Replication strategies in depth](/learn/replication-internals)). **Logical decoding** reads the same log and turns it into row-level insert, update and delete events, delivered through a replication slot and an output plugin such as `pgoutput`; that is what logical replication and [change data capture](/learn/cdc) tools consume. The extra detail decoding needs is why `wal_level` must be raised from its default `replica` to `logical`.
+PostgreSQL's streaming replication ships WAL records to a standby, which replays them exactly as recovery would (see [Replication strategies in depth](/learn/internals/replication-internals)). **Logical decoding** reads the same log and turns it into row-level insert, update and delete events, delivered through a replication slot and an output plugin such as `pgoutput`; that is what logical replication and [change data capture](/learn/streaming/cdc) tools consume. The extra detail decoding needs is why `wal_level` must be raised from its default `replica` to `logical`.
 
 <Callout type="interview" title="Say the order of events">
 

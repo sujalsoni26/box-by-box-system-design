@@ -2,9 +2,9 @@
 
 ## The FaaS execution model
 
-A function is a handler, a runtime and a package, a zip or a container image (see [Containers](/learn/containers)). Nothing runs until an event arrives. Then the platform creates an **execution environment**: Init downloads the code, starts the runtime and runs your initialisation code outside the handler; Invoke runs the handler with the event; afterwards the environment is frozen and kept warm for a while for the next event. On Lambda one environment serves one request at a time, so concurrency is the number of live environments, and the account default is 1,000 concurrent executions per region, raisable on request.
+A function is a handler, a runtime and a package, a zip or a container image (see [Containers](/learn/infrastructure/containers)). Nothing runs until an event arrives. Then the platform creates an **execution environment**: Init downloads the code, starts the runtime and runs your initialisation code outside the handler; Invoke runs the handler with the event; afterwards the environment is frozen and kept warm for a while for the next event. On Lambda one environment serves one request at a time, so concurrency is the number of live environments, and the account default is 1,000 concurrent executions per region, raisable on request.
 
-Events come from three kinds of source: HTTP through an API gateway or a function URL (synchronous, the caller waits); storage and bus events such as an object landing in a bucket or a scheduled rule (asynchronous, queued and retried); and queues and streams (SQS, Kinesis, DynamoDB Streams, Kafka), polled by the platform and delivered in batches (see [Message queues](/learn/message-queues)). Cloud Run functions offer the same shape: HTTP, Pub/Sub messages and Cloud Storage changes.
+Events come from three kinds of source: HTTP through an API gateway or a function URL (synchronous, the caller waits); storage and bus events such as an object landing in a bucket or a scheduled rule (asynchronous, queued and retried); and queues and streams (SQS, Kinesis, DynamoDB Streams, Kafka), polled by the platform and delivered in batches (see [Message queues](/learn/reliability/message-queues)). Cloud Run functions offer the same shape: HTTP, Pub/Sub messages and Cloud Storage changes.
 
 <Mermaid caption="An upload pipeline with no servers: the gateway invokes a function to sign an upload URL, the bucket event invokes a thumbnail function, and a queue feeds a notification function in batches. Each arrow is a trigger, and each box scales independently from zero." chart={`flowchart LR
     U["Phone app"] -->|"POST /photos"| G["API gateway"]
@@ -20,7 +20,7 @@ Events come from three kinds of source: HTTP through an API gateway or a functio
 
 ## Stateless by contract
 
-Nothing survives reliably between invocations: globals and the `/tmp` directory (512 MB to 10,240 MB on Lambda) persist only while that environment is reused, and environments are recycled every few hours, so treat both as a cache. State belongs in a database, a cache cluster or an object store; the signed-URL upload in the diagram is the pattern from [Object storage](/learn/object-storage). A database connection opened during Init belongs to one environment, so 1,000 concurrent invocations are 1,000 connections, more than most databases accept: use a connection proxy or an HTTP data API, and cap the function with reserved concurrency. Asynchronous invocations are retried and queue batches are redelivered, so handlers must be idempotent (see [Idempotency](/learn/idempotency)).
+Nothing survives reliably between invocations: globals and the `/tmp` directory (512 MB to 10,240 MB on Lambda) persist only while that environment is reused, and environments are recycled every few hours, so treat both as a cache. State belongs in a database, a cache cluster or an object store; the signed-URL upload in the diagram is the pattern from [Object storage](/learn/data/object-storage). A database connection opened during Init belongs to one environment, so 1,000 concurrent invocations are 1,000 connections, more than most databases accept: use a connection proxy or an HTTP data API, and cap the function with reserved concurrency. Asynchronous invocations are retried and queue batches are redelivered, so handlers must be idempotent (see [Idempotency](/learn/reliability/idempotency)).
 
 ## Cold starts
 
@@ -51,11 +51,11 @@ Price is invocations plus **GB-seconds**, memory multiplied by duration and bill
 
 ## BaaS: renting the rest
 
-Managed authentication (Cognito, Auth0, Firebase Authentication), object storage (S3), per-request databases (DynamoDB, Firestore), queues and event buses. Functions become the glue between them, and most of the application is configuration rather than code (see [Infrastructure as code](/learn/iac)).
+Managed authentication (Cognito, Auth0, Firebase Authentication), object storage (S3), per-request databases (DynamoDB, Firestore), queues and event buses. Functions become the glue between them, and most of the application is configuration rather than code (see [Infrastructure as code](/learn/infrastructure/iac)).
 
 ## Lock-in and local testing
 
-Event shapes, permission models, triggers and orchestration services differ between providers, so moving means rewriting the edges; keep handlers thin and the domain code portable. Unit tests are easy because a handler is ordinary code; integration tests are hard because, as Mike Roberts put it, "no local environment can fully simulate the cloud environment", so teams test against per-developer stacks in the cloud. With no server to log into, structured logs and tracing (see [Distributed tracing](/learn/tracing)) are your only eyes, and fifty small functions passing events are a distributed system with every failure mode in [What makes a system distributed](/learn/distributed-fundamentals).
+Event shapes, permission models, triggers and orchestration services differ between providers, so moving means rewriting the edges; keep handlers thin and the domain code portable. Unit tests are easy because a handler is ordinary code; integration tests are hard because, as Mike Roberts put it, "no local environment can fully simulate the cloud environment", so teams test against per-developer stacks in the cloud. With no server to log into, structured logs and tracing (see [Distributed tracing](/learn/operations/tracing)) are your only eyes, and fifty small functions passing events are a distributed system with every failure mode in [What makes a system distributed](/learn/distributed/distributed-fundamentals).
 
 <Callout type="interview" title="Say when, then say what you watch">
 
@@ -65,6 +65,6 @@ Event shapes, permission models, triggers and orchestration services differ betw
 
 <DeepDive title="Go deeper: sizing concurrency and protecting the database">
 
-AWS's rule is concurrency equals average requests per second times average duration: 500 requests per second at 400 ms is 200 environments, and 200 database connections if each holds one. A burst past the account limit is throttled, so put a queue in front of anything bursty (see [Backpressure and load shedding](/learn/backpressure)) and drain it at a rate the database can take. Reserved concurrency caps one function so a runaway trigger cannot starve the others; provisioned concurrency sets a floor of warm environments for the latency-critical one. Both are capacity decisions, the part of operations serverless does not remove.
+AWS's rule is concurrency equals average requests per second times average duration: 500 requests per second at 400 ms is 200 environments, and 200 database connections if each holds one. A burst past the account limit is throttled, so put a queue in front of anything bursty (see [Backpressure and load shedding](/learn/reliability/backpressure)) and drain it at a rate the database can take. Reserved concurrency caps one function so a runaway trigger cannot starve the others; provisioned concurrency sets a floor of warm environments for the latency-critical one. Both are capacity decisions, the part of operations serverless does not remove.
 
 </DeepDive>

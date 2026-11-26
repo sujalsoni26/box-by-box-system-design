@@ -1,4 +1,4 @@
-Upload a file from any device, download it anywhere, keep every device's copy in step, share it, and keep old versions. The numbers are the ones from [Worked examples](/learn/estimation-examples) and the bytes path is the one from [Object storage](/learn/object-storage); the new problems are chunking, sync across devices, and keeping two stores (a database and an object store) consistent with each other. Section order follows [How to work a case study](/learn/case-study-method).
+Upload a file from any device, download it anywhere, keep every device's copy in step, share it, and keep old versions. The numbers are the ones from [Worked examples](/learn/practice/estimation-examples) and the bytes path is the one from [Object storage](/learn/data/object-storage); the new problems are chunking, sync across devices, and keeping two stores (a database and an object store) consistent with each other. Section order follows [How to work a case study](/learn/hld/case-study-method).
 
 ## Requirements
 
@@ -27,7 +27,7 @@ Assume 50M DAU, 2 uploads per user per day, a 500 KB average file, reads equal t
 | Change notifications | 1k commits/s × 3 devices per user (assumed) | 3k pushes/s |
 | Open sync connections | assume 20M devices online at once | 20M idle connections |
 
-→ The same 1k writes a second as the [URL shortener](/learn/url-shortener), on objects 500 times bigger: <mark>storage and bandwidth dominate</mark>, the storage- and bandwidth-heavy shape from [Three system shapes](/learn/system-shapes). But 36 TB a year of metadata and 20M open connections are not small either, and the hardest problems in this design are in the metadata, not the bytes.
+→ The same 1k writes a second as the [URL shortener](/learn/hld/url-shortener), on objects 500 times bigger: <mark>storage and bandwidth dominate</mark>, the storage- and bandwidth-heavy shape from [Three system shapes](/learn/practice/system-shapes). But 36 TB a year of metadata and 20M open connections are not small either, and the hardest problems in this design are in the metadata, not the bytes.
 
 <Interactive name="estimator" variant="drive" />
 
@@ -44,7 +44,7 @@ Change the average file size to 5 MB and watch which rows move: bandwidth and st
 | `GET /changes?cursor=` | long poll, held up to 60 s | 200 + `{ "entries": [...], "cursor" }` | 304 nothing changed |
 | `POST /shares` | `{ "namespace_id", "grantee", "role": "viewer" or "editor" }` | 201 | 403 not the owner |
 
-The client talks to the metadata service about *names and hashes*, and to object storage about *bytes*; the two never travel through the same server. `upload_id` makes a retried commit idempotent (see [Idempotency](/learn/idempotency)), and `parent_version` is the compare-and-set that detects two devices editing one file (deep dive 2).
+The client talks to the metadata service about *names and hashes*, and to object storage about *bytes*; the two never travel through the same server. `upload_id` makes a retried commit idempotent (see [Idempotency](/learn/reliability/idempotency)), and `parent_version` is the compare-and-set that detects two devices editing one file (deep dive 2).
 
 ## Data model
 
@@ -113,8 +113,8 @@ CREATE TABLE acl (
 
 - **Metadata service** owns names, versions, permissions and the journal, because every correctness requirement is a statement about metadata and one service must hold the transaction.
 - **Block service** issues short-lived pre-signed URLs and tells clients which block hashes are already stored, so that bytes never pass through an application server and nothing is uploaded twice.
-- **Object storage** holds every block as its own object keyed by hash, because durability, cheap capacity and a lifecycle to colder classes are exactly what it sells (see [Object storage](/learn/object-storage)).
-- **Notification service** holds one idle connection per online device and wakes it when its namespace's journal advances, because polling 20M devices every few seconds would cost more than all the uploads combined (see [WebSockets and real-time](/learn/websockets)).
+- **Object storage** holds every block as its own object keyed by hash, because durability, cheap capacity and a lifecycle to colder classes are exactly what it sells (see [Object storage](/learn/data/object-storage)).
+- **Notification service** holds one idle connection per online device and wakes it when its namespace's journal advances, because polling 20M devices every few seconds would cost more than all the uploads combined (see [WebSockets and real-time](/learn/communication/websockets)).
 - **Workers** run the slow and the periodic: thumbnails, scanning, the janitor that reconciles the database with object storage (deep dive 3).
 
 <Diagram name="presigned-upload" caption="The upload shape this design reuses: the app server signs a URL, the big bytes go straight to storage, the database records only the key. Here the key is the block's hash." />
@@ -157,13 +157,13 @@ sequenceDiagram
 | Block bytes | Object storage, hot class | 55 PB a year; durability is the product |
 | Blocks unread for 90 days | Cold storage class via lifecycle rule | Most files are never opened again; cold classes cost a fraction per GB and reads are rare |
 | Folder listings, cursors, sessions | Redis, cache-aside | A listing is the first screen; the journal position is read on every wake-up |
-| Popular shared files | CDN in front of object storage | A link shared with thousands is static content (see [CDN](/learn/cdn)) |
+| Popular shared files | CDN in front of object storage | A link shared with thousands is static content (see [CDN](/learn/scaling/cdn)) |
 
 The largest cache in this system is not a server: it is the client's local disk. Every device already holds most blocks of most files, so a sync downloads only the blocks it lacks, and an edit uploads only the blocks that changed.
 
 ## Scaling
 
-**Metadata** shards by namespace, so a folder listing, a commit and its journal entry touch one shard; a shared folder is its own namespace, so sharing never crosses shards. Two shards talk only when a file *moves* between namespaces, which is rare enough to run as a two-step copy and delete. **The block index** shards by hash, which spreads perfectly. **Object storage** scales itself; the cost lever is the lifecycle rule, since after a year most of the 55 PB is cold. **Notification servers** scale by connection count: at an assumed 100k idle connections per server, 20M devices need about 200 servers, and a change for a namespace must reach the servers holding its devices, which is a [pub/sub](/learn/pubsub) problem: each server subscribes to the namespaces of its connected devices. **Workers** scale with queue depth (see [Message queues](/learn/message-queues)).
+**Metadata** shards by namespace, so a folder listing, a commit and its journal entry touch one shard; a shared folder is its own namespace, so sharing never crosses shards. Two shards talk only when a file *moves* between namespaces, which is rare enough to run as a two-step copy and delete. **The block index** shards by hash, which spreads perfectly. **Object storage** scales itself; the cost lever is the lifecycle rule, since after a year most of the 55 PB is cold. **Notification servers** scale by connection count: at an assumed 100k idle connections per server, 20M devices need about 200 servers, and a change for a namespace must reach the servers holding its devices, which is a [pub/sub](/learn/reliability/pubsub) problem: each server subscribes to the namespaces of its connected devices. **Workers** scale with queue depth (see [Message queues](/learn/reliability/message-queues)).
 
 <Comparison>
 
@@ -188,11 +188,11 @@ The condition that decides: how often does a device hear news? A desktop in a bu
 | Feature | Model | Why |
 | --- | --- | --- |
 | Names, versions, journal | Strong, within a namespace | One shard, one transaction: no duplicate names, no version that points at missing blocks |
-| Content across devices | Eventual, seconds | A device may be offline; the journal is replayed when it returns (see [Consistency](/learn/consistency)) |
+| Content across devices | Eventual, seconds | A device may be offline; the journal is replayed when it returns (see [Consistency](/learn/data/consistency)) |
 | Sharing revocation | Strong on the ACL, bounded on bytes | The metadata service refuses at once; an already issued download URL lives at most 15 minutes |
 | Block bytes | Durable before visible | The commit checks that every block exists before the version row is written |
 
-A device cut off from the server keeps working on its local copy and reconciles later, so the edge is **AP**, while the metadata database inside one namespace is **CP**: a commit that cannot reach its shard fails and the client retries, because a half-committed version is worse than a late one (see [CAP](/learn/cap)).
+A device cut off from the server keeps working on its local copy and reconciles later, so the edge is **AP**, while the metadata database inside one namespace is **CP**: a commit that cannot reach its shard fails and the client retries, because a half-committed version is worse than a late one (see [CAP](/learn/data/cap)).
 
 ## Failure and recovery
 
@@ -200,8 +200,8 @@ A device cut off from the server keeps working on its local copy and reconciles 
 | --- | --- | --- |
 | Connection drops mid-upload | The progress bar pauses | The client re-sends the blocklist; `need_blocks` lists only what is missing, so the upload resumes at block granularity |
 | Blocks uploaded, commit never sent | Nothing | Orphan blocks cost money, not correctness; the janitor removes them after a grace period (deep dive 3) |
-| Metadata shard primary dies | Commits to that namespace fail for seconds | Synchronous replica promoted; clients retry with the same `upload_id` (see [Replication](/learn/replication)) |
-| Notification server dies | Devices reconnect | The journal is the truth and the cursor is on the device, so nothing is missed; reconnects are spread with jitter (see [Timeouts and retries](/learn/timeouts-retries)) |
+| Metadata shard primary dies | Commits to that namespace fail for seconds | Synchronous replica promoted; clients retry with the same `upload_id` (see [Replication](/learn/data/replication)) |
+| Notification server dies | Devices reconnect | The journal is the truth and the cursor is on the device, so nothing is missed; reconnects are spread with jitter (see [Timeouts and retries](/learn/reliability/timeouts-retries)) |
 | Two devices edit the same file offline | A second file named "conflicted copy" appears | Compare-and-set on `current_ver` rejects the second commit; the client saves its version under a new name (deep dive 2) |
 | User deletes a folder by mistake | Trash | `deleted_at` set, blocks untouched; purge after 30 days |
 | A block downloads corrupted | The sync retries | The hash on the blocklist does not match; the client fetches again, object storage serves another replica |
@@ -209,19 +209,19 @@ A device cut off from the server keeps working on its local copy and reconciles 
 
 ## Security
 
-- **Authentication:** each device holds its own token (see [OAuth 2 and JWT](/learn/oauth-jwt)) so one lost laptop is revoked without logging out the phone.
-- **Authorization:** the metadata service checks the ACL of the *namespace*, and the commonest bug is checking the file but not the folder it was shared through (see [Authorization](/learn/authorization)). A pre-signed URL is scoped to one object and expires in minutes, so revoking a share stops new downloads within that window.
+- **Authentication:** each device holds its own token (see [OAuth 2 and JWT](/learn/security/oauth-jwt)) so one lost laptop is revoked without logging out the phone.
+- **Authorization:** the metadata service checks the ACL of the *namespace*, and the commonest bug is checking the file but not the folder it was shared through (see [Authorization](/learn/security/authorization)). A pre-signed URL is scoped to one object and expires in minutes, so revoking a share stops new downloads within that window.
 - **Dedup as an oracle:** "you already have this block" tells an attacker whether anyone has uploaded a given file. Deduplicate only within one account, or make the client upload the block anyway and discard the duplicate server-side.
-- **Data protection:** blocks are encrypted at rest with envelope encryption (see [Encryption](/learn/encryption)); file names are personal data and belong under the same regime as the content.
+- **Data protection:** blocks are encrypted at rest with envelope encryption (see [Encryption](/learn/security/encryption)); file names are personal data and belong under the same regime as the content.
 - **Abuse:** cap file size and daily upload volume per account, scan uploads asynchronously, and rate-limit share-link creation.
 
 ## Observability
 
-Five numbers and one trace: **sync lag** (commit to other-device wake-up, p50 and p99), the user-visible promise; **upload completion and resumption rates**, which fall when a block URL expires too soon; **dedup ratio** (blocks skipped ÷ blocks offered), which decides the bandwidth bill; **orphan backlog** (blocks at refcount 0) and, far more important, **dangling references** (versions pointing at missing blocks), which must read zero; **open connections and reconnects per second**, the health of the notification tier. The trace follows one commit from `POST /commit` through the journal write, the queue, the notification server and the other device's `GET /changes` (see [Distributed tracing](/learn/tracing)).
+Five numbers and one trace: **sync lag** (commit to other-device wake-up, p50 and p99), the user-visible promise; **upload completion and resumption rates**, which fall when a block URL expires too soon; **dedup ratio** (blocks skipped ÷ blocks offered), which decides the bandwidth bill; **orphan backlog** (blocks at refcount 0) and, far more important, **dangling references** (versions pointing at missing blocks), which must read zero; **open connections and reconnects per second**, the health of the notification tier. The trace follows one commit from `POST /commit` through the journal write, the queue, the notification server and the other device's `GET /changes` (see [Distributed tracing](/learn/operations/tracing)).
 
 ## Trade-offs and bottlenecks
 
-Next to break: the **block index**, which grows by 1.2 × 10⁸ rows a day and will want a key-value store built for it (see [Design a distributed key-value store](/learn/design-key-value-store)); a **shared folder with thousands of editors**, which is one hot namespace shard and one hot journal; and the **small-file overhead**, since a 500 KB file costs a block row, a version row, a journal row and an object, so packing many small blocks into one object becomes worth the complexity.
+Next to break: the **block index**, which grows by 1.2 × 10⁸ rows a day and will want a key-value store built for it (see [Design a distributed key-value store](/learn/hld/design-key-value-store)); a **shared folder with thousands of editors**, which is one hot namespace shard and one hot journal; and the **small-file overhead**, since a 500 KB file costs a block row, a version row, a journal row and an object, so packing many small blocks into one object becomes worth the complexity.
 
 Alternatives not taken: storing bytes in the database (bloat, and backups become impossible); proxying bytes through application servers (doubles the bandwidth bill for nothing); whole-file uploads (no dedup, no resume, and a 2 GB retry); content-defined chunking instead of fixed 4 MB blocks, which survives an insert at the start of a file that shifts every fixed boundary, at the cost of CPU on every device, which is why a system can start with fixed blocks and add rolling-checksum deltas later.
 
@@ -283,7 +283,7 @@ Read-your-own-writes needs no special machinery: the committing device already h
 
 ## Deep dive 3: metadata and bytes without a transaction
 
-The database and the object store cannot share a transaction, and a [distributed transaction](/learn/distributed-transactions) across a public object store is not on offer. So the design accepts that the two can disagree, chooses *which way* they may disagree, and runs a janitor for the rest.
+The database and the object store cannot share a transaction, and a [distributed transaction](/learn/distributed/distributed-transactions) across a public object store is not on offer. So the design accepts that the two can disagree, chooses *which way* they may disagree, and runs a janitor for the rest.
 
 The rule is <mark>bytes first, pointer last</mark>. Blocks are uploaded before the commit, and the commit verifies every hash in the blocklist against the block index before it writes the version row. The only inconsistency this ordering permits is **orphans**: blocks that exist but that no version references, left by uploads that never committed. Orphans cost money, not correctness. The opposite inconsistency, a **dangling reference** from a version to a missing block, is the one that loses user data, and the ordering makes it impossible by construction.
 

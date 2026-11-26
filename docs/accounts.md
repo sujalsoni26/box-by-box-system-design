@@ -13,7 +13,7 @@ as before.
 |---|---|---|
 | Progress (`sdn-progress-v1`) | completed lessons, visits, bookmarks, review flags, quiz attempts, known flashcards | – |
 | Notes (`sdn-notes-v1`) | every lesson note | – |
-| Preferences (`sdn-preferences-v1`) | theme, known glossary terms, Cache's settings, stats, wardrobe | Cache's spot on the screen |
+| Preferences (`sdn-preferences-v1`) | theme, known glossary terms, Cache's settings, stats, wardrobe, the profile (name, what Cache calls you, goal, target date) | Cache's spot on the screen |
 | Focus (`sdn-focus-v1`) | focus length, sessions completed | a running timer |
 
 ## Behaviour
@@ -29,12 +29,22 @@ as before.
   another device saved first, the save is refused, the newer copy is merged in and the save is retried.
 - **Email accounts** must verify their email (a link is sent on sign-up) before anything is saved to the account.
   Until then progress stays in the browser.
+- **Signing in closes the dialog** and Cache says hello. An email account that still has to verify its address
+  moves on to the "Verify your email" step instead.
+- **Profile** (Progress page → Your profile, or the account dialog → Edit profile): a name, what Cache calls the
+  learner ("hooman" until they choose), why they are here and an optional interview or exam date with a suggested
+  daily pace. Nothing sensitive is asked. Guests keep it in the browser; accounts sync it with the settings (on the
+  first sign-in, the account's answers win field by field and a guest's own answers fill the gaps).
+- **Set a password** (account dialog, Google accounts): links a password to the same account, so the learner can
+  still sign in with that email and password, and keep their progress, if Google sign-in stops working for them.
+  Firebase may ask them to confirm with Google first. Accounts that have a password can **change** it there
+  (confirming the current one). A wrong current password counts towards the sign-in lock-out.
 - **Sign-out**: the progress stays in that browser for **5 days** (in case it was a mistake), then it is cleared
   from the browser automatically the next time the site is opened. The account keeps everything.
 - **Another person signing in on the same browser** never receives the previous account's progress: their own
   account's copy replaces it.
-- **Delete account** (Progress page → Your account → Manage account): confirms identity again (Google pop-up or the
-  password), then deletes the account's saved data, the account itself and the browser's copy.
+- **Delete account** (Progress page → Your account → Manage account): confirms identity again (the password, or the
+  Google pop-up), then deletes the account's saved data, the account itself and the browser's copy.
 
 ## Security
 
@@ -140,14 +150,15 @@ Email/password and Google sign-in are free; phone sign-in is not used.
 | File | Role |
 |---|---|
 | `lib/cloud/config.ts` | Reads the environment variables (accounts are off without them); picks the auth domain. |
-| `lib/cloud/firebase.ts` | Loads Firebase on demand (guests never download it), App Check, the Firestore adapter. |
-| `lib/cloud/controller.ts` | Session restore, sign-in/up, reset, verification, sign-out, delete; runs the sync engine. |
+| `lib/cloud/firebase.ts` | Loads Firebase on demand (guests never download it), App Check, the Firestore adapter (Firestore Lite: one HTTPS request per read or write, no streaming connection, so no reconnect noise in the console). |
+| `lib/cloud/controller.ts` | Session restore, sign-in/up, reset, verification, set/change password, sign-out, delete; runs the sync engine. |
 | `lib/cloud/sync-engine.ts` | Merge-on-sign-in, resume, debounced uploads, compare-and-set retries, offline retries. |
 | `lib/cloud/merge.ts` | How each store merges, what is device-only. |
 | `lib/cloud/account-meta.ts`, `lib/cloud/expiry.ts` | Ownership of the browser's data and the 5-day expiry after sign-out. |
 | `lib/cloud/guards.ts` | Client throttling, email cooldowns, validation, safe error messages. |
-| `components/account/*` | Header button, sign-in dialog, Progress page panel, sync status. |
+| `components/account/*` | Header button, sign-in dialog, profile form, Progress page panel, sync status. |
 | `firebase/firestore.rules` | The database rules to publish. |
 
 Tests: `scripts/tests/cloud.test.mjs` (merge rules, expiry, guards, and two simulated devices syncing through a
-fake cloud that applies the same rules).
+fake cloud that applies the same rules) and `scripts/tests/profile.test.mjs` (profile cleaning and syncing, Cache's
+name for the learner, the suggested pace, password messages).

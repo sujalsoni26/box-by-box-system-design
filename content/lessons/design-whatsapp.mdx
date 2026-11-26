@@ -1,4 +1,4 @@
-Send a text or a photo to one person or to a group of up to 1,024, have it arrive within a second if they are online and wait for them if not, show one tick when the server has it, two when their phone has it and blue when they have read it, and never let the server hold a readable copy. The design is **store-and-forward**: **connection gateways** holding hundreds of millions of persistent connections, a per-device **inbox** written before any push is attempted, and clients that do all the cryptography. It assumes [WebSockets](/learn/websockets), [message queues](/learn/message-queues) and [consistency models](/learn/consistency), and follows the order of [How to work a case study](/learn/case-study-method).
+Send a text or a photo to one person or to a group of up to 1,024, have it arrive within a second if they are online and wait for them if not, show one tick when the server has it, two when their phone has it and blue when they have read it, and never let the server hold a readable copy. The design is **store-and-forward**: **connection gateways** holding hundreds of millions of persistent connections, a per-device **inbox** written before any push is attempted, and clients that do all the cryptography. It assumes [WebSockets](/learn/communication/websockets), [message queues](/learn/reliability/message-queues) and [consistency models](/learn/data/consistency), and follows the order of [How to work a case study](/learn/hld/case-study-method).
 
 ## Requirements
 
@@ -8,7 +8,7 @@ Send a text or a photo to one person or to a group of up to 1,024, have it arriv
   - **Delivered in under 500 ms** between two online phones in one region, because chat feels broken at a second.
   - **Never lost once "sent":** one tick means a durable copy on the server, because a message that vanishes after the tick is the worst bug a messenger can have.
   - **Ordered per conversation**, because a reply shown before its question is nonsense.
-  - **Availability over consistency for presence**, because a "last seen" a minute stale costs nothing (see [CAP](/learn/cap)).
+  - **Availability over consistency for presence**, because a "last seen" a minute stale costs nothing (see [CAP](/learn/data/cap)).
   - **The server stores only ciphertext**, because the promise is that nobody in the middle, operator included, can read a message.
 
 ## Estimation
@@ -30,7 +30,7 @@ Assume 2B accounts and 1B daily active users; 100B messages sent a day (the figu
 | Media egress | 2 PB × 6 downloads | 12 PB/day ≈ 120 GB/s ≈ 1 Tbps |
 | Media stored, 30-day retention | 2 PB × 30 days × 1.5 erasure-coded | \~90 PB |
 
-→ <mark>Thirty-three million deliveries a second at peak, routed to 500M connections on 500 machines, is the number</mark>: group fan-out turns 1M sends into 11M deliveries and 22M receipts, and every one must find the one gateway holding the right phone. Storage is an afterthought: a 100 TB inbox fits a handful of nodes, and media is a bandwidth bill handed to [object storage](/learn/object-storage) and a CDN. In the terms of [Three system shapes](/learn/system-shapes): a write-heavy stream of tiny objects with a fan-out multiplier, plus a bandwidth-heavy media path that barely touches it.
+→ <mark>Thirty-three million deliveries a second at peak, routed to 500M connections on 500 machines, is the number</mark>: group fan-out turns 1M sends into 11M deliveries and 22M receipts, and every one must find the one gateway holding the right phone. Storage is an afterthought: a 100 TB inbox fits a handful of nodes, and media is a bandwidth bill handed to [object storage](/learn/data/object-storage) and a CDN. In the terms of [Three system shapes](/learn/practice/system-shapes): a write-heavy stream of tiny objects with a fan-out multiplier, plus a bandwidth-heavy media path that barely touches it.
 
 ## API
 
@@ -46,7 +46,7 @@ Almost everything travels as frames over one persistent connection per device; H
 | `GET /v1/keys/{user_id}` | – | 200 + identity key, signed pre-key, one one-time pre-key per device | 404 |
 | `POST /v1/groups` · `PUT /v1/groups/{id}/members` | `{ "members": [...] }` | 201 / 200 + membership version | 403 not admin · 409 over 1,024 |
 
-`client_msg_id` is chosen by the phone so a resend after a dropped connection is a recognisable duplicate (see [Idempotency](/learn/idempotency)); `msg_id` and `chat_seq` are assigned by the server, and `chat_seq` is what every device sorts by. Receipts have no acknowledgement of their own: a lost one is re-sent at the device's next sync, which is why they are cheap.
+`client_msg_id` is chosen by the phone so a resend after a dropped connection is a recognisable duplicate (see [Idempotency](/learn/reliability/idempotency)); `msg_id` and `chat_seq` are assigned by the server, and `chat_seq` is what every device sorts by. Receipts have no acknowledgement of their own: a lost one is re-sent at the device's next sync, which is why they are cheap.
 
 ## Data model
 
@@ -95,9 +95,9 @@ The inbox is the design: one queue per device holding only what that device has 
 
 - **Gateways** terminate the encrypted transport and hold a million mostly idle connections each, answering keepalives locally so that 8M pings a second never leave the box; they hold no other state, so a lost gateway loses only sessions, which reconnect.
 - **The chat service** owns a shard of chats, mints `chat_seq`, writes every delivery to the recipient's inbox **before** attempting a push, and fans a group message out to each member's inbox, because durability must never depend on a live connection (deep dive 1).
-- **The inbox store** is an LSM engine with TTL (see [B-trees vs LSM trees](/learn/btree-vs-lsm)), because 330 TB a day of writes that are deleted minutes later is a write stream with tombstones, not a dataset.
+- **The inbox store** is an LSM engine with TTL (see [B-trees vs LSM trees](/learn/internals/btree-vs-lsm)), because 330 TB a day of writes that are deleted minutes later is a write stream with tombstones, not a dataset.
 - **The session registry** maps a device to the gateway holding it, so a push is one lookup and one hop; it is in memory with a TTL, because a stale entry is harmless (the inbox has the message) and a slow lookup on 33M pushes a second is not.
-- **The push bridge** wakes an offline phone through APNs or FCM with no content (see [Design a notification system](/learn/design-notification-system)), so the phone reconnects and drains its inbox.
+- **The push bridge** wakes an offline phone through APNs or FCM with no content (see [Design a notification system](/learn/hld/design-notification-system)), so the phone reconnects and drains its inbox.
 - **Object storage and the CDN** carry media as ciphertext uploaded by pre-signed URL, because a 200 KB blob has no business on a chat gateway and an encrypted blob can be cached anywhere.
 - **The key directory and the presence service** are separate because their load profiles are: keys are read once per new session, presence is a firehose nobody must persist.
 
@@ -170,7 +170,7 @@ There is no cache in front of the inbox, because nothing reads it twice: a drain
 
 **The chat service shards by `chat_id`**, so one shard mints one chat's sequence and sees its writes in order; hot shards come only from hot chats, a 1,024-member group with a dozen people typing. **The inbox store shards by `device_id`**, the opposite key, and the join between them is the fan-out: a group message is one write in the chat shard and 50 (or 1,024) writes spread over inbox shards. Fan-out happens on write (deep dive 2) because a phone must drain its inbox in one call; the price is write amplification, and the largest groups eventually flip to fan-out on read.
 
-**The registry shards by `device_id`** and is the one component that sees every delivery at full rate: keep it in memory, dumb and per region, since a device connects to a gateway near it. Cross-region deliveries hop once (see [Multi-region deployment](/learn/multi-region)). [Sharding](/learn/sharding) is the mechanism; the point here is three different keys for three different access patterns.
+**The registry shards by `device_id`** and is the one component that sees every delivery at full rate: keep it in memory, dumb and per region, since a device connects to a gateway near it. Cross-region deliveries hop once (see [Multi-region deployment](/learn/infrastructure/multi-region)). [Sharding](/learn/data/sharding) is the mechanism; the point here is three different keys for three different access patterns.
 
 ## Consistency and availability
 
@@ -183,7 +183,7 @@ There is no cache in front of the inbox, because nothing reads it twice: a drain
 | Presence | Eventual and lossy | A stale "online" costs nothing; persisting it costs a firehose |
 | Key directory | Strong on write, cached on read with invalidation | A stale key after a phone change means messages nobody can decrypt |
 
-The durability promise is per message: once the sender has the tick, the envelope is on two replicas and will be delivered or expire, and the sender never waits on the recipient's state. During a partition between regions two users in the same region chat normally and cross-region messages queue in inboxes, the behaviour the simulation in [CAP](/learn/cap) calls AP.
+The durability promise is per message: once the sender has the tick, the envelope is on two replicas and will be delivered or expire, and the sender never waits on the recipient's state. During a partition between regions two users in the same region chat normally and cross-region messages queue in inboxes, the behaviour the simulation in [CAP](/learn/data/cap) calls AP.
 
 <Callout type="analogy" title="A post office that only handles sealed envelopes">
 
@@ -195,7 +195,7 @@ Every letter arrives sealed and is dropped in the addressee's pigeonhole. The cl
 
 | Failure | What users see | How it heals |
 | --- | --- | --- |
-| A gateway dies | 1M phones drop and reconnect over the next seconds | Reconnect with jittered backoff (see [Timeouts and retries](/learn/timeouts-retries)) spreads the herd; registry entries expire by TTL; every message sent meanwhile is in the inbox and drains on reconnect |
+| A gateway dies | 1M phones drop and reconnect over the next seconds | Reconnect with jittered backoff (see [Timeouts and retries](/learn/reliability/timeouts-retries)) spreads the herd; registry entries expire by TTL; every message sent meanwhile is in the inbox and drains on reconnect |
 | Registry points at a gateway that no longer holds the device | Nothing: the push fails fast | The gateway answers "unknown device", the chat service wakes the phone through the push bridge, and the inbox copy was already written |
 | A chat shard fails over | A pause of seconds on that chat | The new primary resumes the sequence from the replicated counter; a gap is acceptable, a reuse is not (deep dive 3) |
 | Ack lost after a delivery | B holds the message, the server still does | The next drain re-sends it; B deduplicates on `msg_id` and acks again |
@@ -208,15 +208,15 @@ Every letter arrives sealed and is dropped in the addressee's pigeonhole. The cl
 
 ## Security
 
-- **Transport and authentication:** each device holds a key pair and the server stores only the public half, the arrangement the whitepaper describes for its Noise-based channel, so a stolen user database contains no credentials (see [Encryption](/learn/encryption) and [Authentication](/learn/authentication)).
+- **Transport and authentication:** each device holds a key pair and the server stores only the public half, the arrangement the whitepaper describes for its Noise-based channel, so a stolen user database contains no credentials (see [Encryption](/learn/security/encryption) and [Authentication](/learn/security/authentication)).
 - **End-to-end encryption:** pairwise Signal-protocol sessions, with the server acting only as a directory of public keys. The consequence the design must own: **the server stores ciphertext it cannot read**, so there is no server-side search, no server-rendered link preview, no content-based spam filter and no chat recovery without a client-side backup. Abuse detection works on metadata alone: message rate to non-contacts, group-join churn, report counts.
 - **Media:** the client encrypts each attachment with a fresh random key, uploads the ciphertext and sends the key, a hash and the blob pointer inside the message. The blob store therefore needs no per-user authorisation, only unguessable ids and expiry.
 - **Groups:** membership changes are authorised by admins and versioned; the whitepaper notes that when a member leaves, every participant discards the group's Sender Key and starts over, which is what stops a departed member reading on.
-- **Abuse the design invites:** account takeover through a re-registered SIM (a registration PIN mitigates), bulk messaging through many accounts (per-device limits, see [Rate limiting](/learn/rate-limiting)), and metadata harvesting, which is why presence can only be subscribed for chats the subscriber belongs to.
+- **Abuse the design invites:** account takeover through a re-registered SIM (a registration PIN mitigates), bulk messaging through many accounts (per-device limits, see [Rate limiting](/learn/reliability/rate-limiting)), and metadata harvesting, which is why presence can only be subscribed for chats the subscriber belongs to.
 
 ## Observability
 
-Six numbers (see [Metrics and monitoring](/learn/metrics-monitoring)): **connections per gateway and reconnects per second**, the herd detector; **send-to-ack p99**, the one-tick latency and the inbox store's health; **send-to-delivered p99 for online recipients**, the end-to-end promise; **inbox depth and oldest envelope age per shard**; **fan-out lag**, from a group send to the last member's inbox write; and **registry miss rate**, pushes that fell back to the wake-up path. The trace to keep (see [Distributed tracing](/learn/tracing)): a `send` frame through gateway, chat shard, inbox write, registry lookup and the receiving gateway to the moment B's delivered receipt reaches A, because it shows which hop ate the 500 ms.
+Six numbers (see [Metrics and monitoring](/learn/operations/metrics-monitoring)): **connections per gateway and reconnects per second**, the herd detector; **send-to-ack p99**, the one-tick latency and the inbox store's health; **send-to-delivered p99 for online recipients**, the end-to-end promise; **inbox depth and oldest envelope age per shard**; **fan-out lag**, from a group send to the last member's inbox write; and **registry miss rate**, pushes that fell back to the wake-up path. The trace to keep (see [Distributed tracing](/learn/operations/tracing)): a `send` frame through gateway, chat shard, inbox write, registry lookup and the receiving gateway to the moment B's delivered receipt reaches A, because it shows which hop ate the 500 ms.
 
 ## Trade-offs and bottlenecks
 
@@ -246,9 +246,9 @@ The condition that decides: <mark>is "sent" a promise or a hint?</mark> Here it 
 
 ## How it evolves
 
-At **10×** (10M sends a second) the shape holds and the counts grow: 5,000 gateways in regional cells, a registry per region, and the first product change that multiplies everything, **companion devices**: the whitepaper describes client fan-out per device, so a user with a phone, a laptop and a tablet turns one delivery into three inbox writes and three sets of receipts. Group fan-out moves to a worker pool behind a queue so that a 1,024-member send cannot stall the chat shard (see [Message queues](/learn/message-queues)).
+At **10×** (10M sends a second) the shape holds and the counts grow: 5,000 gateways in regional cells, a registry per region, and the first product change that multiplies everything, **companion devices**: the whitepaper describes client fan-out per device, so a user with a phone, a laptop and a tablet turns one delivery into three inbox writes and three sets of receipts. Group fan-out moves to a worker pool behind a queue so that a 1,024-member send cannot stall the chat shard (see [Message queues](/learn/reliability/message-queues)).
 
-At **100×** the largest groups stop being groups. Announcement channels with millions of subscribers cannot be 10⁶ inbox writes per post, so they become a per-channel log that devices pull on open, fan-out on read. Spam becomes the main engineering problem, fought with metadata and reports because content is unavailable by design, and a business API arrives, which the whitepaper is careful to say is not end-to-end encrypted in the same sense because the business endpoint is hosted. [Design Instagram](/learn/design-instagram) shows the same fan-out decision for feeds; [Design a notification system](/learn/design-notification-system) is the wake-up path this design leans on.
+At **100×** the largest groups stop being groups. Announcement channels with millions of subscribers cannot be 10⁶ inbox writes per post, so they become a per-channel log that devices pull on open, fan-out on read. Spam becomes the main engineering problem, fought with metadata and reports because content is unavailable by design, and a business API arrives, which the whitepaper is careful to say is not end-to-end encrypted in the same sense because the business endpoint is hosted. [Design Instagram](/learn/hld/design-instagram) shows the same fan-out decision for feeds; [Design a notification system](/learn/hld/design-notification-system) is the wake-up path this design leans on.
 
 ## Deep dive 1: finding the connection and surviving the race
 
@@ -281,8 +281,8 @@ So the server does fan-out on write to member inboxes, as the whitepaper says in
 
 ## Deep dive 3: ordering and the three ticks
 
-Devices in a chat must agree on an order, and phone clocks cannot provide one (see [Clocks, time and ordering](/learn/time-and-ordering)): two members typing at once with clocks seconds apart would see each other's messages interleaved differently. The chat shard owning `chat_id` mints a **per-chat sequence number** for every send, every envelope carries it as `chat_seq`, and every device sorts by it. The cost is a single writer per chat, which is fine because a chat is tiny and ten thousand chats share a shard.
+Devices in a chat must agree on an order, and phone clocks cannot provide one (see [Clocks, time and ordering](/learn/distributed/time-and-ordering)): two members typing at once with clocks seconds apart would see each other's messages interleaved differently. The chat shard owning `chat_id` mints a **per-chat sequence number** for every send, every envelope carries it as `chat_seq`, and every device sorts by it. The cost is a single writer per chat, which is fine because a chat is tiny and ten thousand chats share a shard.
 
-Three rules keep the sequence honest across failover. The counter is replicated with the chat row, so the new primary knows the last number issued (see [Replication](/learn/replication)); a crash may skip numbers, and clients tolerate gaps, since a gap might equally be a message not yet received. A number is never reused, because two devices would then disagree about which message it names. And the shard treats `client_msg_id` as an idempotency key, so a retried send gets the same `chat_seq` back rather than a second one.
+Three rules keep the sequence honest across failover. The counter is replicated with the chat row, so the new primary knows the last number issued (see [Replication](/learn/data/replication)); a crash may skip numbers, and clients tolerate gaps, since a gap might equally be a message not yet received. A number is never reused, because two devices would then disagree about which message it names. And the shard treats `client_msg_id` as an idempotency key, so a retried send gets the same `chat_seq` back rather than a second one.
 
 The ticks are three facts from three places. **One tick** is the chat shard's ack: the envelope is on two inbox replicas. **Two ticks** is a `delivered` receipt from B's phone, which travels as an ordinary envelope into A's inbox and is pushed to A like any message; the server records nothing. **Blue ticks** is a `read` receipt sent when B opens the chat, by the same route. In a group, A's phone receives one delivered and one read receipt per member and shows the second grey tick only when all have arrived and blue only when all have read, which is the behaviour WhatsApp documents and the reason the server needs no per-message, per-member table: <mark>the server knows what is undelivered, and the sender's phone knows everything else</mark>. A lost receipt is re-sent on B's next sync; a receipt that arrives before its message is held by A's phone until the message does.

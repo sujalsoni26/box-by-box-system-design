@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "danger-soft" | "success";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
@@ -14,6 +14,8 @@ const variants: Record<ButtonVariant, string> = {
     "bg-surface text-ink border border-line-strong shadow-[0_1.5px_0_var(--line-strong)] enabled:hover:border-ink-3",
   ghost: "bg-transparent text-ink-2 border border-transparent enabled:hover:bg-surface-2 enabled:hover:text-ink",
   danger: "bg-bad text-accent-ink border border-bad enabled:hover:brightness-110",
+  /** A quiet red for destructive actions that are not the final confirmation. */
+  "danger-soft": "bg-bad-soft text-bad border border-bad/25 enabled:hover:border-bad/55",
   success: "bg-good text-accent-ink border border-good enabled:hover:brightness-110",
 };
 

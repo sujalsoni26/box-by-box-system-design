@@ -1,4 +1,4 @@
-Apache Kafka stores events in a **distributed, append-only log**. A producer appends a record to the end of a partition, the broker keeps it for as long as retention says, and any number of consumers read it by position, each keeping its own bookmark. Keep the data and let readers track their place: that one decision separates a log from the queue in [Message queues](/learn/message-queues) and gives the fan-out of [Pub/sub](/learn/pubsub) without copying a message per subscriber.
+Apache Kafka stores events in a **distributed, append-only log**. A producer appends a record to the end of a partition, the broker keeps it for as long as retention says, and any number of consumers read it by position, each keeping its own bookmark. Keep the data and let readers track their place: that one decision separates a log from the queue in [Message queues](/learn/reliability/message-queues) and gives the fan-out of [Pub/sub](/learn/reliability/pubsub) without copying a message per subscriber.
 
 ## Log or queue?
 
@@ -39,7 +39,7 @@ A **topic** is a named stream such as `orders`, split into **partitions**. Each 
 
 ## Brokers, leaders and the in-sync replicas
 
-A cluster is a set of **brokers**, and every partition is copied to `replication.factor` of them (the broker default is 1; three is usual in production). One copy is the **leader**, which takes all writes and reads; the others are **followers** that fetch from it and append the same records in the same order, as in [Replication](/learn/replication).
+A cluster is a set of **brokers**, and every partition is copied to `replication.factor` of them (the broker default is 1; three is usual in production). One copy is the **leader**, which takes all writes and reads; the others are **followers** that fetch from it and append the same records in the same order, as in [Replication](/learn/data/replication).
 
 A follower that has not fetched, or has not caught up to the leader's end of the log, within `replica.lag.time.max.ms` (30 s by default) is dropped from the **in-sync replica set (ISR)** and rejoins when it catches up. A record is **committed** only when every ISR member has it, and consumers never see uncommitted records. With f+1 replicas Kafka can lose f of them without losing a committed record. If every replica dies, the controller waits for an ISR member to return rather than crowning a stale one: `unclean.leader.election.enable` is false by default, and switching it on trades data loss for availability.
 
@@ -84,7 +84,7 @@ sequenceDiagram
 
 ## Consumers read by offset
 
-Consumers **pull**, so a slow consumer falls behind instead of being flooded. The only per-consumer state the broker keeps is the **committed offset**, the position a consumer has saved, stored in the internal topic `__consumer_offsets`. A restarted consumer resumes from there; one that wants history resets its offset to any point retention still covers. How a group shares partitions is [Partitions, consumer groups and ordering](/learn/partitions-consumer-groups); whether to commit before or after the work is [Delivery semantics and exactly-once](/learn/delivery-semantics).
+Consumers **pull**, so a slow consumer falls behind instead of being flooded. The only per-consumer state the broker keeps is the **committed offset**, the position a consumer has saved, stored in the internal topic `__consumer_offsets`. A restarted consumer resumes from there; one that wants history resets its offset to any point retention still covers. How a group shares partitions is [Partitions, consumer groups and ordering](/learn/streaming/partitions-consumer-groups); whether to commit before or after the work is [Delivery semantics and exactly-once](/learn/streaming/delivery-semantics).
 
 ## Retention and compaction
 
@@ -92,7 +92,7 @@ Retention is per topic: `retention.ms` (7 days by default) and `retention.bytes`
 
 ## The controller: from ZooKeeper to KRaft
 
-One node is the **controller**: it notices broker failures, elects partition leaders and records the ISR and other metadata. That metadata used to live in ZooKeeper, a separate service to run and upgrade. **KRaft** (Kafka Raft) replaces it with a quorum of controller nodes, usually 3 or 5, keeping the metadata in an internal replicated log with the Raft protocol from [Consensus](/learn/consensus): one active controller, the rest hot standbys, a majority required (3 tolerate 1 failure, 5 tolerate 2). KRaft was declared production-ready in Kafka 3.3, ZooKeeper mode deprecated in 3.5, and Kafka 4.0 (March 2025) removed ZooKeeper; 3.9 is the last release that runs both, the bridge for migrations.
+One node is the **controller**: it notices broker failures, elects partition leaders and records the ISR and other metadata. That metadata used to live in ZooKeeper, a separate service to run and upgrade. **KRaft** (Kafka Raft) replaces it with a quorum of controller nodes, usually 3 or 5, keeping the metadata in an internal replicated log with the Raft protocol from [Consensus](/learn/distributed/consensus): one active controller, the rest hot standbys, a majority required (3 tolerate 1 failure, 5 tolerate 2). KRaft was declared production-ready in Kafka 3.3, ZooKeeper mode deprecated in 3.5, and Kafka 4.0 (March 2025) removed ZooKeeper; 3.9 is the last release that runs both, the bridge for migrations.
 
 <Callout type="interview" title="Say the three settings together">
 

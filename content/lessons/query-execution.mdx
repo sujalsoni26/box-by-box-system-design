@@ -1,4 +1,4 @@
-A SQL statement says *what* you want; the **planner** (often called the optimiser) decides *how*: which index to use, in which order to join tables, whether a full scan is actually cheaper. `EXPLAIN` prints that decision, and most "the database is slow" tickets turn out to be a disagreement between the plan you imagined and the plan that ran. This lesson builds on [Indexing](/learn/indexing) and on pages and the buffer pool from [How a database stores data](/learn/storage-engines). The names are PostgreSQL's; other databases have the same ideas under different labels.
+A SQL statement says *what* you want; the **planner** (often called the optimiser) decides *how*: which index to use, in which order to join tables, whether a full scan is actually cheaper. `EXPLAIN` prints that decision, and most "the database is slow" tickets turn out to be a disagreement between the plan you imagined and the plan that ran. This lesson builds on [Indexing](/learn/data/indexing) and on pages and the buffer pool from [How a database stores data](/learn/internals/storage-engines). The names are PostgreSQL's; other databases have the same ideas under different labels.
 
 ## From SQL to a plan
 
@@ -70,7 +70,7 @@ The planner also chooses the join *order*, and one wrong row estimate can turn a
 
 ## The N+1 problem
 
-The planner can only optimise the query it is given, and the commonest performance bug never reaches it as one query. Code loads 100 orders, then loops and loads each order's customer: 1 + 100 round trips, each fast, together slow, because every trip pays the network latency from [Latency](/learn/latency). The Rails guide's example turns 11 queries into 2 with eager loading; in SQL terms, join the tables or fetch all the customers with one `WHERE id IN (...)`. Any ORM can produce the problem, and the query log gives it away: the same statement repeated with different parameters.
+The planner can only optimise the query it is given, and the commonest performance bug never reaches it as one query. Code loads 100 orders, then loops and loads each order's customer: 1 + 100 round trips, each fast, together slow, because every trip pays the network latency from [Latency](/learn/foundations/latency). The Rails guide's example turns 11 queries into 2 with eager loading; in SQL terms, join the tables or fetch all the customers with one `WHERE id IN (...)`. Any ORM can produce the problem, and the query log gives it away: the same statement repeated with different parameters.
 
 <Callout type="interview" title="Show you would look before guessing">
 

@@ -4,7 +4,7 @@ import { ArrowRight, Bookmark, Check, Flag, History, Sparkles } from "lucide-rea
 import { buttonClasses } from "@/components/ui/button";
 import { LevelChip } from "@/components/ui/chip";
 import { ProgressBar, ProgressRing } from "@/components/ui/progress-bar";
-import { getLesson, getModule, lessons, modules, moduleProgress, nextIncompleteLesson, overallProgress } from "@/lib/curriculum";
+import { getLesson, getModule, lessons, modules, moduleProgress, nextIncompleteLesson, overallProgress, lessonHref } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 import { useProgressStore } from "@/stores/progress-store";
@@ -46,7 +46,7 @@ export function ContinueLearning() {
         </div>
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link href={next || !hydrated ? `/learn/${lesson.slug}` : "/practice"} className={buttonClasses("primary", "lg")}>
+        <Link href={next || !hydrated ? lessonHref(lesson.slug) : "/practice"} className={buttonClasses("primary", "lg")}>
           {!started ? "Start learning" : next ? "Continue" : "Practise"} <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
         <Link href="/learn" className={buttonClasses("ghost", "lg")}>
@@ -124,7 +124,7 @@ export function RoadmapModules() {
         return (
           <li key={m.id}>
             <Link
-              href={`/learn/${first}`}
+              href={lessonHref(first)}
               className={cn(
                 "group flex h-full flex-col gap-3 rounded-2xl border bg-surface p-5 transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-lift)]",
                 p.fraction === 1 ? "border-good" : "border-line hover:border-accent",
@@ -170,7 +170,7 @@ export function RecentlyStudied() {
         <ul className="mt-3 divide-y divide-line">
           {recent.map((l) => (
             <li key={l.slug}>
-              <Link href={`/learn/${l.slug}`} className="flex items-center justify-between gap-3 py-2.5 text-[0.95rem] hover:text-link">
+              <Link href={lessonHref(l.slug)} className="flex items-center justify-between gap-3 py-2.5 text-[0.95rem] hover:text-link">
                 <span className="min-w-0">
                   <span className="mr-1.5 font-mono text-xs text-ink-3">{l.number}</span>
                   {l.title}
@@ -200,7 +200,7 @@ export function BookmarkList({ empty = "Bookmark a lesson to keep it here." }: {
         <ul className="mt-3 divide-y divide-line">
           {items.map((l) => (
             <li key={l.slug}>
-              <Link href={`/learn/${l.slug}`} className="block py-2.5 text-[0.95rem] hover:text-link">
+              <Link href={lessonHref(l.slug)} className="block py-2.5 text-[0.95rem] hover:text-link">
                 <span className="mr-1.5 font-mono text-xs text-ink-3">{l.number}</span>
                 {l.title}
               </Link>
@@ -245,7 +245,7 @@ export function ReviewList({ limit, practiceSlugs = [] }: { limit?: number; prac
           {items.map((l) => (
             <li key={l.slug} className="flex items-center gap-3 py-2">
               <div className="min-w-0 flex-1">
-                <Link href={`/learn/${l.slug}`} className="block text-[0.95rem] hover:text-link">
+                <Link href={lessonHref(l.slug)} className="block text-[0.95rem] hover:text-link">
                   <span className="mr-1.5 font-mono text-xs text-ink-3">{l.number}</span>
                   {l.title}
                 </Link>

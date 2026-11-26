@@ -20,7 +20,7 @@ Say the scope out loud before drawing a class. Most failed attempts here are sco
 
 ## Core entities and responsibilities
 
-Each entity answers to one stakeholder, the single responsibility principle from [SOLID](/learn/solid) applied to a domain: operations changes how spots are chosen, finance changes prices, the hardware vendor changes gates, and the entities change only when the physical lot does.
+Each entity answers to one stakeholder, the single responsibility principle from [SOLID](/learn/lld/solid) applied to a domain: operations changes how spots are chosen, finance changes prices, the hardware vendor changes gates, and the entities change only when the physical lot does.
 
 | Entity | Responsibility | Knows |
 | --- | --- | --- |
@@ -95,11 +95,11 @@ The ticket is an entity rather than an id because it is the only object that liv
     ExitGate --> ParkingLot : exit
 `} />
 
-Two choices are deliberate. Vehicle types are an `enum`, not a hierarchy: a motorcycle and a truck differ in one datum, the smallest spot they fit, and three empty subclasses would be ceremony. The lot *composes* floors (`*--`) because a floor has no meaning outside its lot; a ticket merely *refers to* a vehicle and a spot (`-->`) that exist whether it does or not (see [Class relationships and UML](/learn/class-relationships-uml)).
+Two choices are deliberate. Vehicle types are an `enum`, not a hierarchy: a motorcycle and a truck differ in one datum, the smallest spot they fit, and three empty subclasses would be ceremony. The lot *composes* floors (`*--`) because a floor has no meaning outside its lot; a ticket merely *refers to* a vehicle and a spot (`-->`) that exist whether it does or not (see [Class relationships and UML](/learn/lld/class-relationships-uml)).
 
 ## Key interfaces and methods
 
-The vehicle is a record, and the only "factory" worth having is one static method that maps what the gate camera reports to a type. As the [creational patterns lesson](/learn/design-patterns-creational) put it, a Factory Method hierarchy earns its place when the created objects behave differently, and these do not.
+The vehicle is a record, and the only "factory" worth having is one static method that maps what the gate camera reports to a type. As the [creational patterns lesson](/learn/lld/design-patterns-creational) put it, a Factory Method hierarchy earns its place when the created objects behave differently, and these do not.
 
 ```java
 enum VehicleType { MOTORCYCLE, CAR, TRUCK }
@@ -290,7 +290,7 @@ Many car parks hang a light above every bay: green when free, red when taken. Th
 
 ## Concurrency
 
-Name the shared mutable state first, as [Concurrency and thread safety](/learn/concurrency-basics) insists: spot occupancy, the active-ticket map and the per-floor counters, all touched by gate threads at once.
+Name the shared mutable state first, as [Concurrency and thread safety](/learn/lld/concurrency-basics) insists: spot occupancy, the active-ticket map and the per-floor counters, all touched by gate threads at once.
 
 The race that matters is two gates searching at the same moment, both seeing F2-041 free, both issuing tickets for it. A strategy that *finds* a free spot and returns it for the lot to *claim* has exactly this gap between check and act. Claiming inside the search closes it: `compareAndSet(false, true)` succeeds for one caller and fails for every other, and the loser's loop moves on. The ticket map is a `ConcurrentHashMap`, safe to call from any gate. The counters are `AtomicInteger`s, decremented on a successful claim and incremented on release; a display may read a value a few milliseconds stale, which is harmless because the spot flag, not the counter, decides who parks.
 
@@ -300,7 +300,7 @@ The alternative is a `ReentrantLock` per floor held for the whole search, acquir
 
 - **A new vehicle type.** Electric cars add an enum constant and a size mapping. Charging bays add a feature set to `ParkingSpot` and a strategy that filters on it. The lot does not change.
 - **A new pricing rule.** One class, plus a small selector mapping day, membership and spot size to a strategy.
-- **Reservations.** A claim with an expiry: the same `tryOccupy` on behalf of a future driver, released by a timer if nobody arrives. The seat holds in [Movie ticket booking](/learn/lld-movie-ticket-booking) are the same idea with a database behind them.
+- **Reservations.** A claim with an expiry: the same `tryOccupy` on behalf of a future driver, released by a timer if nobody arrives. The seat holds in [Movie ticket booking](/learn/lld-practice/lld-movie-ticket-booking) are the same idea with a database behind them.
 - **Gates on several machines.** The spot flags must live where every gate can see them: the deep dive below.
 
 | Choice made | What it buys | What it costs |

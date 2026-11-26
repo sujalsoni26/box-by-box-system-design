@@ -1,8 +1,8 @@
-**Multi-version concurrency control (MVCC)** means an update never overwrites the row other transactions are reading: it writes a new version and leaves the old one in place until no running transaction can still see it. That is why readers do not block writers in PostgreSQL and InnoDB, and why one anomaly survives that the table in [ACID](/learn/acid) does not mention.
+**Multi-version concurrency control (MVCC)** means an update never overwrites the row other transactions are reading: it writes a new version and leaves the old one in place until no running transaction can still see it. That is why readers do not block writers in PostgreSQL and InnoDB, and why one anomaly survives that the table in [ACID](/learn/data/acid) does not mention.
 
 ## Versions, snapshots and visibility
 
-Every PostgreSQL row version carries two hidden columns: `xmin`, the ID of the transaction that created it, and `xmax`, the ID of the transaction that deleted or replaced it. An `UPDATE` creates a new version with `xmin` set to the updating transaction and stamps the old version's `xmax` with the same ID. Each transaction's final status is recorded in `pg_xact`, and because old versions stay in place, crash recovery never has to undo anything (see [Write-ahead logging](/learn/wal)).
+Every PostgreSQL row version carries two hidden columns: `xmin`, the ID of the transaction that created it, and `xmax`, the ID of the transaction that deleted or replaced it. An `UPDATE` creates a new version with `xmin` set to the updating transaction and stamps the old version's `xmax` with the same ID. Each transaction's final status is recorded in `pg_xact`, and because old versions stay in place, crash recovery never has to undo anything (see [Write-ahead logging](/learn/internals/wal)).
 
 A **snapshot** is the set of transactions that had committed when it was taken. A version is visible if its creator had committed and its deleter had not. Under Read Committed each statement takes a fresh snapshot; under Repeatable Read and Serializable the transaction takes one snapshot at its first statement and keeps it.
 
@@ -28,7 +28,7 @@ Writers still block writers: two updates to the same row serialise on a row lock
 
 ## The anomaly the ACID table leaves out
 
-[ACID](/learn/acid) covered dirty reads, non-repeatable reads, phantoms and the lost update. Snapshot isolation rules out the first three and, in PostgreSQL's Repeatable Read, also catches the lost update: a transaction that modifies a row another transaction changed after its snapshot fails with "could not serialize access due to concurrent update". One anomaly gets through: **write skew**.
+[ACID](/learn/data/acid) covered dirty reads, non-repeatable reads, phantoms and the lost update. Snapshot isolation rules out the first three and, in PostgreSQL's Repeatable Read, also catches the lost update: a transaction that modifies a row another transaction changed after its snapshot fails with "could not serialize access due to concurrent update". One anomaly gets through: **write skew**.
 
 Two transactions read the same data, each makes a decision, and each writes a *different* row. Neither write conflicts with the other, so both commit, yet together they break a rule each checked alone. The classic illustration, from *Designing Data-Intensive Applications*: a hospital requires at least one doctor on call, and Alice and Bob, both on call, both ask to leave.
 

@@ -12,7 +12,7 @@ A logging framework is the library every other library depends on, which makes i
 
 **Assumptions**: one process; a peak of around a hundred thousand events per second as a sizing assumption; lines of a few hundred bytes; many threads logging, few reconfiguring.
 
-**Out of scope**: shipping, indexing and searching logs, which is [Logging](/learn/logging) at the system level; a vendor-neutral facade in front of this implementation, which appears under extensibility.
+**Out of scope**: shipping, indexing and searching logs, which is [Logging](/learn/operations/logging) at the system level; a vendor-neutral facade in front of this implementation, which appears under extensibility.
 
 **Non-functional**: a disabled call costs a method call and a comparison and allocates nothing. A logging call never throws. A slow or broken destination slows or breaks only itself. Under overload the framework states which events it drops, and `WARN` and `ERROR` go last.
 
@@ -309,7 +309,7 @@ The Singleton debate is the one most interviewers raise. Loggers feel global, an
 - **Fewer arguments than placeholders, or a throwable last.** The layout formats what it has and appends the stack trace; argument problems are rendered, never thrown.
 - **Context leaks.** Thread pools reuse threads, so a request id put into `Mdc` and not removed appears on the next request's lines. Remove in a `finally`, as Logback's manual says. Child threads do not inherit the map, so work handed to another thread carries the snapshot explicitly.
 - **Reconfiguration while logging.** `level` is `volatile`, so the next `isEnabled` sees a change; appender lists are `CopyOnWriteArrayList`, so writers see the old or the new list, never a half-built one.
-- **Queue full.** The explicit policy above. Counting drops matters as much as dropping: a `dropped` metric is the difference between silent loss and a known gap, and [Backpressure](/learn/backpressure) is the same decision one level up.
+- **Queue full.** The explicit policy above. Counting drops matters as much as dropping: a `dropped` metric is the difference between silent loss and a known gap, and [Backpressure](/learn/reliability/backpressure) is the same decision one level up.
 - **Shutdown.** The worker must drain before the process exits, so the context registers a shutdown hook that calls `stop()`. Without it the queued events are lost, the hazard Logback documents for its asynchronous appender.
 
 <Callout type="analogy" title="The newsroom wire">
@@ -330,7 +330,7 @@ A file is a single resource, so the synchronous `FileAppender.write` is `synchro
 
 - **A new destination.** One subclass of `FilteringAppender` with a `write`. Nothing else changes, which is the test of whether the Strategy earned its place.
 - **Rolling files.** Logback splits it into two collaborators worth copying: a `RollingPolicy` that says *what* happens at rollover (rename, compress, delete beyond a history) and a `TriggeringPolicy` that says *when* (a size, a date boundary). `RollingFileAppender` is `FileAppender` plus two Strategies, not a rewrite.
-- **Structured output.** A `JsonLayout` that emits the event's fields and the context map as keys, so the collector in [Logging](/learn/logging) indexes them without parsing.
+- **Structured output.** A `JsonLayout` that emits the event's fields and the context map as keys, so the collector in [Logging](/learn/operations/logging) indexes them without parsing.
 - **A facade.** Libraries should depend on an interface they do not own; SLF4J is exactly that, a facade whose provider is chosen at deployment, and this design is what sits behind it.
 - **Context across threads, sampling.** A wrapper that captures `Mdc.snapshot()` at submission and installs it when the task runs; a filter that accepts one in N `DEBUG` events for a hot logger. Neither needs a new concept.
 

@@ -1,4 +1,4 @@
-Every machine has a clock, and no two agree. A **logical clock** orders events by the messages that connect them rather than by the time of day, the only ordering that machines sharing nothing but a network can trust (see [What makes a system distributed](/learn/distributed-fundamentals)).
+Every machine has a clock, and no two agree. A **logical clock** orders events by the messages that connect them rather than by the time of day, the only ordering that machines sharing nothing but a network can trust (see [What makes a system distributed](/learn/distributed/distributed-fundamentals)).
 
 ## Two clocks on every machine
 
@@ -14,7 +14,7 @@ Your operating system offers two clocks.
 
 NTP corrects wall clocks, typically to within milliseconds or tens of milliseconds over the internet and around a millisecond on a quiet local network. Between corrections a quartz oscillator drifts with temperature; Spanner's designers budget 200 microseconds per second as a worst case, about 17 seconds a day uncorrected. The correction itself can step the clock, backwards included, so a duration computed from two wall-clock readings can come out negative.
 
-Then there are **process pauses**. A stop-the-world garbage collection or a live VM migration freezes your code for milliseconds to, in bad cases, minutes, while every clock keeps running. The code resumes with a stale idea of "now" and no sign it was gone, which is what breaks leases (see [Leader election](/learn/leader-election)).
+Then there are **process pauses**. A stop-the-world garbage collection or a live VM migration freezes your code for milliseconds to, in bad cases, minutes, while every clock keeps running. The code resumes with a stale idea of "now" and no sign it was gone, which is what breaks leases (see [Leader election](/learn/distributed/leader-election)).
 
 <Callout type="warning" title="Cloudflare and the leap second">
 
@@ -26,7 +26,7 @@ On 1 January 2017 a leap second made wall clocks repeat a second. Cloudflare's D
 
 When two replicas accept writes to the same key, something has to pick a winner. **Last-write-wins (LWW)** keeps the write with the highest wall-clock timestamp; Cassandra works this way, with the timestamp supplied by the client or the coordinator's clock.
 
-Suppose node A's clock runs 40 ms ahead of node B's. A customer changes their delivery address through A, then corrects it 10 ms later through B. A stamps the first write `t + 40`, B the second `t + 10`, and LWW keeps the *first* address. The correction is gone, no error is raised, and until someone notices, the fast clock wins every conflict. [Quorums](/learn/quorums) shows the alternative.
+Suppose node A's clock runs 40 ms ahead of node B's. A customer changes their delivery address through A, then corrects it 10 ms later through B. A stamps the first write `t + 40`, B the second `t + 10`, and LWW keeps the *first* address. The correction is gone, no error is raised, and until someone notices, the fast clock wins every conflict. [Quorums](/learn/distributed/quorums) shows the alternative.
 
 ## Happens-before
 
@@ -81,7 +81,7 @@ A **hybrid logical clock (HLC)** pairs the highest physical time a node has seen
 
 Google's Spanner takes the opposite route: make physical time trustworthy by measuring its error. **TrueTime** returns an interval, `TT.now()` giving `[earliest, latest]`, guaranteed to contain the true time; half its width is the uncertainty ε. GPS receivers and atomic clocks in each data centre keep ε small: in the 2012 paper it moved between about 1 and 7 ms, about 4 ms most of the time, and generally below 10 ms.
 
-**Commit wait** turns that bound into ordering. A transaction's leader picks a commit timestamp s no earlier than `TT.now().latest`, then holds the result back until `TT.after(s)` is true, so s is definitely in the past; the expected wait is about 2ε. In exchange, if T1 commits before T2 starts anywhere on Earth, T1 gets the smaller timestamp: globally ordered transactions and lock-free reads at any past timestamp (see [Linearizability](/learn/linearizability)). The costs are the clock hardware, the wait on every commit, and a system that slows down whenever ε grows.
+**Commit wait** turns that bound into ordering. A transaction's leader picks a commit timestamp s no earlier than `TT.now().latest`, then holds the result back until `TT.after(s)` is true, so s is definitely in the past; the expected wait is about 2ε. In exchange, if T1 commits before T2 starts anywhere on Earth, T1 gets the smaller timestamp: globally ordered transactions and lock-free reads at any past timestamp (see [Linearizability](/learn/distributed/linearizability)). The costs are the clock hardware, the wait on every commit, and a system that slows down whenever ε grows.
 
 <Callout type="analogy" title="Numbered letters, not postmarks">
 

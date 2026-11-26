@@ -24,9 +24,12 @@ export interface LampPlan {
   steps: number;
 }
 
-/** True when there is room for the lamp beside the cat (desktop-sized viewport and cat). */
-export function lampFits(viewW: number, size: number): boolean {
-  return viewW >= 700 && size >= 60;
+/**
+ * True when there is room for the lamp beside the cat: a desktop-sized viewport and cat, or on phones and tablets
+ * (compact) any screen at least 300 px wide. planLamp still checks the room on each side when she sets off.
+ */
+export function lampFits(viewW: number, size: number, compact = false): boolean {
+  return compact ? viewW >= 300 && size >= 40 : viewW >= 700 && size >= 60;
 }
 
 /**

@@ -1,12 +1,12 @@
-[Sharding](/learn/sharding) chose a shard key and a strategy. Four problems remain once the data is split, and they are where partitioned systems really differ: how to query by anything other than the key, how to add a node without moving everything, how a request finds its partition, and what to do when one key draws all the traffic.
+[Sharding](/learn/data/sharding) chose a shard key and a strategy. Four problems remain once the data is split, and they are where partitioned systems really differ: how to query by anything other than the key, how to add a node without moving everything, how a request finds its partition, and what to do when one key draws all the traffic.
 
 ## Secondary indexes across partitions
 
 A secondary index on a partitioned table has to live somewhere, and there are exactly two choices.
 
-A **local secondary index** is partitioned the same way as the data: each partition indexes only its own rows. Writes stay cheap, because a row and its index entries land on one partition. Reads by the indexed attribute pay instead: the query goes to every partition and the results are merged, a **scatter-gather** whose latency is the slowest partition's (the tail-latency effect from [Latency](/learn/latency)). DynamoDB's local secondary index is the textbook case: it keeps the table's partition key and adds an alternative sort key, must be declared when the table is created, allows strongly consistent reads, and is capped at five per table and 10 GB of items per partition-key value. Cassandra's original secondary indexes are also local to each node, so its documentation recommends them only with a partition-key restriction.
+A **local secondary index** is partitioned the same way as the data: each partition indexes only its own rows. Writes stay cheap, because a row and its index entries land on one partition. Reads by the indexed attribute pay instead: the query goes to every partition and the results are merged, a **scatter-gather** whose latency is the slowest partition's (the tail-latency effect from [Latency](/learn/foundations/latency)). DynamoDB's local secondary index is the textbook case: it keeps the table's partition key and adds an alternative sort key, must be declared when the table is created, allows strongly consistent reads, and is capped at five per table and 10 GB of items per partition-key value. Cassandra's original secondary indexes are also local to each node, so its documentation recommends them only with a partition-key restriction.
 
-A **global secondary index** is partitioned by the indexed value instead. A query by that value goes to one index partition, but a write now touches the row's partition and the index's partition, often on different machines. Keeping both in step synchronously needs a [distributed transaction](/learn/distributed-transactions), so most systems update the index asynchronously. DynamoDB's global secondary index has its own key schema and throughput, can be added at any time, propagates base-table writes asynchronously, so reads from it are eventually consistent only.
+A **global secondary index** is partitioned by the indexed value instead. A query by that value goes to one index partition, but a write now touches the row's partition and the index's partition, often on different machines. Keeping both in step synchronously needs a [distributed transaction](/learn/distributed/distributed-transactions), so most systems update the index asynchronously. DynamoDB's global secondary index has its own key schema and throughput, can be added at any time, propagates base-table writes asynchronously, so reads from it are eventually consistent only.
 
 | | Local index | Global index |
 | --- | --- | --- |
@@ -42,7 +42,7 @@ The mapping from key to partition changes as partitions split and move, so someo
     T --> P3["Correct partition"]
 `} />
 
-HBase keeps the list of regions and their servers in a catalogue table, `hbase:meta`, whose own location is stored in ZooKeeper; a client looks it up once and caches it until a region moves. Cassandra has no coordinator service: nodes exchange ring state by **gossip** (each node picks a random peer every second), and the node a client connects to coordinates the request, forwarding to the replicas and collecting the read or write quorum described in [Quorums](/learn/quorums). MongoDB puts the map in config servers and the routing in `mongos`, a tier clients talk to instead of the shards.
+HBase keeps the list of regions and their servers in a catalogue table, `hbase:meta`, whose own location is stored in ZooKeeper; a client looks it up once and caches it until a region moves. Cassandra has no coordinator service: nodes exchange ring state by **gossip** (each node picks a random peer every second), and the node a client connects to coordinates the request, forwarding to the replicas and collecting the read or write quorum described in [Quorums](/learn/distributed/quorums). MongoDB puts the map in config servers and the routing in `mongos`, a tier clients talk to instead of the shards.
 
 <Interactive name="shard-router" />
 
@@ -50,7 +50,7 @@ HBase keeps the list of regions and their servers in a catalogue table, `hbase:m
 
 Even a perfect hash cannot spread a single key. A celebrity's post, today's date as the partition key for time-series writes, or the one match on sale during an IPL ticket release all land on one partition, and each partition has a ceiling: in DynamoDB, 3,000 read units and 1,000 write units per second.
 
-The fix is **salting** (DynamoDB calls it write sharding): append a suffix to the key, say a number from 1 to 200, so writes for one date become 200 keys on 200 partitions. Reads must then query all 200 suffixes and merge, so the design trades read cost for write throughput. A **calculated suffix** (a hash of an attribute you know at read time, such as the order ID) keeps single-item reads cheap while still spreading writes. For read-heavy hot keys, [caching](/learn/caching) is the other half of the answer.
+The fix is **salting** (DynamoDB calls it write sharding): append a suffix to the key, say a number from 1 to 200, so writes for one date become 200 keys on 200 partitions. Reads must then query all 200 suffixes and merge, so the design trades read cost for write throughput. A **calculated suffix** (a hash of an attribute you know at read time, such as the order ID) keeps single-item reads cheap while still spreading writes. For read-heavy hot keys, [caching](/learn/reliability/caching) is the other half of the answer.
 
 <Callout type="analogy" title="Branch libraries">
 

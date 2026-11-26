@@ -1,4 +1,4 @@
-A **virtual private cloud (VPC)** is a private network you define inside a cloud region: you choose its address range, divide it into subnets that each live in one availability zone, and decide, subnet by subnet, what may reach the internet and what may not. Everything in [Load balancing](/learn/load-balancing) and [Proxies](/learn/proxy) sits inside one. The vocabulary below is AWS's, because its documentation is the most precise about limits and prices; the last section maps it onto Google Cloud and Azure.
+A **virtual private cloud (VPC)** is a private network you define inside a cloud region: you choose its address range, divide it into subnets that each live in one availability zone, and decide, subnet by subnet, what may reach the internet and what may not. Everything in [Load balancing](/learn/scaling/load-balancing) and [Proxies](/learn/scaling/proxy) sits inside one. The vocabulary below is AWS's, because its documentation is the most precise about limits and prices; the last section maps it onto Google Cloud and Azure.
 
 ## Address space and subnets
 
@@ -51,7 +51,7 @@ Security groups do the real work: an app group that allows port 8080 only *from 
 
 ## Layer 4 or layer 7, inside the VPC
 
-AWS's **Application Load Balancer** is the layer-7 proxy from the load-balancing lesson: it terminates HTTP, HTTPS and gRPC and routes by host, path, header, method, query string or source address to target groups in private subnets. The **Network Load Balancer** is layer 4: TCP, UDP and TLS (see [IP, TCP and UDP](/learn/tcp-udp)), one static address per zone, millions of requests per second, and the client's source address preserved for instance targets, so it suits non-HTTP protocols, fixed-address allow-lists and the front of a PrivateLink service. A Gateway Load Balancer at layer 3 exists for inserting firewalls and inspection appliances. The rule: HTTP semantics or TLS termination, ALB; anything else, or a static IP, NLB. Either lives in the public subnets of two or more zones and talks to targets in the private ones.
+AWS's **Application Load Balancer** is the layer-7 proxy from the load-balancing lesson: it terminates HTTP, HTTPS and gRPC and routes by host, path, header, method, query string or source address to target groups in private subnets. The **Network Load Balancer** is layer 4: TCP, UDP and TLS (see [IP, TCP and UDP](/learn/foundations/tcp-udp)), one static address per zone, millions of requests per second, and the client's source address preserved for instance targets, so it suits non-HTTP protocols, fixed-address allow-lists and the front of a PrivateLink service. A Gateway Load Balancer at layer 3 exists for inserting firewalls and inspection appliances. The rule: HTTP semantics or TLS termination, ALB; anything else, or a static IP, NLB. Either lives in the public subnets of two or more zones and talks to targets in the private ones.
 
 ## Private connectivity
 
@@ -59,7 +59,7 @@ Three constructs join networks without touching the internet. **VPC peering** co
 
 ## DNS inside the VPC
 
-The Amazon-provided resolver answers at the VPC's base address plus two (10.0.0.2 for 10.0.0.0/16) and at 169.254.169.253; `enableDnsSupport` is on by default and `enableDnsHostnames` is off unless it is the default VPC. A **private hosted zone** in Route 53 gives internal names such as `db.internal` that resolve only inside the VPCs you attach, which is how services find each other without the public [DNS](/learn/dns) knowing they exist.
+The Amazon-provided resolver answers at the VPC's base address plus two (10.0.0.2 for 10.0.0.0/16) and at 169.254.169.253; `enableDnsSupport` is on by default and `enableDnsHostnames` is off unless it is the default VPC. A **private hosted zone** in Route 53 gives internal names such as `db.internal` that resolve only inside the VPCs you attach, which is how services find each other without the public [DNS](/learn/foundations/dns) knowing they exist.
 
 ## The same shapes elsewhere
 

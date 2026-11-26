@@ -1,4 +1,4 @@
-**Authentication** is proving that a request comes from the account it claims to come from. It has two halves: checking a proof once, at login, and remembering the result across later requests without tying the user to one server (see [Vertical vs horizontal scaling](/learn/scaling)). HTTP is stateless (see [HTTP](/learn/http)), so the memory lives in a cookie, a token or a shared store.
+**Authentication** is proving that a request comes from the account it claims to come from. It has two halves: checking a proof once, at login, and remembering the result across later requests without tying the user to one server (see [Vertical vs horizontal scaling](/learn/scaling/scaling)). HTTP is stateless (see [HTTP](/learn/foundations/http)), so the memory lives in a cookie, a token or a shared store.
 
 ## Storing passwords: salted, slow and adaptive
 
@@ -51,7 +51,7 @@ sequenceDiagram
 
 <ComparisonItem title="Bearer token (self-contained)">
 
-- Carries signed claims that any server verifies locally (see [OAuth 2.0, OpenID Connect and JWT](/learn/oauth-jwt)).
+- Carries signed claims that any server verifies locally (see [OAuth 2.0, OpenID Connect and JWT](/learn/security/oauth-jwt)).
 - Valid until it expires, so revocation is hard; keep lifetimes short.
 
 </ComparisonItem>
@@ -66,7 +66,7 @@ Both keep application servers stateless: no server holds the session in its own 
 | --- | --- |
 | Secure | Sending the cookie over plain HTTP |
 | HttpOnly | Page scripts reading it, so an XSS bug cannot steal the session |
-| SameSite=Lax or Strict | The browser attaching it to cross-site requests, the basis of CSRF (see [API security](/learn/api-security)) |
+| SameSite=Lax or Strict | The browser attaching it to cross-site requests, the basis of CSRF (see [API security](/learn/security/api-security)) |
 | No Domain attribute, Path=/ | Subdomains reading or planting it |
 
 Chrome treats a cookie without SameSite as Lax, which still sends it on top-level GET navigations, so <mark>a state change must never be a GET</mark>. OWASP also recommends the `__Host-` prefix, which makes browsers enforce those three at once.
@@ -90,7 +90,7 @@ NIST SP 800-63B requires at least one phishing-resistant option at its middle as
 
 ## Single sign-on
 
-**SSO** moves authentication into an identity provider: your app redirects the user there, the provider authenticates them and returns a signed assertion, XML in **SAML 2.0** or a JSON ID token in **OpenID Connect** (see [OAuth 2.0, OpenID Connect and JWT](/learn/oauth-jwt)). Your service never sees the password, and still creates its own session afterwards.
+**SSO** moves authentication into an identity provider: your app redirects the user there, the provider authenticates them and returns a signed assertion, XML in **SAML 2.0** or a JSON ID token in **OpenID Connect** (see [OAuth 2.0, OpenID Connect and JWT](/learn/security/oauth-jwt)). Your service never sees the password, and still creates its own session afterwards.
 
 <Callout type="analogy" title="The cloakroom ticket">
 

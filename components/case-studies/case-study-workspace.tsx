@@ -7,6 +7,7 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { cn } from "@/lib/utils";
 import type { CaseStudy } from "@/types/case-study";
+import { lessonHref } from "@/lib/curriculum";
 
 /**
  * Interview-style practice: one step at a time. The learner answers the prompt on their own,
@@ -171,7 +172,7 @@ export function CaseStudyWorkspace({ study }: { study: CaseStudy }) {
             <p className="mt-3 text-sm text-ink-3">Answer these out loud before you check the walkthrough.</p>
           </section>
           <div className="flex flex-wrap items-center gap-3" data-companion-avoid="">
-            <Link href={`/learn/${study.slug}`} className={buttonClasses("primary", "md")}>
+            <Link href={lessonHref(study.slug)} className={buttonClasses("primary", "md")}>
               Read the full walkthrough <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
             <ReviewButton slug={study.slug} title={study.title} size="button" />

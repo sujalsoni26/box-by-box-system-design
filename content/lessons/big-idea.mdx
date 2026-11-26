@@ -10,17 +10,17 @@ This course grows **one system**, an Instagram-like app, from one user and one s
 
 <Steps>
 
-1. **1 user, 1 server.** The phone has to find the server and talk to it safely: [DNS](/learn/dns), [TCP](/learn/tcp-udp), [HTTP and TLS](/learn/http).
-2. **Tens of thousands of users.** One server can't keep up, so you add [load balancers](/learn/load-balancing), [horizontal scaling](/learn/scaling) and a [CDN](/learn/cdn).
-3. **Many pieces talking.** You split the app into services and give them contracts: [REST](/learn/rest), [gRPC](/learn/grpc), [WebSockets](/learn/websockets), [microservices](/learn/microservices).
-4. **Data piles up.** You choose databases, then add [indexes](/learn/indexing), [replicas](/learn/replication) and [shards](/learn/sharding).
-5. **Millions of reads of one celebrity post.** You add [caches](/learn/caching) and [object storage](/learn/object-storage).
-6. **Many teams, many events.** You stop services from waiting on each other with [queues](/learn/message-queues) and [events](/learn/pubsub).
-7. **Failure becomes normal.** You add [timeouts](/learn/timeouts-retries), [circuit breakers](/learn/circuit-breaker), [rate limits](/learn/rate-limiting) and [idempotency keys](/learn/idempotency).
+1. **1 user, 1 server.** The phone has to find the server and talk to it safely: [DNS](/learn/foundations/dns), [TCP](/learn/foundations/tcp-udp), [HTTP and TLS](/learn/foundations/http).
+2. **Tens of thousands of users.** One server can't keep up, so you add [load balancers](/learn/scaling/load-balancing), [horizontal scaling](/learn/scaling/scaling) and a [CDN](/learn/scaling/cdn).
+3. **Many pieces talking.** You split the app into services and give them contracts: [REST](/learn/communication/rest), [gRPC](/learn/communication/grpc), [WebSockets](/learn/communication/websockets), [microservices](/learn/communication/microservices).
+4. **Data piles up.** You choose databases, then add [indexes](/learn/data/indexing), [replicas](/learn/data/replication) and [shards](/learn/data/sharding).
+5. **Millions of reads of one celebrity post.** You add [caches](/learn/reliability/caching) and [object storage](/learn/data/object-storage).
+6. **Many teams, many events.** You stop services from waiting on each other with [queues](/learn/reliability/message-queues) and [events](/learn/reliability/pubsub).
+7. **Failure becomes normal.** You add [timeouts](/learn/reliability/timeouts-retries), [circuit breakers](/learn/reliability/circuit-breaker), [rate limits](/learn/reliability/rate-limiting) and [idempotency keys](/learn/reliability/idempotency).
 
 </Steps>
 
-By the end of the course, those blocks together form [a complete architecture](/learn/final-architecture), and you'll know why each box is there.
+By the end of the course, those blocks together form [a complete architecture](/learn/practice/final-architecture), and you'll know why each box is there.
 
 ## Start simple, then find what breaks
 
@@ -39,7 +39,7 @@ One person can take orders, brew and serve when ten customers show up. At a hund
 <Steps>
 
 1. **Clarify requirements**: functional (what users do) and non-functional (scale, latency, availability, consistency).
-2. **Estimate the scale** with quick back-of-the-envelope maths (covered in the [estimation lessons](/learn/estimation-numbers)).
+2. **Estimate the scale** with quick back-of-the-envelope maths (covered in the [estimation lessons](/learn/practice/estimation-numbers)).
 3. **Design the architecture**: start with one server and one database, then add boxes.
 4. **Deep-dive** into the two or three hardest parts.
 

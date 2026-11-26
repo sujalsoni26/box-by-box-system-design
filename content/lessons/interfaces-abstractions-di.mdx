@@ -1,4 +1,4 @@
-**Dependency injection (DI)** means a class receives the collaborators it needs from outside, through its constructor, instead of creating them itself. It is the dependency inversion principle from [SOLID](/learn/solid) turned into a habit, and it decides whether a class can be unit-tested without a database, a network or the real time.
+**Dependency injection (DI)** means a class receives the collaborators it needs from outside, through its constructor, instead of creating them itself. It is the dependency inversion principle from [SOLID](/learn/lld/solid) turned into a habit, and it decides whether a class can be unit-tested without a database, a network or the real time.
 
 ## Program to an interface, and let the consumer own it
 
@@ -104,7 +104,7 @@ Everything above exists so this line can be written:
 var service = new OrderService(new InMemoryOrderRepository(), Clock.fixed(T0, ZoneOffset.UTC));
 ```
 
-No database, no container, a clock frozen at a known instant, and a repository you can inspect after the call. [Unit testing and designing for extensibility](/learn/testing-extensibility) builds on exactly this: fakes stand in for the interfaces the consumer owns.
+No database, no container, a clock frozen at a known instant, and a repository you can inspect after the call. [Unit testing and designing for extensibility](/learn/lld/testing-extensibility) builds on exactly this: fakes stand in for the interfaces the consumer owns.
 
 <Callout type="warning" title="The over-application smell">
 

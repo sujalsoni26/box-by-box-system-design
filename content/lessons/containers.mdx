@@ -1,6 +1,6 @@
 A **container** is an ordinary process that the Linux kernel has walled off: it sees its own filesystem, its own process tree and its own network, and it can be capped on CPU and memory. It does not get its own kernel. An **image** is the read-only filesystem and start-up instructions a container is created from, and because an image never changes after it is built, the same bytes run on your laptop, on the test cluster and on two hundred production machines.
 
-Once you [scale out](/learn/scaling) to many machines, every one of them must carry the same libraries, the same language runtime and the same configuration, or requests behave differently depending on which server the load balancer picks. Installing software onto machines by hand, or with scripts that drift, is how "works on my machine" becomes an outage. Containers move the whole dependency tree into the artefact you ship.
+Once you [scale out](/learn/scaling/scaling) to many machines, every one of them must carry the same libraries, the same language runtime and the same configuration, or requests behave differently depending on which server the load balancer picks. Installing software onto machines by hand, or with scripts that drift, is how "works on my machine" becomes an outage. Containers move the whole dependency tree into the artefact you ship.
 
 ## What a container isolates, and what it shares
 
@@ -17,7 +17,7 @@ The isolation comes from two kernel features. **Namespaces** give a process its 
 | Cgroup | view of the cgroup hierarchy |
 | Time | boot and monotonic clocks |
 
-Cgroups add the limits: a container allowed half a CPU and 256 MiB of memory is throttled when it wants more CPU and may be killed by the kernel when it exceeds the memory limit. The requests and limits in [Kubernetes](/learn/kubernetes) are these cgroup settings with a scheduler in front.
+Cgroups add the limits: a container allowed half a CPU and 256 MiB of memory is throttled when it wants more CPU and may be killed by the kernel when it exceeds the memory limit. The requests and limits in [Kubernetes](/learn/infrastructure/kubernetes) are these cgroup settings with a scheduler in front.
 
 What is shared is the kernel. Every container on a machine makes system calls into the same kernel, so a kernel bug is a shared risk, and a Linux container needs a Linux kernel underneath it.
 

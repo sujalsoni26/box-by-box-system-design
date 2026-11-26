@@ -11,7 +11,7 @@
  */
 import type { User } from "firebase/auth";
 import { localStorageAdapter, onPersistWrite } from "@/lib/storage/adapter";
-import { defaultCompanionSettings, usePreferencesStore } from "@/stores/preferences-store";
+import { defaultCompanionSettings, emptyProfile, usePreferencesStore } from "@/stores/preferences-store";
 import { DEFAULT_FOCUS_MINUTES, useFocusStore } from "@/stores/companion-store";
 import { useNotesStore } from "@/stores/notes-store";
 import { useProgressStore } from "@/stores/progress-store";
@@ -68,7 +68,7 @@ function resetStore(key: SyncKey) {
   if (key === "progress") useProgressStore.getState().reset();
   else if (key === "notes") useNotesStore.setState({ notes: {} });
   else if (key === "focus") useFocusStore.setState({ session: null, sessionsDone: 0, focusMinutes: DEFAULT_FOCUS_MINUTES });
-  else usePreferencesStore.setState({ knownTerms: [], companion: defaultCompanionSettings });
+  else usePreferencesStore.setState({ knownTerms: [], companion: defaultCompanionSettings, profile: emptyProfile });
 }
 
 const localSide = {
@@ -147,6 +147,8 @@ function toAccountUser(user: User): AccountUser {
     email: user.email,
     name: user.displayName,
     provider: google ? "google" : password ? "password" : "other",
+    hasGoogle: google,
+    hasPassword: password,
     verified: user.emailVerified || google,
   };
 }
@@ -306,6 +308,51 @@ export async function signOutAccount(): Promise<void> {
   setAccount({ phase: "signed-out", user: null });
 }
 
+const requiresRecentLogin = (e: unknown) => (e as { code?: string } | null)?.code === "auth/requires-recent-login";
+
+/**
+ * Give a Google account a password too, so the same email can still sign in (and keep its progress) if Google
+ * sign-in ever stops working for the learner. Firebase may ask for a fresh Google confirmation first.
+ */
+export async function addPassword(password: string): Promise<ActionResult> {
+  const problems = passwordProblems(password, await loadPasswordRules());
+  if (problems.length) return { ok: false, message: `Your password needs ${problems.join(", ")}.` };
+  const result = await attempt("password", async ({ a, auth }) => {
+    const user = auth.currentUser;
+    if (!user?.email) throw Object.assign(new Error("none"), { code: "auth/user-not-found" });
+    const status = await a.validatePassword(auth, password).catch(() => null);
+    if (status && !status.isValid) throw Object.assign(new Error("policy"), { code: "auth/password-does-not-meet-requirements" });
+    const credential = () => a.EmailAuthProvider.credential(user.email!, password);
+    try {
+      await a.linkWithCredential(user, credential());
+    } catch (e) {
+      if (!requiresRecentLogin(e)) throw e;
+      await a.reauthenticateWithPopup(user, new a.GoogleAuthProvider());
+      await a.linkWithCredential(user, credential());
+    }
+    await user.reload();
+    setAccount({ user: toAccountUser(user) });
+  });
+  return result.ok ? { ok: true, message: "Password set. You can now sign in with your email and this password, with or without Google." } : result;
+}
+
+/** Change the password of an account that has one (confirming the current password first). */
+export async function changePassword(current: string, next: string): Promise<ActionResult> {
+  if (!current) return { ok: false, message: "Enter your current password." };
+  const problems = passwordProblems(next, await loadPasswordRules());
+  if (problems.length) return { ok: false, message: `Your new password needs ${problems.join(", ")}.` };
+  if (current === next) return { ok: false, message: "Choose a new password that differs from the current one." };
+  const result = await attempt("password", async ({ a, auth }) => {
+    const user = auth.currentUser;
+    if (!user?.email) throw Object.assign(new Error("none"), { code: "auth/user-not-found" });
+    const status = await a.validatePassword(auth, next).catch(() => null);
+    if (status && !status.isValid) throw Object.assign(new Error("policy"), { code: "auth/password-does-not-meet-requirements" });
+    await a.reauthenticateWithCredential(user, a.EmailAuthProvider.credential(user.email, current));
+    await a.updatePassword(user, next);
+  });
+  return result.ok ? { ok: true, message: "Password changed." } : result;
+}
+
 /**
  * Delete the account: confirm identity again (Google pop-up, or the password), delete the account's copy, the
  * account and this browser's copy.
@@ -316,11 +363,11 @@ export async function deleteAccount(password?: string): Promise<ActionResult> {
     const user = auth.currentUser;
     if (!user) throw Object.assign(new Error("none"), { code: "auth/user-not-found" });
     const account = toAccountUser(user);
-    if (account.provider === "google") await a.reauthenticateWithPopup(user, new a.GoogleAuthProvider());
-    else {
-      if (!password || !user.email) throw Object.assign(new Error("missing"), { code: "auth/missing-password" });
+    // An account with a password confirms with it when one is given; otherwise (or Google only) with Google.
+    if (account.hasPassword && password && user.email) {
       await a.reauthenticateWithCredential(user, a.EmailAuthProvider.credential(user.email, password));
-    }
+    } else if (account.hasGoogle) await a.reauthenticateWithPopup(user, new a.GoogleAuthProvider());
+    else throw Object.assign(new Error("missing"), { code: "auth/missing-password" });
     engine?.stop();
     if (account.verified) await firestoreBackend(kit).removeAll(user.uid);
     await a.deleteUser(user);

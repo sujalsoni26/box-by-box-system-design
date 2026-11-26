@@ -39,13 +39,13 @@ class TimedSmsSender implements SmsSender {                   // Decorator: same
 // composition root: new TimedSmsSender(new RetryingSmsSender(new VendorSmsAdapter(client)))
 ```
 
-`OtpService` now takes an `SmsSender` in its constructor and knows nothing about vendors or metrics (see [Interfaces, abstractions and dependency injection](/learn/interfaces-abstractions-di)). The JDK's I/O streams are the textbook Decorator: `new BufferedReader(new InputStreamReader(in))` stacks buffering on decoding without either class knowing about the other.
+`OtpService` now takes an `SmsSender` in its constructor and knows nothing about vendors or metrics (see [Interfaces, abstractions and dependency injection](/learn/lld/interfaces-abstractions-di)). The JDK's I/O streams are the textbook Decorator: `new BufferedReader(new InputStreamReader(in))` stacks buffering on decoding without either class knowing about the other.
 
 ## Proxy and Facade: control and simplification
 
-A **Proxy** also implements the same interface as the object it stands in for, but its purpose is to control access: lazy creation, caching, permission checks, or a network hop. A gRPC client stub is a remote proxy (see [gRPC](/learn/grpc)); `Collections.unmodifiableList` is a protection proxy that forwards reads and rejects writes; a reverse proxy is the network-level cousin (see [Proxy and reverse proxy](/learn/proxy)).
+A **Proxy** also implements the same interface as the object it stands in for, but its purpose is to control access: lazy creation, caching, permission checks, or a network hop. A gRPC client stub is a remote proxy (see [gRPC](/learn/communication/grpc)); `Collections.unmodifiableList` is a protection proxy that forwards reads and rejects writes; a reverse proxy is the network-level cousin (see [Proxy and reverse proxy](/learn/scaling/proxy)).
 
-A **Facade** gives a subsystem one simple entry point: `placeOrder(cart)` reserves stock, charges the card and sends the confirmation, and callers never learn there are three services behind it. An API gateway is a facade for a whole backend (see [API gateway](/learn/api-gateway)). The failure mode is that all logic quietly lands in the facade, and three years later it is the god class (see [Clean code and maintainability](/learn/clean-code)).
+A **Facade** gives a subsystem one simple entry point: `placeOrder(cart)` reserves stock, charges the card and sends the confirmation, and callers never learn there are three services behind it. An API gateway is a facade for a whole backend (see [API gateway](/learn/architecture/api-gateway)). The failure mode is that all logic quietly lands in the facade, and three years later it is the god class (see [Clean code and maintainability](/learn/lld/clean-code)).
 
 ## Telling them apart
 
@@ -93,7 +93,7 @@ Some domains are trees: files and directories, panels containing widgets, menu c
 
 <Callout type="warning" title="Wrapper soup">
 
-Each layer is cheap; seven are not. Stack traces grow, debugging means stepping through forwarding methods, and `instanceof` and `equals` on the outermost object no longer see the real one. Worse, an object's calls to its own methods bypass the wrapper, so a caching decorator never sees a self-call. Prefer a few well-named layers assembled in one place, usually by a factory from [Design patterns I](/learn/design-patterns-creational).
+Each layer is cheap; seven are not. Stack traces grow, debugging means stepping through forwarding methods, and `instanceof` and `equals` on the outermost object no longer see the real one. Worse, an object's calls to its own methods bypass the wrapper, so a caching decorator never sees a self-call. Prefer a few well-named layers assembled in one place, usually by a factory from [Design patterns I](/learn/lld/design-patterns-creational).
 
 </Callout>
 
@@ -103,7 +103,7 @@ When you draw a wrapper, say which of the five it is and why, in one clause: "a 
 
 </Callout>
 
-Applied in the case studies: a statistics wrapper around an [in-memory cache](/learn/lld-in-memory-cache), the formatters and sinks of the [logging framework](/learn/lld-logging-framework), and the single entry point a [ride booking](/learn/lld-ride-booking) flow offers over matching, pricing and payment.
+Applied in the case studies: a statistics wrapper around an [in-memory cache](/learn/lld-practice/lld-in-memory-cache), the formatters and sinks of the [logging framework](/learn/lld-practice/lld-logging-framework), and the single entry point a [ride booking](/learn/lld-practice/lld-ride-booking) flow offers over matching, pricing and payment.
 
 <DeepDive title="Go deeper: why framework proxies miss self-calls">
 

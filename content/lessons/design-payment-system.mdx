@@ -1,4 +1,4 @@
-Move money for an order through a **payment service provider (PSP)** so that every rupee is charged once, recorded once and can be proven later, when any call to the PSP can time out *after* the money has moved. The order service, the PSP and the bank each have their own idea of what happened, and none of them will join your transaction. This study assumes [Idempotency](/learn/idempotency), [Distributed transactions](/learn/distributed-transactions) and [Sagas](/learn/sagas), is the payment service that [Design a ticket booking system](/learn/design-ticket-booking) calls, and follows the order of [How to work a case study](/learn/case-study-method).
+Move money for an order through a **payment service provider (PSP)** so that every rupee is charged once, recorded once and can be proven later, when any call to the PSP can time out *after* the money has moved. The order service, the PSP and the bank each have their own idea of what happened, and none of them will join your transaction. This study assumes [Idempotency](/learn/reliability/idempotency), [Distributed transactions](/learn/distributed/distributed-transactions) and [Sagas](/learn/distributed/sagas), is the payment service that [Design a ticket booking system](/learn/hld/design-ticket-booking) calls, and follows the order of [How to work a case study](/learn/hld/case-study-method).
 
 ## Requirements
 
@@ -28,7 +28,7 @@ Assume 1M payments a day averaging ₹1,500, one authorisation and one capture p
 | Settlement rows to match | one per capture and refund | \~1.05M a day, a batch job |
 | Money in flight per minute of PSP ambiguity | 10/s × 60 s × ₹1,500 | ₹9 lakh of "did it go through?" |
 
-→ <mark>Ten payments a second is nothing; nine lakh rupees a minute of "did it go through?" is everything.</mark> Nothing in the table strains a database. The design is about keeping one correct record of money across three parties that never share a transaction. In the terms of [Three system shapes](/learn/system-shapes) this is a write-heavy stream of small immutable records, with the twist that a dropped record is lost money, so the stream is a ledger, not a log.
+→ <mark>Ten payments a second is nothing; nine lakh rupees a minute of "did it go through?" is everything.</mark> Nothing in the table strains a database. The design is about keeping one correct record of money across three parties that never share a transaction. In the terms of [Three system shapes](/learn/practice/system-shapes) this is a write-heavy stream of small immutable records, with the twist that a dropped record is lost money, so the stream is a ledger, not a log.
 
 ## API
 
@@ -125,10 +125,10 @@ CREATE TABLE settlement_line (
 - **Payment API:** stores the caller's idempotency key and a hash of the request in the same transaction as the payment, so that a retried `POST` returns the saved response.
 - **Orchestrator:** owns the state machine and the saga with the order service, because the rules for what may follow what must live in one place.
 - **PSP adapter:** mints one idempotency key per attempt and records the attempt before calling, so that a crash mid-call leaves evidence (deep dive 1).
-- **Webhook receiver:** verifies the signature, inserts the event id, answers 200 and enqueues, so that bursts and slow processing never make the PSP retry (see [Message queues](/learn/message-queues)).
+- **Webhook receiver:** verifies the signature, inserts the event id, answers 200 and enqueues, so that bursts and slow processing never make the PSP retry (see [Message queues](/learn/reliability/message-queues)).
 - **Payments DB and ledger:** one PostgreSQL cluster, because the status change, the ledger journal and the attempt outcome must commit together.
 - **Reconciliation job:** matches the PSP's settlement report to our journals every day, so that whatever idempotency missed is found within a day (deep dive 2).
-- **Outbox:** publishes `payment.authorised` and `payment.captured` after commit, so that the order service's saga advances without a distributed transaction (see [Pub/Sub](/learn/pubsub)).
+- **Outbox:** publishes `payment.authorised` and `payment.captured` after commit, so that the order service's saga advances without a distributed transaction (see [Pub/Sub](/learn/reliability/pubsub)).
 
 <Mermaid caption="One payment, with a timeout on the first authorise call and a duplicated webhook. The retry reuses the attempt key, so the PSP replays its first answer; the second webhook is recognised by its event id and ignored." chart={`---
 config:
@@ -178,7 +178,7 @@ Stripe's PaymentIntent has the same shape under other names: `requires_action`, 
 
 | Data | Where | Why |
 | --- | --- | --- |
-| Payments, attempts, API keys | PostgreSQL, one primary | The key, the attempt and the status change must commit together (see [ACID transactions](/learn/acid)) |
+| Payments, attempts, API keys | PostgreSQL, one primary | The key, the attempt and the status change must commit together (see [ACID transactions](/learn/data/acid)) |
 | Ledger | The same cluster, its own schema, partitioned by month, insert-only role | A balance is a sum of entries; 1.1 TB a year is partition pruning, not a problem |
 | PSP events | PostgreSQL, primary key on the PSP's event id | Deduplication must be in the same transaction as processing |
 | Settlement reports | Object storage for the raw file, rows for matching | The file is audit evidence; the rows are what the job joins |
@@ -189,7 +189,7 @@ Square's Books, its internal double-entry service, caches balances on entries so
 
 ## Scaling
 
-The ceiling is not ours. The PSP's rate limit and latency bound the system, so the outbound pool is sized by Little's law, about 100 concurrent calls at the sale-day peak and 400 when the PSP is slow, and anything beyond that waits in a queue with the payment in AUTHORISING rather than failing (see [Backpressure](/learn/backpressure)). Webhooks arrive in bursts, so they land on a queue and the orchestrator consumes at its own pace.
+The ceiling is not ours. The PSP's rate limit and latency bound the system, so the outbound pool is sized by Little's law, about 100 concurrent calls at the sale-day peak and 400 when the PSP is slow, and anything beyond that waits in a queue with the payment in AUTHORISING rather than failing (see [Backpressure](/learn/reliability/backpressure)). Webhooks arrive in bursts, so they land on a queue and the orchestrator consumes at its own pace.
 
 Writes are 100 payments a second plus a few hundred ledger entries; one primary does this with a wide margin, and when it does not, payments shard by `payment_id` and the ledger partitions by month. The hot spot is accounting, not traffic: merchant payable receives an entry on every capture, which is why balances are snapshot-plus-sum and never one row updated per payment. A second PSP arrives before a second database does.
 
@@ -202,7 +202,7 @@ Writes are 100 payments a second plus a few hundred ledger entries; one primary 
 | Between order and payment | A saga | Order PENDING → authorise (the pivot) → order CONFIRMED → capture; compensations void the authorisation and release stock |
 | Reads by the order service | Read your own writes | Status read from the primary; dashboards may lag |
 
-Two-phase commit with the PSP is not an option you decline; it does not exist, because a PSP will not prepare, hold locks and wait for your decision. So the design replaces atomicity with **idempotency plus reconciliation**, and isolation with the saga's semantic lock, the PENDING order that other code treats as provisional. In [CAP](/learn/cap) terms the service is CP about its own records and tolerant of the PSP's absence: when the PSP is unreachable, `POST /payments` still returns 201 with status AUTHORISING, because the attempt is durable and will be resolved.
+Two-phase commit with the PSP is not an option you decline; it does not exist, because a PSP will not prepare, hold locks and wait for your decision. So the design replaces atomicity with **idempotency plus reconciliation**, and isolation with the saga's semantic lock, the PENDING order that other code treats as provisional. In [CAP](/learn/data/cap) terms the service is CP about its own records and tolerant of the PSP's absence: when the PSP is unreachable, `POST /payments` still returns 201 with status AUTHORISING, because the attempt is durable and will be resolved.
 
 <Callout type="analogy" title="A cheque you may have posted">
 
@@ -214,7 +214,7 @@ You write a cheque and cannot remember whether you dropped it in the postbox. Yo
 
 | Failure | What users see | How it heals |
 | --- | --- | --- |
-| PSP times out on authorise | "Processing" | Retry the same attempt key with backoff (see [Timeouts and retries](/learn/timeouts-retries)); past the budget, leave the outcome NULL and let the reconciler query the PSP by that key; never a new key |
+| PSP times out on authorise | "Processing" | Retry the same attempt key with backoff (see [Timeouts and retries](/learn/reliability/timeouts-retries)); past the budget, leave the outcome NULL and let the reconciler query the PSP by that key; never a new key |
 | We crash after the PSP authorised, before recording it | A payment stuck in AUTHORISING | A recovery job finds attempts with NULL outcome and asks the PSP; the webhook arrives too |
 | Webhook lost | Status lags | The PSP retries (Stripe: for up to three days with exponential backoff); we also poll any CAPTURE\_PENDING older than ten minutes |
 | Webhook delivered twice | Nothing | `psp_event`'s primary key |
@@ -230,14 +230,14 @@ You write a cheque and cannot remember whether you dropped it in the postbox. Yo
 ## Security
 
 - **PCI DSS scope:** card numbers go from the PSP's hosted fields straight to the PSP; Stripe's integration guide describes this as collecting payment information without it passing through your servers, which reduces the compliance burden. We keep the token, brand, last four digits and expiry, which that guide lists as storable.
-- **Webhooks:** verify an HMAC with SHA-256 over the timestamp and the raw body using the endpoint secret, compare in constant time, reject stale timestamps, and allowlist the PSP's IPs; Stripe's `Stripe-Signature` covers a timestamp and the body, Razorpay's `X-Razorpay-Signature` the body alone. Secrets live in a manager and rotate (see [Secrets management](/learn/secrets-management)).
-- **Authorization:** only the order service may create payments; refunds need a role and a reason; amounts are validated against the order on the server (see [Authorization](/learn/authorization)).
+- **Webhooks:** verify an HMAC with SHA-256 over the timestamp and the raw body using the endpoint secret, compare in constant time, reject stale timestamps, and allowlist the PSP's IPs; Stripe's `Stripe-Signature` covers a timestamp and the body, Razorpay's `X-Razorpay-Signature` the body alone. Secrets live in a manager and rotate (see [Secrets management](/learn/security/secrets-management)).
+- **Authorization:** only the order service may create payments; refunds need a role and a reason; amounts are validated against the order on the server (see [Authorization](/learn/security/authorization)).
 - **Keys:** idempotency keys are random, never built from emails or card data, because the PSP stores them.
 - **Audit:** the attempts table and the ledger *are* the audit log; nothing in them can be rewritten.
 
 ## Observability
 
-Six numbers prove the system is healthy (see [Metrics and monitoring](/learn/metrics-monitoring)): **authorisation success rate** by PSP and method, because a decline wave is either fraud or a broken PSP; **PSP p99 latency**; **payments older than ten minutes in AUTHORISING or CAPTURE\_PENDING**, the alert that pages; **attempts with unknown outcome**; **ledger imbalance**, the sum of every journal, which must read zero; and **reconciliation breaks** by count and amount. The trace to keep (see [Distributed tracing](/learn/tracing)) follows one `payment_id` from the API through the PSP call, the webhook and the ledger write, so that a stuck payment shows which hop went quiet.
+Six numbers prove the system is healthy (see [Metrics and monitoring](/learn/operations/metrics-monitoring)): **authorisation success rate** by PSP and method, because a decline wave is either fraud or a broken PSP; **PSP p99 latency**; **payments older than ten minutes in AUTHORISING or CAPTURE\_PENDING**, the alert that pages; **attempts with unknown outcome**; **ledger imbalance**, the sum of every journal, which must read zero; and **reconciliation breaks** by count and amount. The trace to keep (see [Distributed tracing](/learn/operations/tracing)) follows one `payment_id` from the API through the PSP call, the webhook and the ledger write, so that a stuck payment shows which hop went quiet.
 
 ## Trade-offs and bottlenecks
 
@@ -257,7 +257,7 @@ One call, one state to track, money available sooner. The cost is that every ful
 
 </Comparison>
 
-The condition that decides: <mark>can fulfilment fail after the customer has paid?</mark> If it can, authorise first. Next to break, in order: the **PSP's rate limit** on a sale day, answered by a second PSP; the **webhook burst** when a sale ends, answered by the queue; the **merchant payable** account, answered by snapshot balances; and **reconciliation drift**, when breaks pile up faster than people clear them. Not taken: two-phase commit with the PSP (impossible); exactly-once as a property of the system (see [Delivery semantics](/learn/delivery-semantics): what exists is at-least-once calls, idempotent on both ends, plus a daily check); a mutable balance column (history gone, hot row); idempotency keys in Redis rather than in the payment's own transaction (a crash between the two is a double charge or a lost one).
+The condition that decides: <mark>can fulfilment fail after the customer has paid?</mark> If it can, authorise first. Next to break, in order: the **PSP's rate limit** on a sale day, answered by a second PSP; the **webhook burst** when a sale ends, answered by the queue; the **merchant payable** account, answered by snapshot balances; and **reconciliation drift**, when breaks pile up faster than people clear them. Not taken: two-phase commit with the PSP (impossible); exactly-once as a property of the system (see [Delivery semantics](/learn/streaming/delivery-semantics): what exists is at-least-once calls, idempotent on both ends, plus a daily check); a mutable balance column (history gone, hot row); idempotency keys in Redis rather than in the payment's own transaction (a crash between the two is a double charge or a lost one).
 
 <Callout type="interview" title="Say idempotent and reconciled, not exactly-once">
 
@@ -267,9 +267,9 @@ The condition that decides: <mark>can fulfilment fail after the customer has pai
 
 ## How it evolves
 
-At **10×** a second and third PSP arrive, routed by method, cost and health, with failover when one declines everything; the adapter already isolates them. Webhooks move onto a durable log (see [Kafka architecture](/learn/kafka-architecture)) so a burst of a million events at the end of a sale is replayable. Payouts to merchants become journals from merchant payable to bank, and reconciliation gains the bank statement as a third party to match.
+At **10×** a second and third PSP arrive, routed by method, cost and health, with failover when one declines everything; the adapter already isolates them. Webhooks move onto a durable log (see [Kafka architecture](/learn/streaming/kafka-architecture)) so a burst of a million events at the end of a sale is replayable. Payouts to merchants become journals from merchant payable to bank, and reconciliation gains the bank statement as a third party to match.
 
-At **100×** the ledger becomes its own service with its own storage, the shape Square described for Books: immutable double entry at about 20 TB on a horizontally scaled database. Payments are event-sourced, so a status is a fold over attempts and events (see [Event sourcing](/learn/event-sourcing)); every currency conversion is a journal; and each region talks to local PSPs while the ledger stays the single truth. Idempotency, the state machine and the ledger survive every step; only their containers change.
+At **100×** the ledger becomes its own service with its own storage, the shape Square described for Books: immutable double entry at about 20 TB on a horizontally scaled database. Payments are event-sourced, so a status is a fold over attempts and events (see [Event sourcing](/learn/architecture/event-sourcing)); every currency conversion is a journal; and each region talks to local PSPs while the ledger stays the single truth. Idempotency, the state machine and the ledger survive every step; only their containers change.
 
 ## Deep dive 1: one key per attempt, and the unknown outcome
 

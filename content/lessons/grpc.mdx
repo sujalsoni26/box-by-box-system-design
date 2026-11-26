@@ -52,7 +52,7 @@ sequenceDiagram
     F-->>C: Chronological feed (fallback) inside 300 ms
 `} />
 
-Either side can **cancel** a call that is in flight, which stops further work; changes already made are not rolled back. Client and server also judge success independently: the server may have finished while the client saw a timeout. That is one more reason to make writes idempotent (see [Idempotency](/learn/idempotency)).
+Either side can **cancel** a call that is in flight, which stops further work; changes already made are not rolled back. Client and server also judge success independently: the server may have finished while the client saw a timeout. That is one more reason to make writes idempotent (see [Idempotency](/learn/reliability/idempotency)).
 
 ## Status codes
 

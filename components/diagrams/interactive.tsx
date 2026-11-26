@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ANIMATED_INTERACTIVES, interactiveRegistry, type InteractiveName } from "./interactive-registry";
+import { INTERACTIVE_TITLES } from "./interactive-titles";
 import { SimSpeedProvider } from "./sim-speed";
 import { useInView } from "@/lib/hooks/use-in-view";
 
@@ -34,7 +35,15 @@ export function InteractiveDiagram({ name, variant }: InteractiveDiagramProps) {
   }
   const Component = interactiveRegistry[name];
   return (
-    <div ref={ref} data-companion-avoid="" data-interactive={name} className="min-h-[14rem]">
+    <div
+      ref={ref}
+      id={`try-${name}${variant ? `-${variant}` : ""}`}
+      data-toc={`Try it: ${INTERACTIVE_TITLES[name] ?? name}`}
+      data-toc-level="2"
+      data-companion-avoid=""
+      data-interactive={name}
+      className="min-h-[14rem] scroll-mt-24"
+    >
       {mounted ? (
         // Each block owns its playback speed; the provider scopes it to this block only.
         <SimSpeedProvider animated={ANIMATED_INTERACTIVES.has(name)}>

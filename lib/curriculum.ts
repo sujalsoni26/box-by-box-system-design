@@ -31,6 +31,15 @@ const moduleById = new Map(modules.map((m) => [m.id, m]));
 
 export { modules };
 
+/**
+ * A lesson's URL: /learn/<module>/<slug> (e.g. /learn/data/sql-nosql), so the address says where the lesson sits in
+ * the course. The old /learn/<slug> addresses redirect here (next.config.ts).
+ */
+export function lessonHref(slug: string): string {
+  const lesson = lessonBySlug.get(slug);
+  return lesson ? `/learn/${lesson.moduleId}/${slug}` : `/learn/${slug}`;
+}
+
 export function getLesson(slug: string): Lesson | undefined {
   return lessonBySlug.get(slug);
 }

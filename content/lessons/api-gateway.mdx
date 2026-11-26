@@ -1,4 +1,4 @@
-An **API gateway** is the one address your clients call: a reverse proxy (see [Proxy and reverse proxy](/learn/proxy)) that has learned about your API, so it can check who is calling, enforce limits, and route or fan out to the services behind it. A **backend-for-frontend (BFF)** is a gateway built for exactly one kind of client and owned by the team that builds that client.
+An **API gateway** is the one address your clients call: a reverse proxy (see [Proxy and reverse proxy](/learn/scaling/proxy)) that has learned about your API, so it can check who is calling, enforce limits, and route or fan out to the services behind it. A **backend-for-frontend (BFF)** is a gateway built for exactly one kind of client and owned by the team that builds that client.
 
 ## What belongs at the gateway
 
@@ -7,14 +7,14 @@ Everything a gateway does well is something that applies to *every* request and 
 | Job | What the gateway does | Why here and not in each service |
 | --- | --- | --- |
 | TLS termination | Decrypts HTTPS once at the edge | One certificate store; services speak plain HTTP or mTLS inside |
-| Authentication | Verifies tokens or API keys, passes a trusted identity header downstream (see [Authentication](/learn/authentication)) | Checked once; services never see an unauthenticated request |
-| Rate limiting and quotas | Per client, key or plan (see [Rate limiting](/learn/rate-limiting)) | The only place that sees all of one client's traffic |
+| Authentication | Verifies tokens or API keys, passes a trusted identity header downstream (see [Authentication](/learn/security/authentication)) | Checked once; services never see an unauthenticated request |
+| Rate limiting and quotas | Per client, key or plan (see [Rate limiting](/learn/reliability/rate-limiting)) | The only place that sees all of one client's traffic |
 | Routing and canaries | Path, host or header to service; weighted split to a new version | Deployment detail hidden from clients |
 | Aggregation | One client call fans out to several services and returns one response | Saves a phone three round trips on a slow network |
-| Protocol translation | HTTP and JSON outside, gRPC inside (see [gRPC](/learn/grpc)); WebSocket upgrade | Services pick the protocol that suits them |
+| Protocol translation | HTTP and JSON outside, gRPC inside (see [gRPC](/learn/communication/grpc)); WebSocket upgrade | Services pick the protocol that suits them |
 | Observability | Request ids, access logs, latency metrics | One consistent edge record per request |
 
-What does *not* belong: business rules. "Orders above ₹5,000 need a second factor" depends on order data and belongs to the Ordering team; put it in the gateway and it is logic nobody owns, redeployed for every tweak, impossible to unit test with the domain. The same goes for validation beyond schema shape and for orchestrating writes across services, which is a saga's job (see [Sagas](/learn/sagas)). <mark>If changing a business rule means redeploying the gateway, the rule is in the wrong place.</mark>
+What does *not* belong: business rules. "Orders above ₹5,000 need a second factor" depends on order data and belongs to the Ordering team; put it in the gateway and it is logic nobody owns, redeployed for every tweak, impossible to unit test with the domain. The same goes for validation beyond schema shape and for orchestrating writes across services, which is a saga's job (see [Sagas](/learn/distributed/sagas)). <mark>If changing a business rule means redeploying the gateway, the rule is in the wrong place.</mark>
 
 ## Backend-for-frontend
 
@@ -53,14 +53,14 @@ Passport control checks identity once (authentication); separate queues for diff
 | Typical jobs | TLS, caching, compression, load balancing | Auth, quotas, aggregation, protocol translation | mTLS, retries, timeouts, breakers, telemetry |
 | Examples | Nginx, HAProxy | Kong, Envoy Gateway, Amazon API Gateway | Istio, Linkerd |
 
-Envoy appears in two columns: as the engine of Envoy Gateway at the edge and as the sidecar in Istio (see [Service mesh](/learn/service-mesh)). Kong ships a plugin library for authentication, rate limiting and load balancing with health checks. Envoy Gateway manages Envoy proxies configured through the Kubernetes Gateway API. Amazon API Gateway fronts REST, HTTP and WebSocket APIs with authorizers (IAM, Lambda functions, Cognito user pools), canary releases and a web application firewall.
+Envoy appears in two columns: as the engine of Envoy Gateway at the edge and as the sidecar in Istio (see [Service mesh](/learn/architecture/service-mesh)). Kong ships a plugin library for authentication, rate limiting and load balancing with health checks. Envoy Gateway manages Envoy proxies configured through the Kubernetes Gateway API. Amazon API Gateway fronts REST, HTTP and WebSocket APIs with authorizers (IAM, Lambda functions, Cognito user pools), canary releases and a web application firewall.
 
 ## Failure modes
 
-- **The gateway becomes a monolith.** Plugins, transformations and "just one small rule" accumulate; a central team owns them; every change is a release of the one component all traffic passes through. This is the enterprise service bus story again (see [Monolith, modular monolith, SOA and microservices](/learn/modular-monolith-soa)). BFFs owned by client teams are the structural defence.
-- **Single point of failure.** It sits in front of everything, so run several stateless instances behind a load balancer (see [Load balancing](/learn/load-balancing)) with rate-limit counters in a shared store, and decide in advance what happens when the auth service or that store is unreachable: fail closed for authentication, perhaps fail open for quotas.
-- **A latency hop with its own clock.** Each hop adds proxying and, for aggregation, the slowest fan-out call sets the response time. Gateways also impose timeouts of their own: Amazon API Gateway's REST integration timeout is 29 seconds by default, so a backend allowed to run longer is cut off at the edge. Align timeouts across layers (see [Timeouts and retries](/learn/timeouts-retries)).
-- **Limits that disagree.** Amazon API Gateway's default throttle is 10,000 requests per second while Lambda's default concurrency is 1,000 per region; the gateway happily admits traffic the backend cannot serve (see [Serverless architecture](/learn/serverless)). Size limits across layers together.
+- **The gateway becomes a monolith.** Plugins, transformations and "just one small rule" accumulate; a central team owns them; every change is a release of the one component all traffic passes through. This is the enterprise service bus story again (see [Monolith, modular monolith, SOA and microservices](/learn/architecture/modular-monolith-soa)). BFFs owned by client teams are the structural defence.
+- **Single point of failure.** It sits in front of everything, so run several stateless instances behind a load balancer (see [Load balancing](/learn/scaling/load-balancing)) with rate-limit counters in a shared store, and decide in advance what happens when the auth service or that store is unreachable: fail closed for authentication, perhaps fail open for quotas.
+- **A latency hop with its own clock.** Each hop adds proxying and, for aggregation, the slowest fan-out call sets the response time. Gateways also impose timeouts of their own: Amazon API Gateway's REST integration timeout is 29 seconds by default, so a backend allowed to run longer is cut off at the edge. Align timeouts across layers (see [Timeouts and retries](/learn/reliability/timeouts-retries)).
+- **Limits that disagree.** Amazon API Gateway's default throttle is 10,000 requests per second while Lambda's default concurrency is 1,000 per region; the gateway happily admits traffic the backend cannot serve (see [Serverless architecture](/learn/architecture/serverless)). Size limits across layers together.
 
 <Callout type="interview" title="Name the jobs, then the exclusions">
 

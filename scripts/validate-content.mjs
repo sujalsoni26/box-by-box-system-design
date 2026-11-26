@@ -11,7 +11,7 @@
 //     where a widget has presets), <Diagram name> is in components/diagrams/static/index.ts;
 //   - <Mermaid chart> is a plain template literal for a supported diagram type
 //     (sequenceDiagram, flowchart <dir>, stateDiagram-v2, classDiagram);
-//   - internal links point at a real lesson (/learn/<slug>) or module (/learn#<module>);
+//   - internal links point at a real lesson in its own module (/learn/<module>/<slug>) or a module (/learn#<module>);
 //   - no h1, no import/export, and no markdown that failed to parse (stray ** or backticks).
 // Exits 1 if anything is wrong.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -37,6 +37,11 @@ const curriculumSrc = read("data", "curriculum.ts");
 const moduleIds = [...curriculumSrc.matchAll(/\{\s*id:\s*"([a-z0-9-]+)",\s*number:/g)].map((m) => m[1]);
 const moduleSlugs = [...curriculumSrc.matchAll(/lessons:\s*\[([^\]]*)\]/g)].flatMap((m) =>
   [...m[1].matchAll(/"([a-z0-9-]+)"/g)].map((s) => s[1]),
+);
+// Which module each lesson belongs to (lesson URLs are /learn/<module>/<slug>). Modules and their lesson lists
+// appear in the same order in data/curriculum.ts.
+const moduleOfSlug = new Map(
+  [...curriculumSrc.matchAll(/lessons:\s*\[([^\]]*)\]/g)].flatMap((m, i) => [...m[1].matchAll(/"([a-z0-9-]+)"/g)].map((s) => [s[1], moduleIds[i]])),
 );
 const metaSlugs = [...curriculumSrc.matchAll(/\bslug:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
 
@@ -149,10 +154,14 @@ function checkTree(tree, file) {
       case "definition": {
         const url = node.url ?? "";
         if (/^https?:\/\//.test(url)) break;
-        const lesson = url.match(/^\/learn\/([a-z0-9-]+)$/);
+        const lesson = url.match(/^\/learn\/([a-z0-9-]+)\/([a-z0-9-]+)(#[a-z0-9-]+)?$/);
+        const oldForm = url.match(/^\/learn\/([a-z0-9-]+)$/);
         const mod = url.match(/^\/learn#([a-z0-9-]+)$/);
         if (lesson) {
-          if (!slugs.has(lesson[1])) fail(at, `link to unknown lesson ${url}`);
+          if (!slugs.has(lesson[2])) fail(at, `link to unknown lesson ${url}`);
+          else if (moduleOfSlug.get(lesson[2]) !== lesson[1]) fail(at, `${url}: that lesson is in module "${moduleOfSlug.get(lesson[2])}"`);
+        } else if (oldForm) {
+          fail(at, `${url}: link lessons as /learn/<module>/<slug> (here /learn/${moduleOfSlug.get(oldForm[1]) ?? "<module>"}/${oldForm[1]})`);
         } else if (mod) {
           if (!moduleIds.includes(mod[1])) fail(at, `link to unknown module ${url}`);
         } else if (url !== "/learn") {

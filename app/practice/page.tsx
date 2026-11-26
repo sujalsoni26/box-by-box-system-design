@@ -7,7 +7,7 @@ import { KnowledgeCheck } from "@/components/quiz/knowledge-check";
 import { buttonClasses } from "@/components/ui/button";
 import { recallDecks } from "@/data/recall";
 import { caseStudies } from "@/lib/case-studies";
-import { knowledgeChecks, modules } from "@/lib/curriculum";
+import { knowledgeChecks, modules, lessonHref } from "@/lib/curriculum";
 
 export const metadata: Metadata = {
   title: "Practice",
@@ -18,17 +18,17 @@ const EXERCISES = [
   {
     title: "Follow the interview framework",
     body: "Seven steps from functional requirements to deep dives. Practise saying each assumption out loud.",
-    href: "/learn/playbook",
+    href: lessonHref("playbook"),
   },
   {
     title: "Justify every box",
     body: "Open the final architecture and, for each box, name the problem that forced it in before you check.",
-    href: "/learn/final-architecture",
+    href: lessonHref("final-architecture"),
   },
   {
     title: "Classify the system shape",
     body: "Read-heavy, storage-heavy or write-heavy? The shape decides between caching, CDNs and append-only logs.",
-    href: "/learn/system-shapes",
+    href: lessonHref("system-shapes"),
   },
 ];
 

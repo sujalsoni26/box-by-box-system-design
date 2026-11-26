@@ -1,7 +1,7 @@
 /* What Cache says. Plain strings, picked locally; no generated text and no invented facts. */
 
 export const LINES = {
-  correct: ["Correct!", "Yes. Purr.", "Nailed it.", "Right on.", "That is the one.", "Mrrp! Spot on.", "Exactly that."],
+  correct: ["Correct!", "Yes. Purr.", "Nailed it.", "Right on.", "That is the one.", "Mrrp! Spot on.", "Exactly that.", "Nailed it, {you}."],
   incorrect: [
     "Close one. Read the why below; a miss sticks better than a lucky guess.",
     "Not this time. The explanation is the good part.",
@@ -18,22 +18,27 @@ export const LINES = {
     "Tail up! {done} down, {left} to go.",
     "One more box on the diagram. Nicely done.",
     "Mrrp! That one is in your toolkit now.",
+    "Nice work, {you}. {done} of {total} learned.",
+    "Look at you go, {you}. {left} to go.",
   ],
-  quizPerfect: "{score}/{total}! Flawless. I am impressed, and I am a cat.",
+  quizPerfect: "{score}/{total}! Flawless, {you}. I am impressed, and I am a cat.",
   quizGood: "{score}/{total}. Solid. Retake it tomorrow and watch it climb.",
   quizLow: "{score}/{total}. That is what checks are for: reread the explanations, then try again later.",
   greetNew:
-    "Hi, I'm Cache! Click me for a simple explanation, quick revision or a focus timer. You can drag me anywhere.",
+    "Hi {you}, I'm Cache! Click me for a simple explanation, quick revision or a focus timer. You can drag me anywhere.",
   greetBack: [
     "Welcome back! Pick up where you left off?",
     "Mrrp, you're back! Shall we carry on?",
     "There you are. I kept your seat warm.",
     "Hello again! Ready for the next box?",
+    "Welcome back, {you}! Pick up where you left off?",
+    "Oh, it's {you}. I suppose we can learn something.",
   ],
   greetStudying: [
     "Welcome back! Good to see you studying again.",
     "Back for more? I like your style.",
     "Purr. Same time, same cat. Let's learn.",
+    "Back for more, {you}? I like your style.",
   ],
   reviewWaiting: [
     "You have {n} topics marked for review. A quick revisit makes them stick.",
@@ -93,9 +98,10 @@ export const LINES = {
     "Mrrrr. More scratches, fewer bugs.",
     "Purr. My happiness metric just went up.",
     "Prrr. Do that again. I will wait.",
+    "Purr. Acceptable scratching, {you}.",
   ],
   napStart: ["Nap time. Wake me from the menu, or give me a pat.", "Curling up. A pat or the menu wakes me.", "Zzz soon. Tap me when you need me."],
-  wake: ["Mrrp! I'm up. What are we learning?", "Yawn. Okay, I'm awake!", "Stretch... and back. What's next?"],
+  wake: ["Mrrp! I'm up. What are we learning?", "Yawn. Okay, I'm awake!", "Stretch... and back. What's next?", "Mrrp. Oh, it's you, {you}. What are we learning?"],
   lampWake: ["Mrrp! Warm lamp, good nap.", "Yawn. That lamp is the best spot in the house.", "Oh, you're back. I was guarding the lamp."],
   lampNap: [
     "My lamp! Tap me when you need me.",
@@ -121,6 +127,11 @@ export const LINES = {
   completionReview: ["Flagged for review. It's waiting in your review list.", "Marked for review. Come back to it whenever you like."],
   topicPaused: "Topic meows paused. Resume them from my menu whenever you like.",
   topicResumed: "Topic meows back on. I will share a fact from the lesson now and then.",
+  signedIn: [
+    "Signed in. Welcome, {you}! Your progress now follows you to any device.",
+    "Mrrp! Hello, {you}. I will keep your progress safe in your account.",
+    "Signed in. Your boxes are backed up now, {you}. Purr.",
+  ],
   homeTips: [
     "Start simple, then find what breaks. That is the whole course in one sentence.",
     "Whenever you meet a new box, ask: what problem forced this in?",
@@ -187,14 +198,34 @@ export function pickFresh(list: readonly string[]): string {
   return choice;
 }
 
-/** pickFresh for a named category. */
-export function line(category: LineCategory): string {
-  return pickFresh(LINES[category] as readonly string[]);
+/* ------------------------------------------------------------------ what Cache calls the learner */
+
+/** Used when the learner has not told Cache what to call them. */
+export const DEFAULT_YOU = "hooman";
+let youSource: () => string = () => DEFAULT_YOU;
+
+/** Where {you} comes from (the profile); set once by the companion, so this file stays free of imports. */
+export function setYouSource(source: () => string): void {
+  youSource = source;
 }
 
-/** Replace {name} placeholders. */
+/** What Cache calls the learner right now. */
+export function you(): string {
+  try {
+    return youSource().trim() || DEFAULT_YOU;
+  } catch {
+    return DEFAULT_YOU;
+  }
+}
+
+/** pickFresh for a named category, with {you} filled in. */
+export function line(category: LineCategory): string {
+  return fill(pickFresh(LINES[category] as readonly string[]), {});
+}
+
+/** Replace {key} placeholders; {you} is always available (what Cache calls the learner). */
 export function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : key === "you" ? you() : match));
 }
 
 /** Testing hook: forget the history. */

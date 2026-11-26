@@ -1,4 +1,4 @@
-A **partition** is Kafka's unit of both parallelism and ordering, and you cannot have one without the other. Within a partition every consumer sees records in exactly the order they were written; across partitions there is no order at all, and that is precisely what lets many consumers share a topic. How records are spread over partitions, and how consumers divide the partitions up, decides what your system can promise. The vocabulary here is from [Kafka: a distributed log](/learn/kafka-architecture).
+A **partition** is Kafka's unit of both parallelism and ordering, and you cannot have one without the other. Within a partition every consumer sees records in exactly the order they were written; across partitions there is no order at all, and that is precisely what lets many consumers share a topic. How records are spread over partitions, and how consumers divide the partitions up, decides what your system can promise. The vocabulary here is from [Kafka: a distributed log](/learn/streaming/kafka-architecture).
 
 ## Which partition does a record go to?
 
@@ -21,7 +21,7 @@ One producer-side caveat: a retried batch can land behind a later one when sever
 
 ## Consumer groups
 
-Consumers that share a `group.id` form a **consumer group**, and the group coordinator (a broker) assigns every partition of the subscribed topics to exactly one consumer in the group. A consumer may own several partitions; a partition never has two owners within a group. So a group's useful parallelism is capped by the partition count: a topic with four partitions feeds at most four active consumers, and a fifth sits idle. Different groups are independent and each gets every record, which is how one topic serves billing, analytics and search at once: the fan-out from [Pub/sub](/learn/pubsub).
+Consumers that share a `group.id` form a **consumer group**, and the group coordinator (a broker) assigns every partition of the subscribed topics to exactly one consumer in the group. A consumer may own several partitions; a partition never has two owners within a group. So a group's useful parallelism is capped by the partition count: a topic with four partitions feeds at most four active consumers, and a fifth sits idle. Different groups are independent and each gets every record, which is how one topic serves billing, analytics and search at once: the fan-out from [Pub/sub](/learn/reliability/pubsub).
 
 <Mermaid caption="Four partitions, two groups. Within billing each partition has exactly one owner, so a fourth consumer would get one partition each and a fifth would idle; analytics reads every record on its own." chart={`flowchart LR
     subgraph T["Topic orders"]
@@ -63,7 +63,7 @@ Kafka 4.0 made a third option generally available (KIP-848): the group coordinat
 
 ## Consumer lag, the health metric
 
-For each partition, **lag** is the distance between the end of the log and the group's committed offset (`kafka-consumer-groups.sh --describe` prints it as LOG-END-OFFSET minus CURRENT-OFFSET). A steady lag is a buffer doing its job; a lag that grows for minutes means the group cannot keep up. The options, in order: make each consumer faster, add consumers up to the partition count, then add partitions. Lag growing on one partition while the others sit near zero is not a throughput problem: it is a hot key. The log gives you this signal for free, where an in-memory queue would be heading for an out-of-memory crash (see [Backpressure and load shedding](/learn/backpressure)).
+For each partition, **lag** is the distance between the end of the log and the group's committed offset (`kafka-consumer-groups.sh --describe` prints it as LOG-END-OFFSET minus CURRENT-OFFSET). A steady lag is a buffer doing its job; a lag that grows for minutes means the group cannot keep up. The options, in order: make each consumer faster, add consumers up to the partition count, then add partitions. Lag growing on one partition while the others sit near zero is not a throughput problem: it is a hot key. The log gives you this signal for free, where an in-memory queue would be heading for an out-of-memory crash (see [Backpressure and load shedding](/learn/reliability/backpressure)).
 
 ## Hot partitions and key choice
 

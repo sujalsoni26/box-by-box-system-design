@@ -55,7 +55,14 @@ breaking hydration. Notes are kept in this browser only and are not synced.
 On wide screens (xl) the right column holds two collapsible panels, "On this page" and Notes, owned by one component
 (`components/learning/lesson-side-panels.tsx`): opening one closes the other, and both may be closed (`toggleSidePanel` in
 `lib/learning/side-panels.ts`). "On this page" starts open. The choice is kept for the browser session (sessionStorage
-`sdn-side-panel`), so moving between lessons does not flip it. Below xl, the Notes chip in the lesson header opens the sheet.
+`sdn-side-panel`), so moving between lessons does not flip it. Below xl, the Notes chip in the lesson header opens the sheet. At any size, Expand (in the panel or the sheet) or the N key opens a large writing view (`LessonNotesFocus`); Done or Escape closes it and the page is where the reader left it.
+
+"On this page" is built from the rendered lesson (`components/learning/on-this-page.tsx`, rules in `lib/learning/outline.ts`),
+so every lesson has one, including those written around steps and simulations rather than `##` sections: the lesson's
+sections, its `###` headings, "Try it" simulations (titles in `components/diagrams/interactive-titles.ts`, available
+before a simulation loads), "Go deeper" sections (opened when picked), the page's own parts (Problem to building block,
+Quick recall, Knowledge check, Mark as learned) and, for lessons that would otherwise have fewer than 7 entries, titled
+callouts. Below xl the same outline is a folded "On this page" box at the top of the lesson.
 
 **Optional accounts** (docs/accounts.md): when the Firebase variables are set, a signed-in learner's four stores are
 also kept in Firestore (`users/{uid}/stores/*`). The adapter notifies `lib/cloud/controller.ts` of every save; the

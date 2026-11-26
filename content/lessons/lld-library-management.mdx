@@ -19,7 +19,7 @@ A library system looks like a catalogue with a borrow button, and the first desi
 
 ## Core entities and responsibilities
 
-The split along stakeholder lines is the single responsibility principle from [SOLID](/learn/solid): cataloguers change books, the circulation desk changes copies and loans, the finance committee changes fines, and none of them should have to read the others' code.
+The split along stakeholder lines is the single responsibility principle from [SOLID](/learn/lld/solid): cataloguers change books, the circulation desk changes copies and loans, the finance committee changes fines, and none of them should have to read the others' code.
 
 | Entity | Responsibility | Holds |
 | --- | --- | --- |
@@ -271,7 +271,7 @@ A restaurant has one menu entry for biryani and many plates of it. You wait for 
 
 ## Concurrency
 
-The shared mutable state is the copies map, the reservation queues, each member's loan count and fines, and the available-count per title; desks, the hold-expiry scheduler and the overdue sweep all touch them, so the advice from [Concurrency and thread safety](/learn/concurrency-basics) applies: name it, then pick the cheapest tool.
+The shared mutable state is the copies map, the reservation queues, each member's loan count and fines, and the available-count per title; desks, the hold-expiry scheduler and the overdue sweep all touch them, so the advice from [Concurrency and thread safety](/learn/lld/concurrency-basics) applies: name it, then pick the cheapest tool.
 
 The copies map is a `ConcurrentHashMap`, and the race that matters, two desks scanning the same barcode within milliseconds, is settled by `compute`: the check and the status change run as one atomic step for that key, so one desk gets `ON_LOAN` and the other sees it and throws. Two properties of `compute` shape the code. The function must be short and must not modify the map, because other updates may block while it runs, so the member checks and the event publishing sit outside it. And a function that throws leaves the mapping unchanged, so a refused borrow needs no cleanup. Reads are not blocked by updates, so search stays fast while desks are busy.
 
@@ -300,6 +300,6 @@ Each title's reservation queue is guarded by `synchronized` on the queue object,
 
 <DeepDive title="Go deeper: should the copy have a status at all?">
 
-The alternative design keeps no `status` on the copy. Whether a copy is available is *derived*: it is available if no open loan and no live hold refer to it. The loans and holds become the only truth, there is nothing to drift out of step, and the full history of a copy is a query rather than a log you remembered to write. The cost is that every availability question becomes a lookup in two collections, and the two-desk race moves from `compute` on the copy to inserting the open loan: the loans store must refuse a second open loan for the same barcode, which in a database is a partial unique index on open loans, and in memory is a `putIfAbsent` keyed by barcode. The status field is a cache of exactly that fact, and like every cache it must change in the same step as the thing it summarises; in a database-backed version the `compute` and the `loans.put` would share a transaction. The event-sourced version of this idea is the subject of [Event sourcing](/learn/event-sourcing).
+The alternative design keeps no `status` on the copy. Whether a copy is available is *derived*: it is available if no open loan and no live hold refer to it. The loans and holds become the only truth, there is nothing to drift out of step, and the full history of a copy is a query rather than a log you remembered to write. The cost is that every availability question becomes a lookup in two collections, and the two-desk race moves from `compute` on the copy to inserting the open loan: the loans store must refuse a second open loan for the same barcode, which in a database is a partial unique index on open loans, and in memory is a `putIfAbsent` keyed by barcode. The status field is a cache of exactly that fact, and like every cache it must change in the same step as the thing it summarises; in a database-backed version the `compute` and the `loans.put` would share a transaction. The event-sourced version of this idea is the subject of [Event sourcing](/learn/architecture/event-sourcing).
 
 </DeepDive>

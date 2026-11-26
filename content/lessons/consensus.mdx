@@ -1,4 +1,4 @@
-**Consensus** is how a group of machines agrees on one value, or one sequence of values, so that no two of them ever believe different things were decided, even while some crash and the network partitions. **Raft** achieves it by electing a leader and letting only the leader append to a **replicated log** that every node copies. It builds on the failure model in [What makes a system distributed](/learn/distributed-fundamentals) and the overlap argument from [Quorums](/learn/quorums).
+**Consensus** is how a group of machines agrees on one value, or one sequence of values, so that no two of them ever believe different things were decided, even while some crash and the network partitions. **Raft** achieves it by electing a leader and letting only the leader append to a **replicated log** that every node copies. It builds on the failure model in [What makes a system distributed](/learn/distributed/distributed-fundamentals) and the overlap argument from [Quorums](/learn/distributed/quorums).
 
 ## Why a majority
 
@@ -70,13 +70,13 @@ Committing an entry also commits everything before it. **Leader completeness** i
 
 Take five nodes split three against two, with the leader on the side of two. That leader keeps appending commands but never collects the three acknowledgements needed to commit, so its clients hang or time out. Nor may it answer reads from local state, since it may already have been replaced; Raft has a leader exchange heartbeats with a majority before answering a read-only request. On the side of three, a follower times out, wins an election in a higher term and commits new entries. When the partition heals, the old leader sees the higher term, steps down, and its uncommitted entries are overwritten.
 
-In short, <mark>the minority refuses rather than diverges</mark>. That is the CP corner of [CAP](/learn/cap). Lose a majority permanently, say two of three disks at once, and the cluster cannot progress; etcd's documentation calls permanent quorum loss catastrophic.
+In short, <mark>the minority refuses rather than diverges</mark>. That is the CP corner of [CAP](/learn/data/cap). Lose a majority permanently, say two of three disks at once, and the cluster cannot progress; etcd's documentation calls permanent quorum loss catastrophic.
 
 ## Who uses what
 
 | System | Protocol | What it agrees on |
 | --- | --- | --- |
-| etcd | Raft | Kubernetes' cluster state; leases and elections for your own services (see [Leader election](/learn/leader-election)) |
+| etcd | Raft | Kubernetes' cluster state; leases and elections for your own services (see [Leader election](/learn/distributed/leader-election)) |
 | Consul | Raft | Service catalogue, key-value data and sessions |
 | CockroachDB | Raft, one group per range of rows | Every write to a range, committed by a quorum of its replicas |
 | ZooKeeper | Zab, its atomic broadcast | A leader proposes, a quorum acknowledges, then it commits; each transaction id carries an epoch that changes with the leader |
@@ -86,7 +86,7 @@ In short, <mark>the minority refuses rather than diverges</mark>. That is the CP
 
 **Paxos**, which Lamport first circulated in 1989 and published in 1998 as "The Part-Time Parliament", solves the same problem with proposers and acceptors in numbered rounds; Raft, from 2014, was designed to be easier to understand and matches it in fault tolerance. Zab exists because ZooKeeper needed a primary's updates delivered in exactly the order it generated them, which plain Paxos does not guarantee when a primary fails with proposals outstanding.
 
-You will rarely implement any of these; you run etcd or ZooKeeper and keep small, critical state there: who leads, where the shards are, the configuration. Every committed write is a round trip to a majority, so consensus is a poor fit for the bulk data path, which is what [replication](/learn/replication) and quorums are for.
+You will rarely implement any of these; you run etcd or ZooKeeper and keep small, critical state there: who leads, where the shards are, the configuration. Every committed write is a round trip to a majority, so consensus is a poor fit for the bulk data path, which is what [replication](/learn/data/replication) and quorums are for.
 
 <Callout type="analogy" title="Choosing a captain by numbered votes">
 

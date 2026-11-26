@@ -9,7 +9,6 @@ import { lessonFromPath } from "@/lib/companion/lesson-context";
 import { line } from "@/lib/companion/lines";
 import { pageIsBusy } from "@/lib/companion/quiet";
 import type { Size } from "@/lib/companion/resting";
-import { companionBlip } from "@/lib/companion/sound";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useMotionLevel } from "@/lib/hooks/use-motion-level";
@@ -103,15 +102,14 @@ function CompanionShell({ pathname }: { pathname: string }) {
   const animated = motionLevel !== "reduced";
   const { getPhase } = pos;
 
-  // The lamp: desktop only, with room beside the cat, motion allowed. The idle one also needs a quiet, still companion.
+  // The lamp: room beside the cat (phones too), motion allowed. The idle one also needs a quiet, still companion.
   const viewW = pos.view.w;
-  const lampAvailable = !compact && animated && lampFits(viewW, size);
+  const lampAvailable = animated && lampFits(viewW, size, compact);
   const lampAllowed = useCallback(() => {
     const s = useCompanionStore.getState();
     return (
-      !compact &&
       animated &&
-      lampFits(viewW, size) &&
+      lampFits(viewW, size, compact) &&
       isStill(getPhase()) &&
       !s.napping &&
       !s.menuOpen &&
@@ -188,7 +186,6 @@ function CompanionShell({ pathname }: { pathname: string }) {
     }
     s.dismiss();
     s.openMenu(focus);
-    companionBlip("pop");
   };
 
   /** Break play stops the moment she is pressed (or clicked from the keyboard), for the rest of this break. */
@@ -270,8 +267,14 @@ function CompanionShell({ pathname }: { pathname: string }) {
       data-activity={activity?.kind ?? ""}
       data-resting={still ? "true" : "false"}
       data-accessories={equippedAttr(equipped)}
-      className="fixed left-0 top-0 z-40 h-0 w-0"
+      className="fixed bottom-0 left-0 z-40 h-0 w-0"
     >
+      {/*
+        Everything is placed from the top of the viewport, but this frame hangs from its bottom edge: phone toolbars
+        that slide in and out while scrolling move the bottom, and Cache stays standing on it (never floating above
+        it or sinking below it).
+      */}
+      <motion.div className="absolute left-0 top-0 h-0 w-0" style={{ y: pos.originY }}>
       <Lamp lamp={lampRoutine.lamp} size={size} groundY={pos.groundY} animated={animated} catX={pos.x} catY={pos.y} />
 
       <motion.div
@@ -376,6 +379,7 @@ function CompanionShell({ pathname }: { pathname: string }) {
         </motion.div>
       </motion.div>
 
+      </motion.div>
       <BubbleAnnouncer />
     </section>
   );

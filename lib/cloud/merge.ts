@@ -132,9 +132,15 @@ function mergePreferences(l: Json, r: Json): Json {
   const stats: Record<string, number> = {};
   for (const k of new Set([...Object.keys(ls), ...Object.keys(rs)])) stats[k] = Math.max(num(ls[k]) ?? 0, num(rs[k]) ?? 0);
   const equippedR = obj(rc.equipped);
+  // Profile: the account's answers win field by field; one only this browser has (set as a guest) is kept.
+  const lp = obj(l.profile);
+  const rp = obj(r.profile);
+  const profile: Json = {};
+  for (const k of new Set([...Object.keys(lp), ...Object.keys(rp)])) profile[k] = rp[k] !== undefined && rp[k] !== null && rp[k] !== "" ? rp[k] : (lp[k] ?? null);
   return {
     ...l,
     ...r,
+    ...(Object.keys(profile).length ? { profile } : {}),
     // The account's settings win; lists and counters are combined.
     theme: r.theme ?? l.theme,
     knownTerms: unionStrings(l.knownTerms, r.knownTerms),

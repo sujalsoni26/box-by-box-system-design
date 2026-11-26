@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Lightbulb, MessagesSquare, Puzzle, TriangleAlert, type LucideIcon } from "lucide-react";
+import { slugify } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 export type CalloutType = "idea" | "analogy" | "warning" | "interview";
@@ -15,7 +16,14 @@ export function Callout({ type = "idea", title, children }: { type?: CalloutType
   const s = styles[type] ?? styles.idea;
   const Icon = s.icon;
   return (
-    <aside className={cn("my-6 rounded-xl border px-5 pb-1 pt-4", s.box)} aria-label={title ?? s.label}>
+    <aside
+      id={title ? `note-${slugify(title)}` : undefined}
+      data-toc={title}
+      data-toc-level={title ? "2" : undefined}
+      data-toc-minor={title ? "" : undefined}
+      className={cn("my-6 scroll-mt-24 rounded-xl border px-5 pb-1 pt-4", s.box)}
+      aria-label={title ?? s.label}
+    >
       <p className={cn("mb-1.5 flex items-center gap-2 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.12em]", s.title)}>
         <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.2} />
         {title ?? s.label}

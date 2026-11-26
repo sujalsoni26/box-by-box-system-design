@@ -1,4 +1,4 @@
-**At-most-once**, **at-least-once** and **exactly-once**, introduced in [Message queues](/learn/message-queues), are not switches on the broker. They fall out of two choices: whether a producer retries after a lost acknowledgement, and whether a consumer records its progress *before* or *after* it does the work. Kafka's default is at-least-once. Everything stronger is built on top of it with the tools from [Idempotency](/learn/idempotency), applied at every hop of a pipeline of [partitions and consumer groups](/learn/partitions-consumer-groups).
+**At-most-once**, **at-least-once** and **exactly-once**, introduced in [Message queues](/learn/reliability/message-queues), are not switches on the broker. They fall out of two choices: whether a producer retries after a lost acknowledgement, and whether a consumer records its progress *before* or *after* it does the work. Kafka's default is at-least-once. Everything stronger is built on top of it with the tools from [Idempotency](/learn/reliability/idempotency), applied at every hop of a pipeline of [partitions and consumer groups](/learn/streaming/partitions-consumer-groups).
 
 ## Commit before, or commit after?
 
@@ -48,7 +48,7 @@ Two details carry the guarantee. The `transactional.id` is stable across restart
 
 ## Where exactly-once stops
 
-Inside Kafka, "exactly-once" means each input record's effect appears once in the output topics and state stores, even across failures. It says nothing about a payment API, an email or a row in PostgreSQL: a transaction can abort the Kafka side, not recall the email. Across arbitrary systems exactly-once *delivery* is impossible for the reason in [What makes a system distributed](/learn/distributed-fundamentals): the acknowledgement can be lost, so the sender never knows whether to send again. What you can have is exactly-once *effect*, if the sink cooperates:
+Inside Kafka, "exactly-once" means each input record's effect appears once in the output topics and state stores, even across failures. It says nothing about a payment API, an email or a row in PostgreSQL: a transaction can abort the Kafka side, not recall the email. Across arbitrary systems exactly-once *delivery* is impossible for the reason in [What makes a system distributed](/learn/distributed/distributed-fundamentals): the acknowledgement can be lost, so the sender never knows whether to send again. What you can have is exactly-once *effect*, if the sink cooperates:
 
 - **Idempotent writes.** Upsert by a natural key, a unique constraint on the event id, or a dedup table of seen ids. The second attempt changes nothing: in PostgreSQL, inserting with `ON CONFLICT (event_id) DO NOTHING` turns the replayed payments 41 to 45 from the first diagram into a no-op.
 - **Offsets stored with the output.** Write the result and the consumed offset in the same database transaction, and on restart seek to the stored offset instead of trusting Kafka's; Kafka itself keeps its position in the same log as the data.
@@ -66,7 +66,7 @@ The honest name for the whole chain is **effectively once**: at-least-once deliv
 | Consumer processes | Crash before the commit | Commit after processing; dedup by event id or key |
 | Sink | The repeated write | Idempotent write, or the offset stored with the output |
 
-The outbox is the hop most designs forget (see the DeepDive in [Pub/sub](/learn/pubsub)): a service that commits an order and then fails to publish leaves downstream systems that never hear of it, and no consumer-side care can recover an event that was never written.
+The outbox is the hop most designs forget (see the DeepDive in [Pub/sub](/learn/reliability/pubsub)): a service that commits an order and then fails to publish leaves downstream systems that never hear of it, and no consumer-side care can recover an event that was never written.
 
 <Callout type="analogy" title="Ticking the list before or after">
 

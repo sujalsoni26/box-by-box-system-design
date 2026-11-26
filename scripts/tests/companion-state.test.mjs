@@ -135,7 +135,13 @@ test("the lamp appears 3 to 5 walk steps (plus a jump) away, on screen, towards 
   }
   assert.equal(lampGeo.planLamp(10, 84, 150, step), null, "no room: no lamp");
   assert.equal(lampGeo.lampFits(1024, 84), true);
-  assert.equal(lampGeo.lampFits(640, 60), false, "not on small screens");
+  assert.equal(lampGeo.lampFits(640, 60), false, "desktop rule: not on small desktop windows");
+  // Phones and tablets (compact) get the lamp too, with room on at least one side from either corner.
+  assert.equal(lampGeo.lampFits(390, 52, true), true, "phone");
+  assert.equal(lampGeo.lampFits(820, 60, true), true, "tablet");
+  assert.equal(lampGeo.lampFits(280, 52, true), false, "too narrow");
+  assert.ok(lampGeo.planLamp(390 - 52 - 2, 52, 390, 52 * 0.3), "phone: from the right corner");
+  assert.ok(lampGeo.planLamp(2, 52, 390, 52 * 0.3), "phone: from the left corner");
   const perch = lampGeo.perchPoint(500, 84, 900);
   assert.equal(perch.x, 500 - 42);
   assert.ok(perch.y < 900 - 84 * lampGeo.LAMP.h, "perched above the shade top");
@@ -272,6 +278,7 @@ test("old saves load: legacy fields dropped, new fields defaulted, unlocks and e
   const merged = merge(legacy, usePreferencesStore.getState());
   assert.equal(merged.animationSpeed, undefined);
   assert.equal(merged.companion.animations, undefined);
+  assert.equal(merged.companion.sound, undefined, "old sound setting dropped");
   assert.equal(merged.theme, "dark");
   assert.deepEqual(merged.companion.equipped, { neck: "gold-chain", body: "hero-cape" });
   assert.deepEqual(merged.companion.position, { x: 0.25, y: 1, floor: true });

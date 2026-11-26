@@ -12,9 +12,9 @@ Content-Type: application/json
 ```
 
 - **Methods:** `GET` read · `POST` create · `PUT`/`PATCH` update · `DELETE` remove.
-- **Safe vs idempotent:** *safe* means the request changes no server state (`GET /users/42`). *Idempotent* means sending it twice leaves the same state as sending it once (`PUT`, `DELETE`: a second `DELETE /users/42` may return 404, but user 42 is gone either way). Every safe method is idempotent, not every idempotent method is safe, and `POST` is neither, so retrying it can create a duplicate (see [REST APIs](/learn/rest)).
+- **Safe vs idempotent:** *safe* means the request changes no server state (`GET /users/42`). *Idempotent* means sending it twice leaves the same state as sending it once (`PUT`, `DELETE`: a second `DELETE /users/42` may return 404, but user 42 is gone either way). Every safe method is idempotent, not every idempotent method is safe, and `POST` is neither, so retrying it can create a duplicate (see [REST APIs](/learn/communication/rest)).
 - **Status codes:** 2xx success (200, 201) · 3xx redirect · 4xx client error (400, 401, 404, 429) · 5xx server error (500, 503).
-- **Stateless:** each request stands alone; your login travels with it as a cookie or token. <mark>This is what makes horizontal scaling possible</mark> (see [Vertical vs horizontal scaling](/learn/scaling)). How that token is issued, stored and checked is the subject of [Authentication: sessions, tokens and passwords](/learn/authentication).
+- **Stateless:** each request stands alone; your login travels with it as a cookie or token. <mark>This is what makes horizontal scaling possible</mark> (see [Vertical vs horizontal scaling](/learn/scaling/scaling)). How that token is issued, stored and checked is the subject of [Authentication: sessions, tokens and passwords](/learn/security/authentication).
 
 ## HTTPS = HTTP + TLS
 
@@ -26,7 +26,7 @@ TLS (Transport Layer Security) adds three things:
 | Integrity | Tampering: nobody can change the bytes in transit unnoticed |
 | Authentication | Impostors: the certificate proves the server really is instagram.com |
 
-HTTPS is the default everywhere. Versions: **HTTP/1.1** → **HTTP/2** (many requests multiplexed on one connection) → **HTTP/3** (runs on QUIC). Certificates, mutual TLS and encrypting data at rest are covered in [Encryption in transit and at rest](/learn/encryption).
+HTTPS is the default everywhere. Versions: **HTTP/1.1** → **HTTP/2** (many requests multiplexed on one connection) → **HTTP/3** (runs on QUIC). Certificates, mutual TLS and encrypting data at rest are covered in [Encryption in transit and at rest](/learn/security/encryption).
 
 ## One request, end to end
 

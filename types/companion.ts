@@ -73,7 +73,6 @@ export interface CompanionSettings {
   enabled: boolean;
   physics: boolean;
   studyTips: boolean;
-  sound: boolean;
   position: CompanionPosition | null;
   stats: CompanionStats;
   /** One accessory per slot. */

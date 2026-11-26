@@ -1,4 +1,4 @@
-**Change data capture (CDC)** turns the database's own record of committed changes into a stream of events that other systems consume. [Write-ahead logging](/learn/wal) showed where that record lives and how logical decoding reads it; [Replication strategies in depth](/learn/replication-internals) showed Debezium creating a replication slot and writing one Kafka topic per table. This lesson is about the pattern around that machinery: why reading the log beats every other way of noticing a change, how to get an *application event* out reliably, and what the consumers of the stream must cope with.
+**Change data capture (CDC)** turns the database's own record of committed changes into a stream of events that other systems consume. [Write-ahead logging](/learn/internals/wal) showed where that record lives and how logical decoding reads it; [Replication strategies in depth](/learn/internals/replication-internals) showed Debezium creating a replication slot and writing one Kafka topic per table. This lesson is about the pattern around that machinery: why reading the log beats every other way of noticing a change, how to get an *application event* out reliably, and what the consumers of the stream must cope with.
 
 ## Three ways to notice a change
 
@@ -31,7 +31,7 @@ A new connector has history to catch up on. With Debezium's default `snapshot.mo
 
 ## What an event looks like
 
-Each record carries `before` and `after` row images, an `op` of `c`, `u`, `d` or `r` (the last for snapshot reads), `ts_ms`, and a `source` block with the database, table and log position. The key is the table's primary key and the topic is `prefix.schema.table`. After a delete, Debezium emits a **tombstone**, the same key with a null value (`tombstones.on.delete` is true by default), so that a compacted topic (see [Kafka](/learn/kafka-architecture)) can forget the row.
+Each record carries `before` and `after` row images, an `op` of `c`, `u`, `d` or `r` (the last for snapshot reads), `ts_ms`, and a `source` block with the database, table and log position. The key is the table's primary key and the topic is `prefix.schema.table`. After a delete, Debezium emits a **tombstone**, the same key with a null value (`tombstones.on.delete` is true by default), so that a compacted topic (see [Kafka](/learn/streaming/kafka-architecture)) can forget the row.
 
 <Mermaid caption="A price change becomes a cache miss. The catalogue service only updates its own table; the connector, the topic and the invalidator do the rest, in commit order." chart={`---
 config:
@@ -61,7 +61,7 @@ sequenceDiagram
 
 ## At least once, in order per key
 
-Debezium delivers **at least once**: after a crash it resumes from its last committed offset and replays what followed, so consumers see duplicates, never gaps. Order is guaranteed within a partition, and because the key is the primary key, all changes to one row arrive in commit order; changes to different rows, or different tables, carry no mutual order. The consumer's half of the bargain is the one from [Idempotency](/learn/idempotency): an upsert keyed by the primary key that applies the full `after` image is harmless to replay, and a consumer that stores the last `source` log position per key can skip anything older. [Delivery semantics](/learn/delivery-semantics) has the general argument.
+Debezium delivers **at least once**: after a crash it resumes from its last committed offset and replays what followed, so consumers see duplicates, never gaps. Order is guaranteed within a partition, and because the key is the primary key, all changes to one row arrive in commit order; changes to different rows, or different tables, carry no mutual order. The consumer's half of the bargain is the one from [Idempotency](/learn/reliability/idempotency): an upsert keyed by the primary key that applies the full `after` image is harmless to replay, and a consumer that stores the last `source` log position per key can skip anything older. [Delivery semantics](/learn/streaming/delivery-semantics) has the general argument.
 
 ## Schema evolution
 
@@ -71,7 +71,7 @@ One quiet failure belongs here. The slot advances only when the connector reads 
 
 ## Where the stream goes
 
-The same events feed a cache invalidator (delete the key and let the next read repopulate, as in [Caching](/learn/caching)), a search indexer that upserts documents, a warehouse loader and an audit log. A Flipkart-style price change becomes one `UPDATE` and, within a second, a cache miss, a fresh search result and a row in the analytics table, with no code in the catalogue service knowing about any of them.
+The same events feed a cache invalidator (delete the key and let the next read repopulate, as in [Caching](/learn/reliability/caching)), a search indexer that upserts documents, a warehouse loader and an audit log. A Flipkart-style price change becomes one `UPDATE` and, within a second, a cache miss, a fresh search result and a row in the analytics table, with no code in the catalogue service knowing about any of them.
 
 <Callout type="analogy" title="The court stenographer">
 

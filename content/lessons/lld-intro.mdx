@@ -2,7 +2,7 @@
 
 ## Boxes versus classes
 
-The [interview playbook](/learn/playbook) and the [case-study template](/learn/case-study-method) stop where a food-delivery app has an order service, a payment service and a queue between them. An LLD question starts exactly there. Inside the order service, what is an `Order`? Who computes the total when a coupon is applied? What happens if the coupon expires while the user is paying?
+The [interview playbook](/learn/practice/playbook) and the [case-study template](/learn/hld/case-study-method) stop where a food-delivery app has an order service, a payment service and a queue between them. An LLD question starts exactly there. Inside the order service, what is an `Order`? Who computes the total when a coupon is applied? What happens if the coupon expires while the user is paying?
 
 | | High-level design | Low-level design |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ Every LLD problem can be worked in the same order, and the order matters because
 1. **Requirements.** What the system must do, must not do, and what you are assuming (one lot or many, prepaid or pay-on-exit). Say them out loud.
 2. **Entities.** Underline the nouns: vehicle, spot, floor, ticket, payment. Each becomes a class, a field or nothing.
 3. **Responsibilities.** One sentence per entity starting "knows" or "does": a `Spot` knows its size and whether it is free; a `ParkingLot` assigns spots and issues tickets. An "and" in the sentence hints at two classes hiding in one.
-4. **Classes and relationships.** Turn responsibilities into fields and methods, then draw which objects own which, which merely use which, and how many of each (see [Class relationships and UML](/learn/class-relationships-uml)).
+4. **Classes and relationships.** Turn responsibilities into fields and methods, then draw which objects own which, which merely use which, and how many of each (see [Class relationships and UML](/learn/lld/class-relationships-uml)).
 5. **Interactions.** Walk the main use case object by object (a vehicle arrives, the lot asks a floor for a spot, the spot is marked taken, a ticket is issued); a sequence diagram makes the gaps obvious.
 6. **Edge cases.** Lot full, vehicle too large for any spot, lost ticket, payment fails, two cars arrive at the last spot at once. Each becomes a method, a state or a documented decision.
 7. **Extensibility.** Name the change most likely to arrive next (electric-vehicle spots, hourly versus flat pricing) and show where it plugs in without rewriting what exists.
@@ -69,7 +69,7 @@ An LLD round is scored less on whether the code compiles than on the decisions y
 
 - **Clear responsibilities.** Every class can be described in one sentence, and none is called `Manager` or `Helper` because you could not say what it does.
 - **Sensible relationships.** Ownership, usage and counts match the domain: a ticket refers to a spot; it does not own it.
-- **Patterns used for a reason.** "Strategy here, because the spot-assignment rule is the thing most likely to change" earns credit; "Singleton" with no reason loses it. The pattern lessons, from [creational patterns](/learn/design-patterns-creational) on, teach the problem first.
+- **Patterns used for a reason.** "Strategy here, because the spot-assignment rule is the thing most likely to change" earns credit; "Singleton" with no reason loses it. The pattern lessons, from [creational patterns](/learn/lld/design-patterns-creational) on, teach the problem first.
 - **Edge cases named.** Naming the full lot, the race for the last spot and the payment that times out shows you have run the system in your head.
 - **Trade-offs said out loud.** More classes buy flexibility and cost indirection; a `switch` reads faster than four polymorphic classes until the fifth case arrives. Either is defensible if you name the cost.
 
@@ -81,8 +81,8 @@ Say which step you are on: "I have the entities; before I draw classes I want on
 
 ## How this module is organised
 
-The foundation lessons build from the object up. [OOP pillars](/learn/oop-pillars) and [class relationships](/learn/class-relationships-uml) give you the vocabulary. [Composition over inheritance](/learn/composition-over-inheritance), [SOLID](/learn/solid) and [interfaces and dependency injection](/learn/interfaces-abstractions-di) are the rules for deciding where code should live. Three pattern lessons catalogue the recurring shapes, and [concurrency](/learn/concurrency-basics), [error handling](/learn/error-handling), [clean code](/learn/clean-code) and [testing](/learn/testing-extensibility) cover what makes the classes correct and changeable.
+The foundation lessons build from the object up. [OOP pillars](/learn/lld/oop-pillars) and [class relationships](/learn/lld/class-relationships-uml) give you the vocabulary. [Composition over inheritance](/learn/lld/composition-over-inheritance), [SOLID](/learn/lld/solid) and [interfaces and dependency injection](/learn/lld/interfaces-abstractions-di) are the rules for deciding where code should live. Three pattern lessons catalogue the recurring shapes, and [concurrency](/learn/lld/concurrency-basics), [error handling](/learn/lld/error-handling), [clean code](/learn/lld/clean-code) and [testing](/learn/lld/testing-extensibility) cover what makes the classes correct and changeable.
 
-The case-study module then applies the whole workflow to classic problems, starting with the [parking lot](/learn/lld-parking-lot). Every case study follows one template (requirements, entities, class design, interfaces, interactions, patterns, edge cases, concurrency, extensibility), so learn it once and fourteen problems become one habit.
+The case-study module then applies the whole workflow to classic problems, starting with the [parking lot](/learn/lld-practice/lld-parking-lot). Every case study follows one template (requirements, entities, class design, interfaces, interactions, patterns, edge cases, concurrency, extensibility), so learn it once and fourteen problems become one habit.
 
 <mark>Low-level design is deciding, for one box, who is responsible for what, and proving it with a sequence.</mark>

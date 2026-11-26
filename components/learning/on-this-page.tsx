@@ -1,38 +1,98 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
 import { ChevronDown, TableOfContents } from "lucide-react";
+import { buildOutline, type OutlineCandidate, type OutlineEntry } from "@/lib/learning/outline";
 import { cn } from "@/lib/utils";
 import type { LessonHeading } from "@/lib/lesson-headings";
 
-/**
- * Section list for long lessons, highlighting the section being read. Collapsible: `open` and `onToggle`
- * come from <LessonSidePanels>, which keeps it and the Notes panel from being open together.
- */
-export function OnThisPage({ headings, open, onToggle }: { headings: LessonHeading[]; open: boolean; onToggle: () => void }) {
+/** Everything on the lesson page that can go in the outline, in page order (rules: lib/learning/outline.ts). */
+function collectCandidates(): OutlineCandidate[] {
+  const article = document.querySelector("[data-lesson-article]");
+  if (!article) return [];
+  const out: OutlineCandidate[] = [];
+  article.querySelectorAll<HTMLElement>("[data-toc], [data-lesson-body] h2[id], [data-lesson-body] h3[id]").forEach((el) => {
+    if (el.matches("h2, h3")) {
+      // Headings inside a folded "Go deeper", a callout or a simulation belong to that block, not the outline.
+      if (el.parentElement?.closest("details, aside, section, figure, [data-toc]")) return;
+      out.push({ id: el.id, label: el.textContent?.replace(/#$/, "") ?? "", level: el.tagName === "H2" ? 1 : 2 });
+      return;
+    }
+    out.push({ id: el.id, label: el.dataset.toc ?? "", level: el.dataset.tocLevel === "1" ? 1 : 2, minor: el.hasAttribute("data-toc-minor") });
+  });
+  return out;
+}
+
+/** The outline of this lesson and the entry being read. Starts from the build-time headings, then reads the page. */
+function useLessonOutline(headings: LessonHeading[]): { entries: OutlineEntry[]; active: string | null } {
+  const [entries, setEntries] = useState<OutlineEntry[]>(() => headings.map((h) => ({ id: h.id, label: h.text, level: 1 })));
   const [active, setActive] = useState<string | null>(null);
-  const regionRef = useRef<HTMLDivElement>(null);
-  const id = useId();
-  const regionId = `${id}-toc`;
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntries(buildOutline(collectCandidates())));
+    return () => cancelAnimationFrame(id);
+  }, [headings]);
 
   // Keeps tracking while collapsed, so the list is right the moment it opens.
   useEffect(() => {
-    const els = headings.map((h) => document.getElementById(h.id)).filter((el): el is HTMLElement => Boolean(el));
+    const els = entries.map((e) => document.getElementById(e.id)).filter((el): el is HTMLElement => Boolean(el));
     if (!els.length) return;
     const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      (items) => {
+        const visible = items.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]) setActive(visible[0].target.id);
       },
       { rootMargin: "-80px 0px -65% 0px" },
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, [headings]);
+  }, [entries]);
 
-  if (headings.length < 2) return null;
+  return { entries, active };
+}
 
-  // Collapsed, the header still says where the reader is.
-  const current = open ? undefined : headings.find((h) => h.id === active)?.text;
+/** A "Go deeper" entry opens its folded section on the way there. */
+function openTarget(e: MouseEvent<HTMLAnchorElement>) {
+  const target = document.getElementById(e.currentTarget.hash.slice(1));
+  if (target instanceof HTMLDetailsElement) target.open = true;
+}
+
+function OutlineList({ entries, active, onPick }: { entries: OutlineEntry[]; active: string | null; onPick?: () => void }) {
+  return (
+    <ul className="space-y-0.5 border-l border-line">
+      {entries.map((h) => (
+        <li key={h.id}>
+          <a
+            href={`#${h.id}`}
+            aria-current={active === h.id ? "location" : undefined}
+            onClick={(e) => {
+              openTarget(e);
+              onPick?.();
+            }}
+            className={cn(
+              "-ml-px block border-l-2 py-1 leading-snug transition-colors",
+              h.level === 1 ? "pl-3" : "pl-6 text-[0.8rem]",
+              active === h.id ? "border-accent font-bold text-ink" : "border-transparent text-ink-3 hover:text-ink",
+            )}
+          >
+            {h.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Right column (xl and up): the lesson's outline, highlighting the part being read. Collapsible: `open` and
+ * `onToggle` come from <LessonSidePanels>, which keeps it and the Notes panel from being open together.
+ */
+export function OnThisPage({ headings, open, onToggle }: { headings: LessonHeading[]; open: boolean; onToggle: () => void }) {
+  const { entries, active } = useLessonOutline(headings);
+  const regionRef = useRef<HTMLDivElement>(null);
+  const id = useId();
+  const regionId = `${id}-toc`;
+
+  if (entries.length < 2) return null;
 
   const toggle = () => {
     onToggle();
@@ -56,32 +116,32 @@ export function OnThisPage({ headings, open, onToggle }: { headings: LessonHeadi
             <span className="font-mono text-[0.68rem] uppercase tracking-[0.12em]">On this page</span>
             <ChevronDown aria-hidden="true" className={cn("ml-auto size-4 shrink-0 transition-transform", open && "rotate-180")} />
           </span>
-          {current ? (
-            <span aria-hidden="true" className="mt-1 block truncate text-[0.8rem] text-ink-2">
-              {current}
-            </span>
-          ) : null}
         </button>
       </h2>
       <div ref={regionRef} id={regionId} hidden={!open} data-testid="side-panel-toc" data-open={open ? "true" : "false"} className="mt-3">
-        <ul className="space-y-0.5 border-l border-line">
-          {headings.map((h) => (
-            <li key={h.id}>
-              <a
-                href={`#${h.id}`}
-                aria-current={active === h.id ? "location" : undefined}
-                className={cn(
-                  "-ml-px block border-l-2 py-1 pl-3 leading-snug transition-colors",
-                  active === h.id ? "border-accent font-bold text-ink" : "border-transparent text-ink-3 hover:text-ink",
-                )}
-              >
-                {h.text}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <OutlineList entries={entries} active={active} />
       </div>
     </nav>
+  );
+}
+
+/** Below xl (phones, tablets, small laptops): the same outline, folded, at the top of the lesson. */
+export function OnThisPageCompact({ headings }: { headings: LessonHeading[] }) {
+  const { entries, active } = useLessonOutline(headings);
+  const ref = useRef<HTMLDetailsElement>(null);
+  if (entries.length < 2) return null;
+  return (
+    <details ref={ref} className="group mb-6 rounded-xl border border-line bg-surface px-4 py-2 text-sm xl:hidden" data-companion-avoid="" data-testid="toc-compact">
+      <summary className="flex cursor-pointer list-none items-center gap-2 py-1 font-bold text-ink-2 group-open:mb-2 [&::-webkit-details-marker]:hidden">
+        <TableOfContents aria-hidden="true" className="size-4 shrink-0 text-ink-3" />
+        On this page
+        <span className="font-mono text-[0.7rem] font-normal text-ink-3">{entries.length}</span>
+        <ChevronDown aria-hidden="true" className="ml-auto size-4 shrink-0 text-ink-3 transition-transform group-open:rotate-180" />
+      </summary>
+      <nav aria-label="On this page" className="pb-1">
+        <OutlineList entries={entries} active={active} onPick={() => ref.current?.removeAttribute("open")} />
+      </nav>
+    </details>
   );
 }
 

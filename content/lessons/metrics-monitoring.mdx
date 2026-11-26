@@ -1,4 +1,4 @@
-A **metric** is a number sampled on a schedule and stored as a time series: a name, a set of labels and a value every few seconds. Metrics are cheap to keep and fast to query, which makes them the right signal for dashboards and alerts and the wrong one for "what happened to this one request" (that is [logging](/learn/logging) and [tracing](/learn/tracing)). Getting value from them comes down to three instruments, two checklists, one discipline about labels and one rule about paging.
+A **metric** is a number sampled on a schedule and stored as a time series: a name, a set of labels and a value every few seconds. Metrics are cheap to keep and fast to query, which makes them the right signal for dashboards and alerts and the wrong one for "what happened to this one request" (that is [logging](/learn/operations/logging) and [tracing](/learn/operations/tracing)). Getting value from them comes down to three instruments, two checklists, one discipline about labels and one rule about paging.
 
 ## Three instruments
 
@@ -20,7 +20,7 @@ What does add up is counts. A histogram records how many observations fell under
 histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))
 ```
 
-The price is precision. The estimate assumes observations are spread evenly inside the bucket, so its error is bounded by the bucket's width: with the Go client's default boundaries (5 ms up to 10 s in roughly 2.5× steps) a p99 that lands between 1 s and 2.5 s is known only to that range. Put a boundary exactly at your SLO threshold and the share of requests under it becomes exact, which is what a [latency SLI](/learn/slos-error-budgets) needs.
+The price is precision. The estimate assumes observations are spread evenly inside the bucket, so its error is bounded by the bucket's width: with the Go client's default boundaries (5 ms up to 10 s in roughly 2.5× steps) a p99 that lands between 1 s and 2.5 s is known only to that range. Put a boundary exactly at your SLO threshold and the share of requests under it becomes exact, which is what a [latency SLI](/learn/operations/slos-error-budgets) needs.
 
 ## RED for a service, USE for a resource
 

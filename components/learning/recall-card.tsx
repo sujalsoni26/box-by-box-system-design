@@ -9,7 +9,7 @@ export function RecallCard({ recall, hint }: { recall: RecallPrompt; hint: strin
   const [revealed, setRevealed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   return (
-    <section aria-label="Quick recall" className="mt-12 rounded-2xl border-[1.5px] border-line-strong bg-surface p-5">
+    <section id="quick-recall" data-toc="Quick recall" data-toc-level="1" aria-label="Quick recall" className="mt-12 scroll-mt-24 rounded-2xl border-[1.5px] border-line-strong bg-surface p-5">
       <p className="flex items-center gap-2 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-amber-ink">
         <Brain aria-hidden="true" className="size-4" /> Before you move on
       </p>

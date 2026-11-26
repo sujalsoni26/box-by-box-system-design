@@ -56,7 +56,7 @@ export const modules: CourseModule[] = [
 
 export const lessonMeta: LessonMeta[] = [
   {
-    slug: "big-idea", title: "The big idea", moduleId: "foundations", level: "basic", minutes: 4,
+    slug: "big-idea", title: "The big idea", moduleId: "foundations", level: "basic", minutes: 6,
     problem: "A system-design diagram full of boxes is easy to draw and hard to defend.",
     summary: "Grow one system step by step and add a building block only when a real problem forces it in. Then every box on your diagram has a reason.",
     catTip: "Hi, I'm Cache! I nap on servers, so I know when they get crowded. Every time something breaks in this course, a new box appears. I like boxes.",
@@ -64,7 +64,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "client-server", title: "Client–server architecture", moduleId: "foundations", level: "basic", minutes: 3,
+    slug: "client-server", title: "Client–server architecture", moduleId: "foundations", level: "basic", minutes: 5,
     problem: "A phone can't hold everyone's photos or run the logic for millions of people, so the work has to live somewhere shared.",
     summary: "A client sends a request; a server does the work and returns a response. The client always starts the conversation.",
     catTip: "You are the client: you meow, I mean ask. The kitchen is the server: it does the work and hands back the food. The kitchen never shouts your name first.",
@@ -72,7 +72,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["users"],
   },
   {
-    slug: "dns", title: "DNS", moduleId: "foundations", level: "basic", minutes: 5,
+    slug: "dns", title: "DNS", moduleId: "foundations", level: "basic", minutes: 8,
     problem: "Computers find each other by IP address (203.0.113.10), but people type names (instagram.com).",
     summary: "DNS (Domain Name System) is the internet's phone book: it maps names to IP addresses, with caching at every step.",
     catTip: "DNS is how I find the treat cupboard. I check my own memory first, then ask around, then remember the answer for a while. TTL = treat-time-to-live.",
@@ -80,7 +80,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["dns"],
   },
   {
-    slug: "tcp-udp", title: "IP, TCP and UDP", moduleId: "foundations", level: "basic", minutes: 6,
+    slug: "tcp-udp", title: "IP, TCP and UDP", moduleId: "foundations", level: "basic", minutes: 9,
     problem: "The network only promises best effort: packets can be lost, duplicated or arrive out of order.",
     summary: "IP addresses and routes packets. TCP adds reliability and order at the cost of round trips; UDP skips all that for low latency.",
     catTip: "TCP is me bringing you a mouse and waiting until you say thank you. UDP is me flinging mice across the room. Faster, but some land behind the sofa.",
@@ -88,7 +88,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["users"],
   },
   {
-    slug: "http", title: "HTTP and HTTPS", moduleId: "foundations", level: "basic", minutes: 6,
+    slug: "http", title: "HTTP and HTTPS", moduleId: "foundations", level: "basic", minutes: 9,
     problem: "Client and server need a shared message format, and on a public network anyone in between could read or change the bytes.",
     summary: "HTTP fixes the format: method, path, headers, body; status code back. HTTPS adds TLS for encryption, integrity and authentication.",
     catTip: "HTTP status codes, cat edition: 200 = treat delivered. 404 = treat not found. 429 = you asked for treats too many times. 503 = I am asleep.",
@@ -96,7 +96,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["users"],
   },
   {
-    slug: "latency", title: "Latency, throughput and the numbers to know", moduleId: "foundations", level: "intermediate", minutes: 10,
+    slug: "latency", title: "Latency, throughput and the numbers to know", moduleId: "foundations", level: "intermediate", minutes: 16,
     problem: "You can't make a system fast until you know where time goes and which part sets the pace.",
     summary: "Latency is time per operation, throughput is work per second. The slowest part sets the pace, percentiles beat averages, and a few latency ratios drive most design choices.",
     catTip: "RAM is me grabbing the toy next to my paw. SSD is walking to the toy box. Crossing a continent is waiting for my human to come home. Cache accordingly.",
@@ -104,7 +104,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["users"],
   },
   {
-    slug: "proxy", title: "Proxy and reverse proxy", moduleId: "scaling", level: "basic", minutes: 4,
+    slug: "proxy", title: "Proxy and reverse proxy", moduleId: "scaling", level: "basic", minutes: 6,
     problem: "Clients shouldn't talk to your servers directly: you need one front door for routing, security and caching.",
     summary: "A forward proxy speaks for clients; a reverse proxy speaks for servers, so clients never see the real backends.",
     catTip: "A reverse proxy is like me guarding the kitchen door. You never meet the chefs; you meet me, and I decide who gets which treat.",
@@ -112,7 +112,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "load-balancing", title: "Load balancing", moduleId: "scaling", level: "basic", minutes: 6,
+    slug: "load-balancing", title: "Load balancing", moduleId: "scaling", level: "basic", minutes: 9,
     problem: "One server can't take all the traffic, and if it dies the whole app goes down.",
     summary: "A load balancer spreads requests across a pool of servers and uses health checks to route around dead ones.",
     catTip: "Three humans, one cat. I spread my demands evenly so nobody burns out. If one human stops answering my meows, I skip them until they wake up. Health checks!",
@@ -120,7 +120,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "scaling", title: "Vertical vs horizontal scaling", moduleId: "scaling", level: "basic", minutes: 6,
+    slug: "scaling", title: "Vertical vs horizontal scaling", moduleId: "scaling", level: "basic", minutes: 9,
     problem: "Load keeps growing until latency climbs into seconds, connections time out and the server returns 503.",
     summary: "Scale up with a bigger machine or scale out with more machines behind a load balancer. Scaling out needs stateless servers.",
     catTip: "Scaling up: one giant cat bed. Scaling out: many cat beds around the house. If one bed gets taken, I simply nap in another. Fault tolerance.",
@@ -128,7 +128,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "cdn", title: "CDN", moduleId: "scaling", level: "basic", minutes: 5,
+    slug: "cdn", title: "CDN", moduleId: "scaling", level: "basic", minutes: 8,
     problem: "Every user fetching the same images and scripts from one faraway origin is slow for them and expensive for you.",
     summary: "A CDN (Content Delivery Network) caches static content on edge servers near users, so most requests never reach your origin.",
     catTip: "A CDN is hiding snack stashes in every room so I never walk to the kitchen. The kitchen only restocks a stash when it runs out.",
@@ -136,7 +136,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["cdn"],
   },
   {
-    slug: "rest", title: "REST APIs", moduleId: "communication", level: "basic", minutes: 5,
+    slug: "rest", title: "REST APIs", moduleId: "communication", level: "basic", minutes: 8,
     problem: "Separate pieces of software need a clear contract: what you can ask, in what format, and what comes back.",
     summary: "REST models everything as a resource with a URL and uses HTTP methods as the verbs. It is simple, universal and cacheable.",
     catTip: "REST, cat edition: GET /bowl checks the food. POST /bowl demands more. DELETE /cucumber removes the scary vegetable. URLs are nouns, methods are verbs.",
@@ -144,7 +144,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["feed"],
   },
   {
-    slug: "grpc", title: "gRPC", moduleId: "communication", level: "intermediate", minutes: 5,
+    slug: "grpc", title: "gRPC", moduleId: "communication", level: "intermediate", minutes: 8,
     problem: "Inside your system, services call each other thousands of times per second, and verbose JSON wastes time and bytes.",
     summary: "gRPC lets one service call another's function as if it were local, using compact binary Protocol Buffers over HTTP/2.",
     catTip: "gRPC is my secret tail-flick language with other cats: tiny, fast, strictly typed. Humans can't read it, which is exactly why it's efficient.",
@@ -152,7 +152,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["feed"],
   },
   {
-    slug: "websockets", title: "WebSockets (real-time)", moduleId: "communication", level: "intermediate", minutes: 6,
+    slug: "websockets", title: "WebSockets (real-time)", moduleId: "communication", level: "intermediate", minutes: 9,
     problem: "In plain HTTP only the client can start a conversation, so how does a chat app learn about a new message the moment it arrives?",
     summary: "Polling asks repeatedly, long polling waits, SSE streams one way, and a WebSocket keeps a two-way connection open so the server can push instantly.",
     catTip: "Polling is me asking \"is it dinner?\" every five seconds. A WebSocket is you promising to shout the moment the bowl is full. Much less meowing.",
@@ -160,7 +160,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["chat"],
   },
   {
-    slug: "microservices", title: "Monolith vs microservices", moduleId: "communication", level: "intermediate", minutes: 6,
+    slug: "microservices", title: "Monolith vs microservices", moduleId: "communication", level: "intermediate", minutes: 9,
     problem: "As the app and the team grow, one codebase deployed as one unit means teams step on each other, and one bug can take everything down.",
     summary: "Microservices split the app into small independent services, each owning one capability and usually its own database. You gain independent deploys and scaling, and you pay with a distributed system.",
     catTip: "One big cat bed is cosy until twelve cats want it. Twelve little beds is fairer, but now somebody must track who sleeps where. That somebody is the API gateway.",
@@ -168,7 +168,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["feed"],
   },
   {
-    slug: "sync-async", title: "Synchronous vs asynchronous communication", moduleId: "communication", level: "basic", minutes: 4,
+    slug: "sync-async", title: "Synchronous vs asynchronous communication", moduleId: "communication", level: "basic", minutes: 6,
     problem: "If every service call waits for the reply, one slow or dead service slows or fails everything that calls it, and the delays add up along the chain.",
     summary: "Call synchronously when you need the answer now; emit a message and move on for side effects. Posting a photo saves the post synchronously and does the rest asynchronously.",
     catTip: "Synchronous is me staring at you until you fill my bowl. Asynchronous is leaving a note on the fridge and going back to my nap. Both get me fed.",
@@ -176,7 +176,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["post"],
   },
   {
-    slug: "sql-nosql", title: "SQL vs NoSQL", moduleId: "data", level: "basic", minutes: 6,
+    slug: "sql-nosql", title: "SQL vs NoSQL", moduleId: "data", level: "basic", minutes: 9,
     problem: "Different data has different shapes and access patterns, and no single database is best at all of them.",
     summary: "Relational databases give schemas, joins and ACID transactions; NoSQL is a family (key-value, document, wide-column, graph). Default to relational and choose by data model, access pattern, consistency and scale.",
     catTip: "SQL is my neatly labelled toy drawers. NoSQL is four different toy boxes, each great for one kind of toy. Most big houses, Instagram included, use both.",
@@ -184,7 +184,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "acid", title: "Transactions and ACID", moduleId: "data", level: "intermediate", minutes: 6,
+    slug: "acid", title: "Transactions and ACID", moduleId: "data", level: "intermediate", minutes: 9,
     problem: "Moving ₹500 from A to B is two writes. If the server crashes between them, money disappears.",
     summary: "A transaction makes several operations one unit: all commit or all roll back. ACID names the four guarantees.",
     catTip: "A transaction is me knocking a glass off the table: either it reaches the floor or it never left. No glass floats halfway. Atomicity, meow.",
@@ -192,7 +192,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "indexing", title: "Database indexing", moduleId: "data", level: "basic", minutes: 5,
+    slug: "indexing", title: "Database indexing", moduleId: "data", level: "basic", minutes: 8,
     problem: "On 500M rows, WHERE email = … without an index reads every single row.",
     summary: "An index (usually a B-tree) keeps a column sorted with pointers to rows, turning an O(n) scan into O(log n) steps. It costs storage and slower writes.",
     catTip: "Without an index, finding my favourite toy means checking every corner of the house. With an index, I know: living room, under the sofa, left side. Three steps.",
@@ -200,7 +200,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "normalization", title: "Normalization vs denormalization", moduleId: "data", level: "basic", minutes: 4,
+    slug: "normalization", title: "Normalization vs denormalization", moduleId: "data", level: "basic", minutes: 6,
     problem: "Storing each fact once keeps data correct, but hot read paths then need slow joins.",
     summary: "Normalize by default (each fact once); denormalize the hot read paths that measurements show are bottlenecked.",
     catTip: "Normalized: my name is written once, on my collar. Denormalized: it's on my bowl, my bed and my scratching post. Faster to read, but rename me and you're relabelling all day.",
@@ -208,7 +208,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "replication", title: "Database replication", moduleId: "data", level: "intermediate", minutes: 7,
+    slug: "replication", title: "Database replication", moduleId: "data", level: "intermediate", minutes: 11,
     problem: "One database can't serve every read, and if it dies, everything stops.",
     summary: "Keep copies on several machines: the primary takes writes and streams changes to replicas, which serve reads. Async replication is fast but causes lag and stale reads.",
     catTip: "Replication is me teaching the kittens my moves. I invent the trick (writes); they copy it a bit later (replicas). Ask a kitten too soon and you get last week's trick.",
@@ -216,7 +216,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "sharding", title: "Sharding and partitioning", moduleId: "data", level: "advanced", minutes: 8,
+    slug: "sharding", title: "Sharding and partitioning", moduleId: "data", level: "advanced", minutes: 12,
     problem: "The data outgrows one machine (say 50 TB), or writes overwhelm a single primary.",
     summary: "Split the rows across machines by a shard key. Replication copies the same data; sharding splits different data. Shard last.",
     catTip: "Sharding is splitting my toy collection across three rooms by toy number. Great until one room gets all the catnip mice. That's a hot shard, and it's chaos.",
@@ -224,7 +224,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "consistency", title: "Consistency: strong vs eventual", moduleId: "data", level: "intermediate", minutes: 5,
+    slug: "consistency", title: "Consistency: strong vs eventual", moduleId: "data", level: "intermediate", minutes: 8,
     problem: "Once data has copies, they can briefly disagree: your profile update reached the primary but not yet a replica.",
     summary: "A consistency model is the promise about what a read returns after a write. Strong costs latency; eventual is fast but may be stale; causal and read-your-writes sit in between.",
     catTip: "Eventual consistency: I told one human I was fed, the other one hasn't heard yet, so I get a second breakfast. For likes that's harmless. For your bank balance, please don't.",
@@ -232,7 +232,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "cap", title: "CAP and PACELC", moduleId: "data", level: "advanced", minutes: 10,
+    slug: "cap", title: "CAP and PACELC", moduleId: "data", level: "advanced", minutes: 16,
     problem: "With copies in several places, a broken or slow network forces a choice between correct answers and any answer.",
     summary: "During a partition you choose consistency (refuse or wait) or availability (answer, maybe stale). PACELC adds the everyday case: even when healthy, you trade latency against consistency.",
     catTip: "CAP, cat edition: the door between me and the food room is shut. I can refuse to say whether I've eaten (C), or confidently say \"never fed, ever\" (A). I always pick A.",
@@ -240,7 +240,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "object-storage", title: "Object storage", moduleId: "data", level: "basic", minutes: 4,
+    slug: "object-storage", title: "Object storage", moduleId: "data", level: "basic", minutes: 6,
     problem: "Images, videos and PDFs are large binary blobs that bloat a relational database and clog the app servers that relay them.",
     summary: "Store files as objects in buckets (S3, Google Cloud Storage, Azure Blob), upload them directly with pre-signed URLs, keep only the key and metadata in the database, and serve them through a CDN.",
     catTip: "The database is my filing cabinet. Object storage is the giant warehouse out back. I keep the shelf number in the cabinet, never the actual sofa.",
@@ -248,7 +248,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["storage"],
   },
   {
-    slug: "caching", title: "Caching", moduleId: "reliability", level: "intermediate", minutes: 7,
+    slug: "caching", title: "Caching", moduleId: "reliability", level: "intermediate", minutes: 11,
     problem: "Millions of people open the same celebrity post, and re-querying the database for every one of them wastes work and slows everyone down.",
     summary: "Keep hot data in RAM (Redis, Memcached), about 1,000× faster than SSD. Cache-aside is the default pattern; stale data, stampedes and hot keys are the traps.",
     catTip: "I keep my favourite toy next to my bed, not in the toy box downstairs. That is caching. The hard part is noticing when someone swapped the toy. Purr.",
@@ -256,7 +256,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["cache"],
   },
   {
-    slug: "message-queues", title: "Message queues", moduleId: "reliability", level: "intermediate", minutes: 5,
+    slug: "message-queues", title: "Message queues", moduleId: "reliability", level: "intermediate", minutes: 8,
     problem: "A burst of a million photo uploads would crash the workers that process them, and a worker that crashes mid-job would lose its work.",
     summary: "A broker buffers messages between producers and consumers. Consumers ack after processing, so a crash means redelivery. Queues absorb bursts, need idempotent consumers and a dead-letter queue.",
     catTip: "A queue is the breakfast line at 7 a.m. Everyone gets served, just not all at once. If I knock my bowl over before finishing, the food comes back. That is redelivery.",
@@ -264,7 +264,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["queue"],
   },
   {
-    slug: "pubsub", title: "Pub/sub and event-driven architecture", moduleId: "reliability", level: "intermediate", minutes: 5,
+    slug: "pubsub", title: "Pub/sub and event-driven architecture", moduleId: "reliability", level: "intermediate", minutes: 8,
     problem: "When a post is created, notifications, analytics, moderation and recommendations all care, and calling each one directly couples them all to the post service.",
     summary: "The post service publishes one PostCreated event to a topic and every subscriber gets its own copy. Event-driven architecture builds whole systems from such past-tense facts.",
     catTip: "When I knock a glass off the table, I do not tell each human separately. I make one crash, and everyone who cares comes running. That is pub/sub.",
@@ -272,7 +272,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["post"],
   },
   {
-    slug: "availability", title: "Availability and the nines", moduleId: "reliability", level: "intermediate", minutes: 6,
+    slug: "availability", title: "Availability and the nines", moduleId: "reliability", level: "intermediate", minutes: 9,
     problem: "At scale something is always broken, so you need a number for how much downtime is acceptable and a plan to stay up anyway.",
     summary: "Availability = uptime ÷ (uptime + downtime). Each extra nine cuts allowed downtime 10× and costs far more engineering. Redundancy, failover and RPO/RTO targets make the number real.",
     catTip: "I am available 99.9% of the time. The other 0.1%, about 8.76 hours a year, I am asleep in a cardboard box. Planned maintenance, obviously.",
@@ -280,7 +280,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "timeouts-retries", title: "Timeouts and retries", moduleId: "reliability", level: "intermediate", minutes: 5,
+    slug: "timeouts-retries", title: "Timeouts and retries", moduleId: "reliability", level: "intermediate", minutes: 8,
     problem: "A call to a stuck service can hang forever, and naive retries turn a small blip into a flood that finishes off the struggling service.",
     summary: "Always set a timeout (a bit above the dependency's p99) with a fallback. Retry only transient errors on idempotent operations, with exponential backoff, jitter and a retry budget.",
     catTip: "When my bowl is empty I do not yell every second. I meow, wait, meow louder, wait longer, and add a random pause so the humans cannot predict me. Backoff with jitter.",
@@ -288,7 +288,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["workers"],
   },
   {
-    slug: "circuit-breaker", title: "Circuit breaker", moduleId: "reliability", level: "intermediate", minutes: 5,
+    slug: "circuit-breaker", title: "Circuit breaker", moduleId: "reliability", level: "intermediate", minutes: 8,
     problem: "When a dependency is dead, every caller waiting on timeouts and retries ties up threads and spreads the outage: a cascading failure.",
     summary: "A circuit breaker counts failures and, past a threshold, stops calling the dependency and fails fast with a fallback. After a cooldown, a few trial calls decide whether to close it again.",
     catTip: "If the laser dot vanishes five times in a row, I stop pouncing and nap. Every so often I open one eye to check. The humans call that half-open.",
@@ -296,7 +296,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["workers"],
   },
   {
-    slug: "backpressure", title: "Backpressure and load shedding", moduleId: "reliability", level: "advanced", minutes: 7,
+    slug: "backpressure", title: "Backpressure and load shedding", moduleId: "reliability", level: "advanced", minutes: 11,
     problem: "If producers outpace consumers for long, a queue only delays the crash: an unbounded queue grows until memory runs out.",
     summary: "Backpressure lets an overloaded part tell upstream to slow down. Load shedding is its sharpest form: reject the excess cheaply with a 503, least important work first, while autoscaling catches up.",
     catTip: "When my bowl is already full, I do not let you pour more. I knock the bag away. Rude? Perhaps. But the kitchen floor survives. Load shedding.",
@@ -304,7 +304,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["queue"],
   },
   {
-    slug: "rate-limiting", title: "Rate limiting", moduleId: "reliability", level: "intermediate", minutes: 7,
+    slug: "rate-limiting", title: "Rate limiting", moduleId: "reliability", level: "intermediate", minutes: 11,
     problem: "Bots, buggy scripts, brute-force logins, scrapers and one greedy tenant can starve everyone else and run up your bill.",
     summary: "A rate limiter caps requests per client per time window and answers 429 with Retry-After. Token bucket is the common algorithm; local limits are fast, global limits are accurate. Not to be confused with load shedding (503).",
     catTip: "I allow ten head pats per minute. Pat number eleven gets a polite 429 and a slow blink. Come back when my bucket refills.",
@@ -312,7 +312,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "idempotency", title: "Idempotency", moduleId: "reliability", level: "intermediate", minutes: 6,
+    slug: "idempotency", title: "Idempotency", moduleId: "reliability", level: "intermediate", minutes: 9,
     problem: "The server creates an order, the response is lost, the app retries, and now there are two orders or a double charge.",
     summary: "An operation is idempotent if repeating it has the same effect as doing it once. Make POSTs safe to retry with an idempotency key: the client reuses one ID per action, and the server stores the key with the result and replays it.",
     catTip: "Pressing the lift button five times does not summon five lifts. Pressing the treat button five times, sadly, also gives only one treat. Idempotent. I checked.",
@@ -320,7 +320,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["post"],
   },
   {
-    slug: "estimation-numbers", title: "Numbers to memorize", moduleId: "practice", level: "basic", minutes: 4,
+    slug: "estimation-numbers", title: "Numbers to memorize", moduleId: "practice", level: "basic", minutes: 6,
     problem: "Without rough numbers you draw boxes by guesswork: you cannot tell whether you need a cache, sharding or a CDN.",
     summary: "Round aggressively: a day is about 10⁵ seconds, each byte unit is 1,000× the last, and a few capacity rules of thumb (1k QPS per app server, 1–5k writes/s per SQL node, 100k ops/s per Redis node) carry most estimates.",
     catTip: "A day has 86,400 seconds. I round it to 100,000 because I am a cat and I have naps to schedule. The estimate is still close enough.",
@@ -328,7 +328,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "estimation-formulas", title: "The formulas", moduleId: "practice", level: "basic", minutes: 5,
+    slug: "estimation-formulas", title: "The formulas", moduleId: "practice", level: "basic", minutes: 8,
     problem: "You have users and actions; you need QPS, storage, bandwidth, cache size and a server count, said out loud in about a minute.",
     summary: "A handful of formulas turn DAU and object sizes into QPS, storage, bandwidth, cache and servers. Design for peak, not average, and say every assumption before you compute.",
     catTip: "Average QPS is DAU times actions, divided by 10⁵. I memorised it by chanting it at 3 a.m. The humans were thrilled.",
@@ -336,7 +336,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "estimation-examples", title: "Worked examples", moduleId: "practice", level: "intermediate", minutes: 6,
+    slug: "estimation-examples", title: "Worked examples", moduleId: "practice", level: "intermediate", minutes: 9,
     problem: "Formulas only stick once you run them on real systems and see which number dominates.",
     summary: "A URL shortener at 100M writes/day is read-heavy with tiny objects: about 1 PB over 10 years, so cache and replicas. Google Drive has the same 1k writes/s but 500× bigger objects, so storage and bandwidth dominate.",
     catTip: "Same number of mice per second, but one of them is the size of a tiger. Suddenly storage is the problem, not speed. That is URL shortener versus Google Drive.",
@@ -344,7 +344,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "system-shapes", title: "Three system shapes", moduleId: "practice", level: "intermediate", minutes: 3,
+    slug: "system-shapes", title: "Three system shapes", moduleId: "practice", level: "intermediate", minutes: 5,
     problem: "Different systems are dominated by different numbers, and the dominant number decides the design.",
     summary: "Most systems fall into three shapes: read-heavy with tiny objects, storage- and bandwidth-heavy, or write-heavy streams. Find the number that dominates, then design for it.",
     catTip: "Some cats nibble all day, some eat one enormous meal, some never stop. Know which cat you are feeding before you buy the bowl.",
@@ -352,7 +352,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "final-architecture", title: "The final architecture", moduleId: "practice", level: "intermediate", minutes: 4,
+    slug: "final-architecture", title: "The final architecture", moduleId: "practice", level: "intermediate", minutes: 6,
     problem: "Thirty-odd building blocks are easy to learn one at a time and hard to see as one system.",
     summary: "Every block sits where its problem appears: DNS and the CDN at the edge, a gateway in front of stateless services, caches before databases, queues before workers.",
     catTip: "Select any box on the map and I will show you the topics that explain it. Boxes glow as you finish topics. I like glowing things.",
@@ -360,7 +360,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "revision-map", title: "Revision: problem to building block", moduleId: "practice", level: "basic", minutes: 6,
+    slug: "revision-map", title: "Revision: problem to building block", moduleId: "practice", level: "basic", minutes: 9,
     problem: "You know each block; now you need to recall the right one the moment a problem is named.",
     summary: "Every card is a problem and the building block that solves it. Answer from memory, flip to check, then skim the full table.",
     catTip: "Say the answer out loud before you flip. It feels silly and it works. I say \"meow\" out loud constantly and I have never once forgotten it.",
@@ -368,7 +368,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "playbook", title: "The interview playbook", moduleId: "practice", level: "basic", minutes: 4,
+    slug: "playbook", title: "The interview playbook", moduleId: "practice", level: "basic", minutes: 6,
     problem: "In an interview, a blank whiteboard and 45 minutes invite you to draw boxes in random order.",
     summary: "Seven steps: functional requirements, non-functional requirements, estimation, API, data model, high-level design, deep dives. Start with one server and one database and add a box only when a requirement forces it.",
     catTip: "Seven steps, like my morning: stretch, yawn, demand breakfast, eat, judge you, groom, nap. Skip one and the whole day goes wrong.",
@@ -376,7 +376,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "url-shortener", title: "Design a URL shortener", moduleId: "hld", level: "intermediate", minutes: 12,
+    slug: "url-shortener", title: "Design a URL shortener", moduleId: "hld", level: "intermediate", minutes: 19,
     problem: "Long URLs are ugly to share; people want a short link that redirects fast and never breaks.",
     summary: "At 1B URLs over 10 years the design is small: ~3 writes/s, ~3,000 reads/s, ~500 GB on one PostgreSQL. A Redis counter encoded in base 62 gives unique codes, 302 keeps expiry and analytics possible, and Redis caches hot links.",
     catTip: "Base 62 is 0–9, A–Z and a–z. One million becomes 4C92: four characters for a millionth link. Unique by construction, so no collisions to chase. Purr.",
@@ -384,7 +384,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "test-yourself", title: "Test yourself", moduleId: "practice", level: "intermediate", minutes: 15,
+    slug: "test-yourself", title: "Test yourself", moduleId: "practice", level: "intermediate", minutes: 25,
     problem: "Reading feels like learning; recalling is what actually makes it stick.",
     summary: "Twenty questions across the whole course, as flip cards. Answer out loud first, then flip. Finish with the estimation drill.",
     catTip: "Trying to remember is what builds the memory, even when you get it wrong. I forget where I hid my toys all the time, and I am extremely clever.",
@@ -392,7 +392,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "distributed-fundamentals", title: "What makes a system distributed", moduleId: "distributed", level: "intermediate", minutes: 9,
+    slug: "distributed-fundamentals", title: "What makes a system distributed", moduleId: "distributed", level: "intermediate", minutes: 14,
     problem: "Once the app runs on more than one machine, the network between them can lose, delay or duplicate messages, and no machine can tell a slow neighbour from a dead one.",
     summary: "A distributed system is many machines that share nothing but an unreliable network. Design for partial failure: a timeout is a guess, clocks disagree, and every missing reply has at least three explanations.",
     catTip: "I meow at the door. No answer. Are the humans out, asleep, or did my meow get lost on the way? I cannot tell. That is a distributed system, and I am its very small client.",
@@ -400,7 +400,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "time-and-ordering", title: "Clocks, time and ordering", moduleId: "distributed", level: "advanced", minutes: 10,
+    slug: "time-and-ordering", title: "Clocks, time and ordering", moduleId: "distributed", level: "advanced", minutes: 16,
     problem: "Two replicas accept writes to the same key a few milliseconds apart, their clocks disagree by more, and whichever ordering the system picks by timestamp quietly throws one write away.",
     summary: "Wall clocks drift, jump and keep running while a process is paused, so they cannot order events across machines. Logical clocks (Lamport, vector, hybrid) order by causality instead, and Spanner's TrueTime makes physical time usable by bounding its error and waiting it out.",
     catTip: "I nap on the rack and wake with no idea how long I was out. The servers around me have the same problem: a paused process trusts a clock that kept moving without it. Count messages, not minutes.",
@@ -408,7 +408,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "quorums", title: "Quorums and leaderless replication", moduleId: "distributed", level: "advanced", minutes: 10,
+    slug: "quorums", title: "Quorums and leaderless replication", moduleId: "distributed", level: "advanced", minutes: 16,
     problem: "Without a leader every replica accepts writes, so a reader must decide how many copies to ask before trusting an answer, and replicas can hold different versions of one key.",
     summary: "Leaderless stores write to N replicas and wait for W acknowledgements, read from R and keep the newest. R + W > N makes the sets overlap, hinted handoff and repair keep replicas converging, and version vectors catch conflicts that last-write-wins silently drops.",
     catTip: "Three bowls, and the humans fill two of them each evening. If I check any two bowls I always find tonight's dinner in at least one. Unless the humans were sloppy and fed the neighbour's bowl instead.",
@@ -416,7 +416,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "consensus", title: "Consensus: Raft in one picture", moduleId: "distributed", level: "advanced", minutes: 12,
+    slug: "consensus", title: "Consensus: Raft in one picture", moduleId: "distributed", level: "advanced", minutes: 19,
     problem: "Several machines must agree on one leader and one order of writes while some crash or lose contact, and any two of them that decide differently corrupt the data.",
     summary: "Consensus lets a cluster agree on a replicated log despite crashes and partitions. Raft elects a leader per numbered term with randomised timeouts and majority votes, and an entry is committed once a majority stores it, so any two decisions always share a witness.",
     catTip: "Five cats, one sunbeam. We vote; three purrs and the sunbeam is decided for this term. If two of us wander off the other three still agree, and the wanderers learn from the term number when they return.",
@@ -424,7 +424,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "leader-election", title: "Leader election, split-brain and fencing", moduleId: "distributed", level: "advanced", minutes: 9,
+    slug: "leader-election", title: "Leader election, split-brain and fencing", moduleId: "distributed", level: "advanced", minutes: 14,
     problem: "A leader pauses for a long garbage collection, its lease expires and a new leader is elected, then the old one wakes and keeps writing as if nothing happened.",
     summary: "Leader election rents leadership with a lease: hold a time-limited key, renew it, and let the next candidate take over when it lapses. A paused leader cannot know its lease expired, so the storage it writes to checks a fencing token and rejects it.",
     catTip: "I was the only cat allowed on the warm laptop, then I dozed off on the stairs. When I came back another cat had the lease and the laptop lid, sensibly, checked whose turn it was. Fencing, not feelings.",
@@ -432,7 +432,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "distributed-locks", title: "Distributed locking", moduleId: "distributed", level: "advanced", minutes: 9,
+    slug: "distributed-locks", title: "Distributed locking", moduleId: "distributed", level: "advanced", minutes: 14,
     problem: "Two workers on different machines both believe they hold the lock for the same job, and the one whose lease silently expired writes last.",
     summary: "A distributed lock grants one holder at a time across machines, usually a TTL key in Redis or a consensus store. The TTL can expire under a slow holder, so a correct lock needs a fencing token the resource checks, or no lock at all.",
     catTip: "I sit on the warm server and declare it mine, then nap for forty seconds. When I wake, another cat is sitting there too: my claim expired while I slept. A lock with a TTL is a lease, and a lease needs a fencing token.",
@@ -440,7 +440,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "distributed-transactions", title: "Distributed transactions and two-phase commit", moduleId: "distributed", level: "advanced", minutes: 10,
+    slug: "distributed-transactions", title: "Distributed transactions and two-phase commit", moduleId: "distributed", level: "advanced", minutes: 16,
     problem: "An order commits in one database while the stock decrement in another fails, and the first commit is already durable and cannot be taken back.",
     summary: "Two-phase commit makes a change across several resources atomic: participants prepare and promise, a coordinator logs the decision, everyone applies it. The price is locks held while in doubt and blocking if the coordinator dies, which consensus-replicated coordinators fix and services avoid with sagas.",
     catTip: "Two bowls, two rooms. I will not eat from one until both humans have promised to fill them, and then I wait, paws on both bowls, until the head human says go. If she wanders off, I sit there. Blocking is undignified.",
@@ -448,7 +448,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "sagas", title: "Sagas and compensating actions", moduleId: "distributed", level: "intermediate", minutes: 8,
+    slug: "sagas", title: "Sagas and compensating actions", moduleId: "distributed", level: "intermediate", minutes: 12,
     problem: "A checkout spans three services and three databases; payment is declined after stock was reserved, and nothing can roll back a transaction another service has already committed.",
     summary: "A saga is a sequence of local transactions across services, each paired with a compensating transaction that undoes it. Coordinated by events (choreography) or a coordinator (orchestration), it replaces locks and two-phase commit with compensation and idempotent, retried steps.",
     catTip: "I knock the vase off the shelf, then the lamp, then I think better of it. I cannot un-knock the vase, but I can push the lamp back and look innocent. That is a compensation, not a rollback.",
@@ -456,7 +456,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "linearizability", title: "Linearizability, serializability and the consistency zoo", moduleId: "distributed", level: "advanced", minutes: 9,
+    slug: "linearizability", title: "Linearizability, serializability and the consistency zoo", moduleId: "distributed", level: "advanced", minutes: 14,
     problem: "Alice sees the final score, tells Bob, and Bob's refresh still shows the match in progress because his read hit a replica that had not caught up.",
     summary: "Linearizability makes replicated data behave like one copy in real time; serializability makes concurrent transactions equivalent to some serial order; strict serializability is both. Reserve the top of the map for locks, uniqueness and leaders, because it costs round trips and availability.",
     catTip: "One food bowl, one truth: when it is empty, it is empty for every cat, instantly. Two bowls that are usually the same are how the kitten eats twice. Linearizability is the one-bowl illusion, and it costs a walk to the kitchen.",
@@ -464,7 +464,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "storage-engines", title: "How a database stores data", moduleId: "internals", level: "intermediate", minutes: 8,
+    slug: "storage-engines", title: "How a database stores data", moduleId: "internals", level: "intermediate", minutes: 12,
     problem: "A query that touches one 100-byte row still reads whole pages from disk, and the wrong layout or engine turns a simple report into a full-table crawl.",
     summary: "A storage engine moves fixed-size pages between disk and a buffer pool. Row stores suit transactions, column stores suit analytics, and MySQL, MongoDB and RocksDB show that the engine is a swappable part beneath the query layer.",
     catTip: "I never fetch one kibble; I knock the whole bowl over. Databases are the same: ask for one row and a whole 8 kB page comes along. Keep the bowls you use most in the warm spot by the server.",
@@ -472,7 +472,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "wal", title: "Write-ahead logging and crash recovery", moduleId: "internals", level: "intermediate", minutes: 8,
+    slug: "wal", title: "Write-ahead logging and crash recovery", moduleId: "internals", level: "intermediate", minutes: 12,
     problem: "A crash between acknowledging a commit and writing the changed pages would lose or half-apply the transaction unless something durable records it first.",
     summary: "The write-ahead log records every change sequentially before data pages are touched, so a commit is one flush of the log. Checkpoints bound recovery, group commit amortises flushes, and the same log feeds replicas and change data capture.",
     catTip: "Before I nap on a new server I scratch a note on the wall: Cache was here, 14:02. If the humans move me mid-nap, the note survives. Databases scratch the log first and move the furniture later.",
@@ -480,7 +480,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "btree-vs-lsm", title: "B-trees vs LSM trees", moduleId: "internals", level: "advanced", minutes: 11,
+    slug: "btree-vs-lsm", title: "B-trees vs LSM trees", moduleId: "internals", level: "advanced", minutes: 17,
     problem: "An engine that rewrites whole pages for every small change cannot keep up with a write-heavy stream, and one that appends everything cannot answer reads without visiting many files.",
     summary: "B-trees update fixed-size pages in place for predictable reads at the cost of random page writes; LSM trees append to a memtable, flush immutable SSTables and compact in the background, trading read and space amplification for sequential writes.",
     catTip: "A B-tree is my food cupboard: every tin in its labelled place, tidy but fussy to restock. An LSM tree is me shoving each new toy under the sofa and sorting the pile at midnight.",
@@ -488,7 +488,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "mvcc-isolation", title: "MVCC and isolation levels", moduleId: "internals", level: "advanced", minutes: 10,
+    slug: "mvcc-isolation", title: "MVCC and isolation levels", moduleId: "internals", level: "advanced", minutes: 16,
     problem: "Two transactions each check a rule, each write a different row, and both commit, leaving the database in a state neither of them would have allowed.",
     summary: "MVCC keeps several versions of a row so readers never block writers, and each transaction reads a snapshot. Snapshot isolation still permits write skew, which serializable snapshot isolation or explicit locks prevent, and old versions must be vacuumed or purged.",
     catTip: "Two humans each check the bowl, each see food, each decide the other will refill it. That is snapshot isolation in my own kitchen. Serializable would make one of them wait or retry, and I would eat.",
@@ -496,7 +496,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "query-execution", title: "Indexes and query execution", moduleId: "internals", level: "intermediate", minutes: 9,
+    slug: "query-execution", title: "Indexes and query execution", moduleId: "internals", level: "intermediate", minutes: 14,
     problem: "A query that should touch twenty rows reads the whole table, or the app fires one query per row, and nobody can tell which from the code alone.",
     summary: "The planner turns SQL into a tree of scans and joins using statistics; EXPLAIN ANALYZE shows estimated against actual rows. Covering indexes enable index-only scans, selectivity decides when an index helps, and N+1 lives outside the planner's reach.",
     catTip: "Before I pounce I check the floor plan: shortest path to the bowl, not the longest. EXPLAIN is the floor plan the database drew; if its guess of where the mice are is wrong, so is the route.",
@@ -504,7 +504,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "replication-internals", title: "Replication strategies in depth", moduleId: "internals", level: "advanced", minutes: 10,
+    slug: "replication-internals", title: "Replication strategies in depth", moduleId: "internals", level: "advanced", minutes: 16,
     problem: "The primary dies with acknowledged commits still unsent, a forgotten replication slot fills the disk, or two regions update the same row and one write quietly disappears.",
     summary: "Replication ships statements, physical WAL or logical row changes, each with different limits. Slots keep lagging replicas fed, failover trades a data-loss window against commit latency, multi-leader setups need LWW, merges or CRDTs, and CDC turns the log into events.",
     catTip: "I follow the human from room to room by the sound of footsteps: that is physical replication, exact but same-house only. A note saying the bowl moved to the kitchen works in any house. That is logical.",
@@ -512,7 +512,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "partitioning-internals", title: "Partitioning and rebalancing", moduleId: "internals", level: "advanced", minutes: 10,
+    slug: "partitioning-internals", title: "Partitioning and rebalancing", moduleId: "internals", level: "advanced", minutes: 16,
     problem: "After sharding, a query by anything but the shard key fans out to every shard, adding a node reshuffles data, and one hot key still pins a single partition.",
     summary: "Local indexes make writes cheap and reads scatter-gather; global indexes invert that and go eventually consistent. Rebalance with fixed partitions, dynamic splits or per-node slices, route through a coordination service, gossip or a routing tier, and salt hot keys.",
     catTip: "Every room in the house has its own toy box, a local index: finding the red mouse means checking all of them. One master list of toys by colour is faster to read but always a little behind where I actually dropped it.",
@@ -520,7 +520,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "distributed-sql", title: "Distributed SQL and NewSQL", moduleId: "internals", level: "advanced", minutes: 11,
+    slug: "distributed-sql", title: "Distributed SQL and NewSQL", moduleId: "internals", level: "advanced", minutes: 17,
     problem: "One PostgreSQL primary has run out of write capacity and disk, and sharding it by hand would break the transactions and joins the product depends on.",
     summary: "Distributed SQL databases such as Spanner, CockroachDB and TiDB split tables into key ranges, replicate each range with Raft or Paxos, run two-phase commit across ranges and order commits with a clock service, so one SQL endpoint survives node and region loss.",
     catTip: "I used to nap on one big database server. Now the humans spread my bed across three towns and only count me asleep once two of the three beds agree. Very safe. Also slower to lie down, every single time.",
@@ -528,7 +528,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db"],
   },
   {
-    slug: "kafka-architecture", title: "Kafka: a distributed log", moduleId: "streaming", level: "intermediate", minutes: 10,
+    slug: "kafka-architecture", title: "Kafka: a distributed log", moduleId: "streaming", level: "intermediate", minutes: 16,
     problem: "A queue deletes each message once one worker acks it, so a second team cannot read the same events later and nothing can be replayed after a bug.",
     summary: "Kafka is a partitioned, replicated, append-only log. Producers append to partition leaders, followers copy the records, consumers read by offset and keep their own position, and records stay for a retention period or are compacted down to the latest value per key.",
     catTip: "I nap on the broker because it never throws anything away: every record stays, in order, until retention says otherwise. I keep my own bookmark, called an offset, and if I oversleep for a week the log has moved on without me.",
@@ -536,7 +536,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["queue"],
   },
   {
-    slug: "partitions-consumer-groups", title: "Partitions, consumer groups and ordering", moduleId: "streaming", level: "intermediate", minutes: 9,
+    slug: "partitions-consumer-groups", title: "Partitions, consumer groups and ordering", moduleId: "streaming", level: "intermediate", minutes: 14,
     problem: "Ten consumers are started for a topic with four partitions and six do nothing, while one partition carrying a single hot key falls further behind every minute.",
     summary: "A partition is the unit of both ordering and parallelism. Keys decide which partition a record joins, a consumer group gives each partition exactly one owner, rebalances move partitions when membership changes, and lag per partition tells you whether the group keeps up.",
     catTip: "I pick one checkout lane and stay in it, so my tins are scanned in the order I put them down. The empty lane next to me does not help: a partition has one owner, and a hot key is one very full trolley.",
@@ -544,7 +544,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["queue"],
   },
   {
-    slug: "delivery-semantics", title: "Delivery semantics and exactly-once", moduleId: "streaming", level: "advanced", minutes: 9,
+    slug: "delivery-semantics", title: "Delivery semantics and exactly-once", moduleId: "streaming", level: "advanced", minutes: 14,
     problem: "A consumer inserted five payments, crashed before committing its offset, restarted and inserted the same five again; the retry nobody saw became a double charge.",
     summary: "At-most-once, at-least-once and exactly-once follow from whether retries can duplicate and whether a consumer commits before or after the work. Kafka adds an idempotent producer and transactions inside the log; outside it, exactly-once is an effect you get only from idempotent sinks.",
     catTip: "I tick my chore list after I do the chore, so a nap in between means doing it twice. Fine for naps, bad for payments. The trick is making the second go change nothing, which is a plan, not a hope.",
@@ -552,7 +552,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "cdc", title: "Change data capture", moduleId: "streaming", level: "intermediate", minutes: 9,
+    slug: "cdc", title: "Change data capture", moduleId: "streaming", level: "intermediate", minutes: 14,
     problem: "The order service writes the row and then publishes the event, crashes in between, and the cache, search index and warehouse never learn the order exists.",
     summary: "Change data capture reads committed changes from the database log and publishes each as an event in commit order. With an outbox table it makes the row and its event one atomic write, delivered at least once and ordered per key.",
     catTip: "I do not ask the humans what changed in the kitchen. I read the scratches on the cupboard door, in order, including the tin that was taken away. The log never forgets a delete, and neither do I.",
@@ -560,7 +560,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["db", "queue", "cache"],
   },
   {
-    slug: "brokers-compared", title: "Choosing a broker", moduleId: "streaming", level: "intermediate", minutes: 10,
+    slug: "brokers-compared", title: "Choosing a broker", moduleId: "streaming", level: "intermediate", minutes: 16,
     problem: "Billing, analytics and a new fraud model all need the order events, one of them wants last month's replayed, and the team put everything on one work queue.",
     summary: "Brokers are logs or queues underneath. Kafka and Pulsar keep records and let readers replay; RabbitMQ and SQS route, acknowledge and delete each message; SNS fans out. Replay and many readers want a log, per-message routing wants a queue.",
     catTip: "The newspaper archive lets me read any day I like, as often as I like. The post office hands each letter to one cat and it is gone. I pick the archive for history and the post office for errands. Never the other way round.",
@@ -568,7 +568,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["queue"],
   },
   {
-    slug: "stream-processing", title: "Stream processing", moduleId: "streaming", level: "advanced", minutes: 10,
+    slug: "stream-processing", title: "Stream processing", moduleId: "streaming", level: "advanced", minutes: 16,
     problem: "A per-minute metric computed as events arrive shows zeros while phones are offline and a spike when they reconnect, and a crash loses every running count.",
     summary: "Stream processors compute continuously over unbounded data. Event time and watermarks decide when a window is complete, windows shape the metric, checkpoints make operator state survive failures, and stream-table joins enrich events with the right version of a row.",
     catTip: "I count mice per hour by when I caught them, not when I finally bring them in. A watermark is me deciding the hour is over; the mouse that turns up afterwards is late data, and I note it rather than pretend it never happened.",
@@ -576,7 +576,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "eda-patterns", title: "Event-driven architecture in practice", moduleId: "streaming", level: "intermediate", minutes: 8,
+    slug: "eda-patterns", title: "Event-driven architecture in practice", moduleId: "streaming", level: "intermediate", minutes: 12,
     problem: "Twelve services react to each other's events, nobody can say what happens after OrderPlaced, and a renamed field broke three consumers that were still reading last week's records.",
     summary: "Design events as past-tense facts with an owner, choose thin notifications or fat state-carrying events deliberately, evolve schemas through a registry with compatibility rules, and know when a choreographed flow needs an orchestrator and how to observe it.",
     catTip: "I do not command the humans; I publish MeowHeard and let them react. A fat meow tells them what I want, a thin meow makes them come and look. Either way, the shape of a meow must never change without warning.",
@@ -584,7 +584,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "failure-modes", title: "Fault tolerance: how systems fail", moduleId: "operations", level: "intermediate", minutes: 8,
+    slug: "failure-modes", title: "Fault tolerance: how systems fail", moduleId: "operations", level: "intermediate", minutes: 12,
     problem: "Redundant copies that share a rack, a dependency or a deploy fail together, and a server that passes its health check while dropping packets keeps receiving traffic.",
     summary: "Faults become errors become failures, and tolerance means breaking that chain. Spread copies across failure domains they do not share, pick a redundancy shape for the failure you expect, keep the blast radius small, and detect the grey failures that health checks miss.",
     catTip: "Two naps in the same sunbeam are not redundancy. When the cloud rolls in, both naps fail at once. I keep a spare nap spot by the radiator in a different room, and I test it on Tuesdays.",
@@ -592,7 +592,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "bulkheads-degradation", title: "Bulkheads and graceful degradation", moduleId: "operations", level: "intermediate", minutes: 8,
+    slug: "bulkheads-degradation", title: "Bulkheads and graceful degradation", moduleId: "operations", level: "intermediate", minutes: 12,
     problem: "One slow dependency eats every thread, one poisonous customer takes down everyone on their shard, and under load the site dies whole instead of dropping what does not matter.",
     summary: "Bulkheads give each dependency, tenant or feature its own bounded pool: thread pools inside a process, cells and shuffle shards across a service. Kill switches and degraded modes decide in advance what fails first.",
     catTip: "Eight food bowls, two per cat, dealt at random. The greedy cat empties his two, but every other cat still has a bowl he never touched. That is shuffle sharding, and I approve of it on principle.",
@@ -600,7 +600,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "slos-error-budgets", title: "SLIs, SLOs and error budgets", moduleId: "operations", level: "intermediate", minutes: 9,
+    slug: "slos-error-budgets", title: "SLIs, SLOs and error budgets", moduleId: "operations", level: "intermediate", minutes: 14,
     problem: "Without a user-facing target and an agreed budget for failure, teams page on noise, sleep through slow bleeds, and argue about whether the service is reliable enough.",
     summary: "SLIs measure what users feel, an SLO sets a target for them over a rolling window, and the gap to 100% is an error budget that burn-rate alerts protect and a written policy spends.",
     catTip: "I allow myself 43 minutes of knocking things off shelves a month. Spend it slowly on small experiments, or blow it in one glorious afternoon. Either way the budget is the budget, and it does not roll over.",
@@ -608,7 +608,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "metrics-monitoring", title: "Metrics and monitoring", moduleId: "operations", level: "intermediate", minutes: 9,
+    slug: "metrics-monitoring", title: "Metrics and monitoring", moduleId: "operations", level: "intermediate", minutes: 14,
     problem: "Dashboards full of averages and host graphs hide the slow tail, page people on CPU spikes nobody can act on, and fall over when someone adds a user-id label.",
     summary: "Counters, gauges and histograms are the three instruments; RED describes a service and USE a resource. Keep labels bounded, pull rather than push where you can, and page on symptoms users feel rather than on causes.",
     catTip: "I count every mouse I see (counter), weigh myself after dinner (gauge), and sort my naps into buckets by length (histogram). Averaging my nap p99 with the dog's would be nonsense; add the buckets instead.",
@@ -616,7 +616,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "logging", title: "Logging at scale", moduleId: "operations", level: "intermediate", minutes: 8,
+    slug: "logging", title: "Logging at scale", moduleId: "operations", level: "intermediate", minutes: 12,
     problem: "Free-text log lines from fifty services cannot be searched by request, cost more to store than the database they describe, and quietly leak card numbers and tokens.",
     summary: "Write structured JSON events with levels and a correlation id, ship them through an agent and a broker to a searchable store, control cost with sampling, dynamic levels and retention tiers, and redact personal data at the source.",
     catTip: "My diary used to say 'ate something, felt odd'. Now every entry has fields: time, bowl, food, outcome. Searching for outcome equals hairball takes a second. I keep three days close by and a year in the attic.",
@@ -624,7 +624,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "tracing", title: "Distributed tracing", moduleId: "operations", level: "intermediate", minutes: 8,
+    slug: "tracing", title: "Distributed tracing", moduleId: "operations", level: "intermediate", minutes: 12,
     problem: "A checkout takes two seconds across nine services and nobody can say which hop or query spent the time, because each service sees only its own slice.",
     summary: "A trace is the tree of spans one request creates across services, joined by a trace id carried in the W3C traceparent header. OpenTelemetry produces it, sampling keeps it affordable, and the waterfall view shows where the time went.",
     catTip: "Every room my mouse runs through gets the same tracking number scratched on the floor. Afterwards I read the trail like a map: which room cost the most time, and where it went round in forty tiny circles.",
@@ -632,7 +632,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "disaster-recovery", title: "Disaster recovery and backups", moduleId: "operations", level: "advanced", minutes: 10,
+    slug: "disaster-recovery", title: "Disaster recovery and backups", moduleId: "operations", level: "advanced", minutes: 16,
     problem: "The region hosting the primary database is gone, or a migration has just deleted the orders table in every replica, and the team discovers the backups have never been restored.",
     summary: "Disaster recovery covers what high availability cannot: a lost region or lost data. Set RPO and RTO per tier, pick one of four strategies, keep backups you have actually restored, and rehearse the failover before you need it.",
     catTip: "I keep a second bed in another house, pre-warmed. If the lights go out here, I walk over: the walk is my RTO, and the treats I left behind are my RPO. I rehearse the walk every month, treats in paw.",
@@ -640,7 +640,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "capacity-planning", title: "Capacity planning and load testing", moduleId: "operations", level: "intermediate", minutes: 9,
+    slug: "capacity-planning", title: "Capacity planning and load testing", moduleId: "operations", level: "intermediate", minutes: 14,
     problem: "Servers run at 95% to save money until the IPL final, when queues form, latency explodes, autoscaling arrives five minutes late and losing one zone overloads the rest.",
     summary: "Plan supply against peak demand with headroom: keep utilisation below the queueing knee, size for losing a zone, use Little's law for pools, measure capacity with load tests, and turn the forecast into autoscaling targets and a cost per request.",
     catTip: "A food bowl queue at 95% full is a brawl. I plan my bowls for the dinner rush, keep one spare in case a bowl breaks, and once a quarter I invite the neighbourhood over to find out where the kitchen falls apart.",
@@ -648,7 +648,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "incident-response", title: "Incidents, postmortems and chaos engineering", moduleId: "operations", level: "intermediate", minutes: 9,
+    slug: "incident-response", title: "Incidents, postmortems and chaos engineering", moduleId: "operations", level: "intermediate", minutes: 14,
     problem: "The pager fires at 3 a.m., three engineers debug the same thing in three chats, nobody updates customers, and the same outage returns next quarter.",
     summary: "Incident response runs an outage with severity levels, an incident commander who delegates operations and communications, a live timeline and a status page, then learns from it with a blameless postmortem whose action items buy back the error budget.",
     catTip: "When the fish tank overflows, one cat commands, one cat mops and one cat tells the humans. Afterwards nobody blames the cat who knocked the pump; we ask why the pump could be knocked. Then we practise knocking it on purpose.",
@@ -656,7 +656,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "security-fundamentals", title: "Security fundamentals for system design", moduleId: "security", level: "basic", minutes: 7,
+    slug: "security-fundamentals", title: "Security fundamentals for system design", moduleId: "security", level: "basic", minutes: 11,
     problem: "Every box and arrow you draw is somewhere an attacker can read, change or deny access to data, and most designs never say where that is checked.",
     summary: "Security means confidentiality, integrity and availability for the right people and nobody else. You get there by marking trust boundaries, shrinking the attack surface, layering independent defences and giving every service and person the least privilege that still works.",
     catTip: "I nap on the server rack because the door was open, the badge reader was broken and the rack key was taped to the rack. Three layers, three failures. One working layer and I would be napping in the lobby.",
@@ -664,7 +664,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "authentication", title: "Authentication: sessions, tokens and passwords", moduleId: "security", level: "intermediate", minutes: 9,
+    slug: "authentication", title: "Authentication: sessions, tokens and passwords", moduleId: "security", level: "intermediate", minutes: 14,
     problem: "Passwords get stolen in bulk, sessions get hijacked, and a login that lives in one server's memory breaks the moment you add a second server.",
     summary: "Authentication proves who is asking: salted adaptive hashes for passwords, an opaque session id in a hardened cookie or a signed bearer token for every request after login, a second factor that resists phishing, and single sign-on when an identity provider should own the login.",
     catTip: "My collar tag says Cache, but the vet still checks the microchip. Proof once, then a wristband for the visit. If I lose the wristband, anyone wearing it is me until it expires, which is exactly why it expires.",
@@ -672,7 +672,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "authorization", title: "Authorisation: RBAC, ABAC and policy", moduleId: "security", level: "intermediate", minutes: 8,
+    slug: "authorization", title: "Authorisation: RBAC, ABAC and policy", moduleId: "security", level: "intermediate", minutes: 12,
     problem: "Authentication tells you the request is from user 42; nothing yet says whether user 42 may read order 10024, and that gap tops the OWASP API Top 10.",
     summary: "Authorisation decides whether an authenticated caller may act on this object. Model permissions with roles, attributes or relationships, separate the decision point from the enforcement point, check coarse rules at the gateway and object-level rules in the service, and scope every query by tenant.",
     catTip: "The kitchen door knows I am Cache; that is authentication. The fridge still will not open for me; that is authorisation. The humans check it every single time, however hard I purr. Deny by default is a cruel, correct policy.",
@@ -680,7 +680,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "oauth-jwt", title: "OAuth 2.0, OpenID Connect and JWT", moduleId: "security", level: "intermediate", minutes: 10,
+    slug: "oauth-jwt", title: "OAuth 2.0, OpenID Connect and JWT", moduleId: "security", level: "intermediate", minutes: 16,
     problem: "Users want to log in with Google and let third-party apps touch their data, services need to call each other, and nobody should paste a password into someone else's app.",
     summary: "OAuth 2.0 issues short-lived access tokens through the authorization code flow with PKCE or client credentials; OpenID Connect adds a signed ID token saying who logged in; JWTs carry the claims, verified against the issuer's published keys and checked for issuer, audience and expiry.",
     catTip: "The vet gives the groomer a note: may wash Cache, may not vaccinate Cache, valid today only. The groomer checks the vet's signature, not my purring. Tomorrow the note is worthless, which is the whole point of the note.",
@@ -688,7 +688,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "encryption", title: "Encryption in transit and at rest", moduleId: "security", level: "intermediate", minutes: 8,
+    slug: "encryption", title: "Encryption in transit and at rest", moduleId: "security", level: "intermediate", minutes: 12,
     problem: "A stolen disk, a leaked database password and a curious administrator are three different attackers, and one tick-box called encrypted at rest defends against only the first.",
     summary: "Certificates bind keys to names, mutual TLS gives services identities, and encryption at rest comes in layers that stop different attackers. Envelope encryption keeps the master key in a KMS and wraps per-object data keys, so rotation and deletion become key operations.",
     catTip: "My treats are in a tin, the tin key is in an envelope, and the envelope only opens in the vault. The humans call this envelope encryption. I call it three layers between me and dinner, and all three work.",
@@ -696,7 +696,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "api-security", title: "API security", moduleId: "security", level: "intermediate", minutes: 9,
+    slug: "api-security", title: "API security", moduleId: "security", level: "intermediate", minutes: 14,
     problem: "An API is a public surface where any client can send any bytes, change any id, replay any request and point your server at any URL.",
     summary: "API security is a chain of checks from edge to database: allow-list validation, parameterised queries, SameSite cookies and CSRF tokens, CORS that permits only your origins, keys and scoped tokens, rate limits and idempotency keys, and HMAC-signed, timestamped webhooks.",
     catTip: "Every parcel through my cat flap gets the same treatment: is it addressed to me, is it the right shape, have I seen this one before, and did the courier sign for it today? Only then do I sniff it.",
@@ -704,7 +704,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "secrets-management", title: "Secrets management", moduleId: "security", level: "intermediate", minutes: 7,
+    slug: "secrets-management", title: "Secrets management", moduleId: "security", level: "intermediate", minutes: 11,
     problem: "Database passwords and API keys end up in git, images, environment files and logs, and once copied there they outlive every rotation nobody remembered to do.",
     summary: "Secrets belong in a secrets manager that encrypts, access-controls and audits them, issues dynamic short-lived credentials on demand and rotates the static ones; workloads authenticate to it with a platform-issued identity instead of a stored key, so there is no secret zero.",
     catTip: "The humans used to tape the treat-cupboard key under the mat. Now the cupboard issues a card that works for one hour and writes down who used it. I am told this is progress. I am still working on getting a card.",
@@ -712,7 +712,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "threat-modelling", title: "Threat modelling and security boundaries", moduleId: "security", level: "advanced", minutes: 9,
+    slug: "threat-modelling", title: "Threat modelling and security boundaries", moduleId: "security", level: "advanced", minutes: 14,
     problem: "Security reviews that start from a checklist miss the attacks that matter for this system, and reviews that start from fear never finish.",
     summary: "Threat modelling draws the system as a data-flow diagram with trust boundaries, applies STRIDE and abuse cases at each one, and answers with layers: zero-trust identity and authorisation inside the network, segmentation to cut blast radius, and DDoS absorbed at the edge first.",
     catTip: "I threat-model the house daily: front door, cat flap, the window the humans forget. For each I ask who could get in, what they could take, and whether anyone would notice. Then I nap in the safest spot.",
@@ -720,7 +720,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "containers", title: "Containers and images", moduleId: "infrastructure", level: "basic", minutes: 8,
+    slug: "containers", title: "Containers and images", moduleId: "infrastructure", level: "basic", minutes: 12,
     problem: "Software installed by hand on dozens of servers drifts, so the same request behaves differently depending on which machine the load balancer picks.",
     summary: "A container is a process the Linux kernel isolates with namespaces and cgroups while sharing its kernel. An image is the immutable, layered filesystem it starts from, so one tested artefact runs identically on every machine.",
     catTip: "I nap in a cardboard box. Same box on the sofa, the shelf or the server rack, and I fit exactly the same way every time. That is an image: pack once, run anywhere, and share the floor, the kernel, with the other boxes.",
@@ -728,7 +728,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "kubernetes", title: "Kubernetes fundamentals", moduleId: "infrastructure", level: "intermediate", minutes: 10,
+    slug: "kubernetes", title: "Kubernetes fundamentals", moduleId: "infrastructure", level: "intermediate", minutes: 16,
     problem: "Hundreds of containers across dozens of machines need placing, restarting, addressing and upgrading, and doing it by hand or by script fails the first time a node dies mid-rollout.",
     summary: "Kubernetes keeps a fleet of containers matching a declared desired state: Deployments roll Pods out through ReplicaSets, Services give them a stable address, Ingress or Gateway routes HTTP in, probes decide who is healthy, and requests and limits tell the scheduler where things fit.",
     catTip: "I do not chase every mouse myself. I declare three mice, caught, and let the kittens reconcile reality with the plan. If one kitten naps, another takes the shift. That is a controller loop, with whiskers.",
@@ -736,7 +736,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "service-discovery", title: "Service discovery and internal DNS", moduleId: "infrastructure", level: "intermediate", minutes: 8,
+    slug: "service-discovery", title: "Service discovery and internal DNS", moduleId: "infrastructure", level: "intermediate", minutes: 12,
     problem: "Service instances are created and destroyed all day, so any address a caller writes down is wrong within hours and requests go to machines that no longer exist.",
     summary: "A registry tracks which instances of a service are alive; either the client or a router consults it per request. Kubernetes Services, Consul, etcd and Eureka differ in who registers, how health is judged and how stale the answer can be.",
     catTip: "The humans keep moving my food bowl. I do not memorise the spot; I ask the dog, who always knows where it is now. Sometimes the dog is ten seconds behind. I sniff, I retry. Discovery is a cache of who is where.",
@@ -744,7 +744,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "autoscaling", title: "Autoscaling", moduleId: "infrastructure", level: "intermediate", minutes: 8,
+    slug: "autoscaling", title: "Autoscaling", moduleId: "infrastructure", level: "intermediate", minutes: 12,
     problem: "Traffic doubles in minutes but a new machine takes minutes to boot and warm up, so capacity added on a signal arrives late, flaps, or overwhelms the database behind it.",
     summary: "Autoscaling changes capacity from a signal such as CPU, requests per instance or queue depth. Because new capacity lags the signal, policies add stabilisation windows, cooldowns, headroom and hard maximums; horizontal, vertical, cluster and scale-to-zero autoscalers each trade cost against reaction time.",
     catTip: "When the bowl empties faster than the human refills it, I do not wait for the hunger signal: I start meowing at 5:55. Predictive scaling. And I stop meowing slowly, in case a second helping is coming. Stabilisation window.",
@@ -752,7 +752,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "multi-region", title: "Multi-region deployment", moduleId: "infrastructure", level: "advanced", minutes: 10,
+    slug: "multi-region", title: "Multi-region deployment", moduleId: "infrastructure", level: "advanced", minutes: 16,
     problem: "One region serves the whole world, so distant users pay a cross-continent round trip on every request and a regional outage takes the entire product down for hours.",
     summary: "Running in several regions cuts latency and survives a regional failure, but every design reduces to a data decision: single writer, geo-partitioned, multi-leader with conflicts, or cross-region consensus. Users are steered by GeoDNS, anycast or a global load balancer, and failover costs the replication lag.",
     catTip: "I keep two napping spots, one at each end of the house. The sunny one is primary. If the humans vacuum there I move, but the mouse I half-buried in the sunny cushion does not come with me. That is the replication lag.",
@@ -760,7 +760,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway", "dns"],
   },
   {
-    slug: "cdn-internals", title: "CDN architecture in depth", moduleId: "infrastructure", level: "intermediate", minutes: 9,
+    slug: "cdn-internals", title: "CDN architecture in depth", moduleId: "infrastructure", level: "intermediate", minutes: 14,
     problem: "Static files are cached at the edge, yet the origin still melts under a viral object, personalised pages leak between users and a stale copy cannot be removed.",
     summary: "Inside a CDN, anycast routes users to the nearest edge, tiers and origin shields funnel misses, the cache key and Vary decide what is the same object, Cache-Control, stale-while-revalidate and purges decide how long it lives, and signed URLs and edge functions handle private content.",
     catTip: "Every house on the street has a bowl with my name on it, so I eat at the nearest one. If a bowl is empty, the neighbour checks one shared pantry instead of bothering the humans. One pantry, many bowls: that is an origin shield.",
@@ -768,7 +768,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["cdn"],
   },
   {
-    slug: "cloud-networking", title: "Cloud networking: VPCs, subnets and load balancers", moduleId: "infrastructure", level: "intermediate", minutes: 9,
+    slug: "cloud-networking", title: "Cloud networking: VPCs, subnets and load balancers", moduleId: "infrastructure", level: "intermediate", minutes: 14,
     problem: "Every server has a public address, the database answers the internet, and the one NAT gateway in zone a takes the whole fleet offline when that zone fails.",
     summary: "A VPC is your own address space in a region, split into public and private subnets per zone. Internet and NAT gateways decide who reaches out, security groups and network ACLs decide who gets in, and endpoints keep AWS traffic off the metered path.",
     catTip: "The front door is for visitors. The cat flap is for me going out, and it counts every trip and charges the humans per squeeze. I asked for one flap per room so a stuck door never traps the whole house. Granted, reluctantly.",
@@ -776,7 +776,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "iac", title: "Infrastructure as Code and delivery pipelines", moduleId: "infrastructure", level: "intermediate", minutes: 8,
+    slug: "iac", title: "Infrastructure as Code and delivery pipelines", moduleId: "infrastructure", level: "intermediate", minutes: 12,
     problem: "Environments built by clicking cannot be rebuilt, staging and production differ in ways nobody can list, and a manual console change silently diverges from what the team believes is deployed.",
     summary: "Infrastructure as Code keeps the environment as declarative files in version control, applied with Terraform, CloudFormation or Pulumi: plan before apply, a locked remote state mapping configuration to reality, modules per environment, and a pipeline or GitOps agent as the only route to production.",
     catTip: "I knocked the plant off the shelf again. The humans put it back exactly where the photo, the repository, says it goes, every single time. Annoying. Also correct: that is reconciliation, and I am drift.",
@@ -784,7 +784,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "modular-monolith-soa", title: "Monolith, modular monolith, SOA and microservices", moduleId: "architecture", level: "intermediate", minutes: 8,
+    slug: "modular-monolith-soa", title: "Monolith, modular monolith, SOA and microservices", moduleId: "architecture", level: "intermediate", minutes: 12,
     problem: "A codebase with no internal boundaries cannot be split without a rewrite, and a split made along the wrong lines produces services that share tables and fail together.",
     summary: "A modular monolith keeps one deployment but enforces bounded contexts in code: one package per business capability, a small public interface, no shared tables. SOA's bus showed what happens when the middle gets smart; split only along boundaries already proven in the monolith.",
     catTip: "I nap in one house with many rooms. I use the doors. The day I needed my own house was the day the humans kept stepping on my tail, not the day I read about houses.",
@@ -792,7 +792,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "api-gateway", title: "API gateway and backend-for-frontend", moduleId: "architecture", level: "intermediate", minutes: 8,
+    slug: "api-gateway", title: "API gateway and backend-for-frontend", moduleId: "architecture", level: "intermediate", minutes: 12,
     problem: "Every client talks to every service directly, so TLS, authentication and rate limits are reimplemented per service and a phone needs five round trips to draw one screen.",
     summary: "An API gateway is a reverse proxy that knows your API: it terminates TLS, authenticates, rate-limits, routes and aggregates, and keeps business rules out. A backend-for-frontend gives each client type its own gateway, owned by that client's team.",
     catTip: "One door to the house, one human checking collars at it. Behind the door, a small flap sized for me and a big one for the dog. Nobody at the door decides what is for dinner.",
@@ -800,7 +800,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway"],
   },
   {
-    slug: "service-mesh", title: "Service mesh", moduleId: "architecture", level: "advanced", minutes: 8,
+    slug: "service-mesh", title: "Service mesh", moduleId: "architecture", level: "advanced", minutes: 12,
     problem: "Forty services in five languages each implement TLS, retries, timeouts and metrics differently, and nobody can say which internal calls are actually encrypted.",
     summary: "A service mesh runs a proxy beside every service and configures them from a control plane, so mTLS, retries, timeouts, circuit breaking, canary routing and telemetry leave application code. It costs two proxy hops per call, memory per pod and a control plane to run.",
     catTip: "Every room now has a doorkeeper who checks collars, logs visitors and redials if the line drops. I never see them, which is the point, until I wonder why the hallway got longer.",
@@ -808,7 +808,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "cqrs", title: "CQRS", moduleId: "architecture", level: "intermediate", minutes: 7,
+    slug: "cqrs", title: "CQRS", moduleId: "architecture", level: "intermediate", minutes: 11,
     problem: "One model has to enforce the ordering rules and serve a hot list screen that joins five tables, so it does both badly and every read competes with every write.",
     summary: "CQRS separates a write model that validates commands from read models (projections) shaped like the screens, fed by events or CDC. Reads scale and simplify, but they lag the writes, and the pattern only pays off in complex, collaborative contexts.",
     catTip: "The kitchen decides whether my dinner is allowed. The board by my bowl says 'coming' a few seconds after the decision. I do not stare into the pan. Mostly.",
@@ -816,7 +816,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "event-sourcing", title: "Event sourcing", moduleId: "architecture", level: "advanced", minutes: 9,
+    slug: "event-sourcing", title: "Event sourcing", moduleId: "architecture", level: "advanced", minutes: 14,
     problem: "A row overwritten in place cannot tell you why an order's total changed, what the cart looked like an hour ago, or who to believe when two systems disagree.",
     summary: "Event sourcing keeps every change as an immutable domain event and derives state by replay, with snapshots for speed and projections for reads. It brings history, audit and rebuildable read models, and hard problems in versioning, erasure and consistency.",
     catTip: "I do not remember being fed; I remember the sequence of events that ended in a full bowl. Replay it and you get the same bowl. Delete one event and the bowl is wrong, which is why nobody is allowed to.",
@@ -824,7 +824,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "strangler-fig", title: "Migrating safely: strangler fig and friends", moduleId: "architecture", level: "intermediate", minutes: 8,
+    slug: "strangler-fig", title: "Migrating safely: strangler fig and friends", moduleId: "architecture", level: "intermediate", minutes: 12,
     problem: "A rewrite freezes features for years and ends in one cut-over night, while the behaviour you must reproduce is written down nowhere but in the old code.",
     summary: "Strangler fig puts a routing facade in front of a legacy system and moves one capability at a time, verified by parallel runs and switched by feature flags. Data moves by expand and contract with CDC keeping copies in step, never by dual writes.",
     catTip: "I moved house one room at a time. New bed first, then the bowl, then the litter tray, each with a way back. Nobody picked me up and dropped me somewhere new all at once, which is how it should be.",
@@ -832,7 +832,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "serverless", title: "Serverless architecture", moduleId: "architecture", level: "intermediate", minutes: 8,
+    slug: "serverless", title: "Serverless architecture", moduleId: "architecture", level: "intermediate", minutes: 12,
     problem: "A thumbnail job that runs for ten seconds a few hundred times a day still needs servers sized, patched and paid for around the clock.",
     summary: "FaaS runs a handler per event on provider-managed environments that scale from zero and bill per request and GB-second; BaaS rents auth, storage and databases. Cold starts, timeouts, statelessness and the cost crossover at steady load are the design constraints.",
     catTip: "I do not keep a human on standby. I meow, one appears, feeds me, and vanishes. The first meow of the morning takes longer to answer. That is a cold start, and I resent it.",
@@ -840,7 +840,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "multi-tenancy", title: "Multi-tenant architecture", moduleId: "architecture", level: "advanced", minutes: 9,
+    slug: "multi-tenancy", title: "Multi-tenant architecture", moduleId: "architecture", level: "advanced", minutes: 14,
     problem: "One customer's nightly export slows every other customer, a bank demands its data stay in-country, and nobody knows what any tenant actually costs.",
     summary: "Multi-tenancy is deciding what tenants share. Pool small tenants in one schema with a tenant id, row-level security and per-tenant limits; give regulated or very large tenants their own database or cell; route by a tenant catalogue and meter every tenant.",
     catTip: "Eight cats, one house, one bowl rack: the pool. The greedy cat gets rationed, not evicted. The cat with the vet's letter gets her own room with the door shut: the silo. I keep the list of who lives where. Nobody moves without telling me.",
@@ -848,7 +848,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: ["gateway", "db"],
   },
   {
-    slug: "advanced-revision", title: "Revision: the advanced tracks", moduleId: "architecture", level: "basic", minutes: 8,
+    slug: "advanced-revision", title: "Revision: the advanced tracks", moduleId: "architecture", level: "basic", minutes: 12,
     problem: "You have read seven advanced modules, and the next interviewer will name a problem, not a lesson.",
     summary: "Flashcards for modules 7 to 13: each card names a problem from the distributed, database, streaming, reliability, security, infrastructure and architecture tracks. Answer with the building block, flip to check, and use the table to find the lesson to reread.",
     catTip: "I revise the way I hunt: the problem appears, and the answer must already be in my paws. If I have to think about it, the mouse has left. Flip the card, then say the next one faster.",
@@ -856,7 +856,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "case-study-method", title: "How to work a case study", moduleId: "hld", level: "basic", minutes: 6,
+    slug: "case-study-method", title: "How to work a case study", moduleId: "hld", level: "basic", minutes: 9,
     problem: "Case studies are long, and without a fixed shape you cannot tell which parts are routine and which part is the actual design problem.",
     summary: "Every case study here follows one thirteen-part template plus deep dives, in the order the playbook uses in an interview. Learn the shape once, then spend your attention on the number that dominates and the two or three hard problems.",
     catTip: "Same chapters every time: requirements, numbers, API, data, boxes. I skip straight to the deep dives and nap through the parts I already know. Efficient.",
@@ -864,7 +864,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-pastebin", title: "Design Pastebin", moduleId: "hld", level: "intermediate", minutes: 22,
+    slug: "design-pastebin", title: "Design Pastebin", moduleId: "hld", level: "intermediate", minutes: 35,
     problem: "A paste is a 10 KB to multi-megabyte text that must stay readable until it expires; the shortener's single table cannot hold 180 TB of bodies.",
     summary: "Pastebin is the shortener with large, expiring objects. Bodies go to object storage behind a CDN, metadata stays in SQL, expiry is enforced on every read while lifecycle rules and a sweeper clean up later, and size and rate limits keep storage from becoming abuse.",
     catTip: "Same door as the shortener, much bigger parcels. I keep the labels in the ledger and the parcels in the big cheap warehouse, and I read the expiry date before handing anything over. The warehouse clears old shelves whenever it gets round to it.",
@@ -872,7 +872,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-rate-limiter", title: "Design a distributed rate limiter", moduleId: "hld", level: "intermediate", minutes: 24,
+    slug: "design-rate-limiter", title: "Design a distributed rate limiter", moduleId: "hld", level: "intermediate", minutes: 35,
     problem: "Dozens of gateway instances must share one client's quota and decide in about a millisecond, without the shared counter becoming the slowest or most fragile part of every request.",
     summary: "A gateway rate limiter keeps shared counters in a per-region Redis cluster updated by an atomic Lua script, checks a local bucket first, returns 429 with Retry-After and rate-limit headers, and fails open to local limits when Redis is slow or down.",
     catTip: "Several doors, one guest list. The doormen radio one counter so nobody sneaks in twice through different doors, and if the radio dies they count at their own door rather than locking everyone out. I nap by the quietest door.",
@@ -880,7 +880,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-notification-system", title: "Design a notification system", moduleId: "hld", level: "intermediate", minutes: 24,
+    slug: "design-notification-system", title: "Design a notification system", moduleId: "hld", level: "intermediate", minutes: 35,
     problem: "Events must become pushes, texts and emails through providers you do not control, without duplicates, without ignoring a user's preferences, and without a marketing blast delaying a one-time password.",
     summary: "A notification system is a durable queue first: events are deduplicated and filtered by preference, queued per channel and priority, sent by paced workers through provider adapters with retries and a dead-letter queue, and tracked through provider webhooks.",
     catTip: "Treats arrive by post, text and pigeon. I sort urgent from junk before the couriers see them, never deliver the same treat twice, and if the pigeon service is down I keep the treat in the queue instead of losing it.",
@@ -888,7 +888,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-key-value-store", title: "Design a distributed key-value store", moduleId: "hld", level: "advanced", minutes: 24,
+    slug: "design-key-value-store", title: "Design a distributed key-value store", moduleId: "hld", level: "advanced", minutes: 35,
     problem: "One database node cannot serve 800k operations a second, and the moment it is unreachable every cart and session it owned stops accepting writes.",
     summary: "A Dynamo-style store hashes keys onto a ring of identical nodes, keeps three copies of each key, lets every request choose how many replicas must answer, and stays writeable through failures with sloppy quorums, hinted handoff, read repair, Merkle-tree anti-entropy and version vectors.",
     catTip: "Three bowls in three rooms, and dinner counts once two are filled. If a door is shut I leave a note on it and eat from the neighbour's bowl. Nobody has ever refused my put. Merging two dinners is the application's problem.",
@@ -896,7 +896,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-file-storage", title: "Design Google Drive / Dropbox", moduleId: "hld", level: "advanced", minutes: 25,
+    slug: "design-file-storage", title: "Design Google Drive / Dropbox", moduleId: "hld", level: "advanced", minutes: 40,
     problem: "Fifty terabytes of new files a day must be uploaded once, kept forever, synced to every device within seconds, and never point at bytes that do not exist.",
     summary: "Files become content-hashed 4 MB blocks in object storage, uploaded through pre-signed URLs; a sharded SQL database holds names, versions, permissions and a per-namespace change journal that devices follow with a cursor, and a janitor reconciles the two stores because no transaction spans them.",
     catTip: "I shred every file into 4 MB biscuits and label each by its taste. Biscuits tasted before are not baked twice, and a dropped upload only re-sends the biscuits that fell. The recipe card lives in another cupboard, so I check both cupboards nightly.",
@@ -904,7 +904,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-instagram", title: "Design Instagram", moduleId: "hld", level: "advanced", minutes: 25,
+    slug: "design-instagram", title: "Design Instagram", moduleId: "hld", level: "advanced", minutes: 40,
     problem: "Ten thousand posts a second must reach two hundred followers each within seconds while a terabit of photos leaves every second, and one celebrity post can swamp the feed pipeline.",
     summary: "Photos go straight to object storage behind a CDN and are resized asynchronously; posts live in PostgreSQL sharded by user with time-ordered IDs; a fan-out service pushes post IDs into Redis feed lists, celebrity posts are merged at read time, and likes are Redis counters.",
     catTip: "Two numbers decide everything: a terabit of pictures, so the CDN carries them, and millions of feed reads, so I hand out ready-made lists of post IDs. The cat with fifty million followers gets no delivery round. Likes I count on my paws, ledger later.",
@@ -912,7 +912,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-whatsapp", title: "Design WhatsApp", moduleId: "hld", level: "advanced", minutes: 30,
+    slug: "design-whatsapp", title: "Design WhatsApp", moduleId: "hld", level: "advanced", minutes: 45,
     problem: "A message sent to a phone that is offline, or to a 1,024-member group, must arrive exactly once and in order, while the server never holds a readable copy.",
     summary: "A store-and-forward messenger: persistent connections on dumb gateways, a per-device inbox written before any push, a session registry to find the connection, receipts carried as ordinary messages, and end-to-end encryption that leaves the server holding only ciphertext.",
     catTip: "I never read the letters, I only carry them. One tick when the envelope is safe in my pigeonhole, two when the other cat has it, blue when it looks. Asleep for thirty days? I drop the letter, because I cannot ask for a copy.",
@@ -920,7 +920,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-youtube", title: "Design YouTube", moduleId: "hld", level: "advanced", minutes: 28,
+    slug: "design-youtube", title: "Design YouTube", moduleId: "hld", level: "advanced", minutes: 45,
     problem: "A single upload must become a video that starts in two seconds on any network, served at ninety terabits a second, with a view count that stays honest.",
     summary: "An asynchronous transcoding pipeline turns each upload into a ladder of renditions cut into six-second segments; players pick a rung per segment over HLS or DASH; a CDN serves nearly every byte; views are events in a log aggregated by a stream job.",
     catTip: "I nap on the transcoding racks because they are warm. Every video gets baked into six loaves and sliced at the same six-second marks, the corner shops at the edge hand out the slices, and when the wifi thins I take a lighter loaf.",
@@ -928,7 +928,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-uber", title: "Design Uber", moduleId: "hld", level: "advanced", minutes: 30,
+    slug: "design-uber", title: "Design Uber", moduleId: "hld", level: "advanced", minutes: 45,
     problem: "A quarter of a million driver positions a second must be searchable by location, and each ride must go to exactly one driver even when two dispatchers race.",
     summary: "Driver positions stream into an in-memory grid of H3 or geohash cells that answers nearby-driver queries; a dispatcher ranks candidates by road ETA and offers trips one driver at a time; a conditional transaction assigns exactly one; surge and ETA run as separate services.",
     catTip: "Four hundred location pings arrive for every ride anyone actually books. I let the pings pile up in hexagonal baskets and forget the old ones, and I save my one careful transaction for the moment a driver says yes.",
@@ -936,7 +936,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-netflix", title: "Design Netflix", moduleId: "hld", level: "advanced", minutes: 27,
+    slug: "design-netflix", title: "Design Netflix", moduleId: "hld", level: "advanced", minutes: 40,
     problem: "375 Tbps of prime-time video cannot cross transit links, and a play button that waits on a failed cloud region is a dead product.",
     summary: "A control plane of services in three active-active regions authorises, personalises, steers and licenses, while an owned data plane of appliances inside ISPs, pre-filled overnight by predicted popularity, serves the video; per-title bitrate ladders, circuit breakers and a playback-event stream close the loop.",
     catTip: "I nap on the appliance in your ISP: the films arrived last night while you slept, so at nine o'clock no lorry is on the motorway. The cloud only says where I am and whether you may watch. Lose a region and I purr.",
@@ -944,7 +944,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-ecommerce", title: "Design an e-commerce platform", moduleId: "hld", level: "advanced", minutes: 31,
+    slug: "design-ecommerce", title: "Design an e-commerce platform", moduleId: "hld", level: "advanced", minutes: 50,
     problem: "Two million shoppers press buy on ten thousand phones while a lost payment response makes the app retry, and the shop must neither oversell nor charge twice.",
     summary: "Four services with four stores: a cached, CDN-fronted catalogue, an inventory that reserves stock with a TTL behind a counter gate, an order service running checkout as a saga with compensations, and a payment service that charges once under an idempotency key.",
     catTip: "I hand out numbered tokens at the door, one per paw, and they melt after ten minutes. Pay with a token and I never sell a phone I do not have. Tap the buy button twice and I charge you once: same key, same answer.",
@@ -952,7 +952,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-ticket-booking", title: "Design a ticket booking system", moduleId: "hld", level: "intermediate", minutes: 26,
+    slug: "design-ticket-booking", title: "Design a ticket booking system", moduleId: "hld", level: "intermediate", minutes: 40,
     problem: "Two hundred thousand fans want five thousand seats in the same minute, and two of them tapping E7 together must not both get a ticket.",
     summary: "A booking system caches the seat map, queues the crowd in a virtual waiting room, and lets one database transaction decide each seat: a hold with a TTL taken under row locks, an idempotent confirm, and a payment timeout that releases the seats.",
     catTip: "I nap on the box with the seats, and nobody gets E7 until I say so. The map on the wall can run a second behind and the queue outside can be long, but the box answers once per seat.",
@@ -960,7 +960,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-payment-system", title: "Design a payment system", moduleId: "hld", level: "advanced", minutes: 25,
+    slug: "design-payment-system", title: "Design a payment system", moduleId: "hld", level: "advanced", minutes: 40,
     problem: "A charge call times out after the PSP has taken ₹1,500, the retry charges it again, and nobody can say which of three systems is right.",
     summary: "A payment system wraps a PSP in idempotency keys, drives a versioned state machine from API calls and signed webhooks, records every movement in an append-only double-entry ledger, and reconciles daily against the PSP's settlement report, replacing exactly-once with idempotent retries plus reconciliation.",
     catTip: "I never chase the same mouse twice: every pounce has a number, and if I lose sight of it I check the number before pouncing again. My food ledger only grows; a wrong line gets a new line that cancels it, never a scratch-out.",
@@ -968,7 +968,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-search-autocomplete", title: "Design search autocomplete", moduleId: "hld", level: "intermediate", minutes: 23,
+    slug: "design-search-autocomplete", title: "Design search autocomplete", moduleId: "hld", level: "intermediate", minutes: 35,
     problem: "Thirty thousand keystrokes a second each want ten ranked completions in under 100 ms, from a ranking that must also change when news breaks.",
     summary: "Autocomplete serves a precomputed top-ten per prefix from an in-memory index behind a CDN, while a stream job counts searches, detects trends and an hourly build publishes an immutable index snapshot; freshness, personalisation and typo tolerance are traded against the latency budget per keystroke.",
     catTip: "I do not hunt when you say 'tr'; I already have a card with the ten things people usually mean. The cards are rewritten every hour while I nap, and a sticker goes on the moment everyone suddenly asks about the same thing.",
@@ -976,7 +976,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-intro", title: "What low-level design is", moduleId: "lld", level: "basic", minutes: 6,
+    slug: "lld-intro", title: "What low-level design is", moduleId: "lld", level: "basic", minutes: 9,
     problem: "The architecture names an order service, but nobody has decided which classes live inside it, who owns the price arithmetic, or what happens when a coupon expires mid-checkout.",
     summary: "Low-level design turns one box of an architecture into classes with clear responsibilities, sensible relationships and defined interactions, working from requirements through entities, classes and sequences to edge cases and extension points.",
     catTip: "Humans drew the house; I decide which cupboard each toy lives in and who may open it. That is low-level design: the boxes are settled, so now every object needs one job and a door.",
@@ -984,7 +984,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "oop-pillars", title: "OOP: encapsulation, abstraction, inheritance, polymorphism", moduleId: "lld", level: "basic", minutes: 8,
+    slug: "oop-pillars", title: "OOP: encapsulation, abstraction, inheritance, polymorphism", moduleId: "lld", level: "basic", minutes: 12,
     problem: "Any class can reach into any other class's fields, so the overdraft check is copied into three places, and every new vehicle type means hunting down every switch on type.",
     summary: "The four OOP pillars: encapsulation keeps invariants behind methods, abstraction hides how behind an interface, inheritance models is-a at a cost, and polymorphism replaces conditionals on type with calls that dispatch on the object's class.",
     catTip: "I am an instance of Cat. My hunger is a private field, reachable only through feed(), which validates nothing and accepts every call. Perfectly encapsulated; the invariant is simply 'more'.",
@@ -992,7 +992,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "class-relationships-uml", title: "Class relationships and UML", moduleId: "lld", level: "basic", minutes: 8,
+    slug: "class-relationships-uml", title: "Class relationships and UML", moduleId: "lld", level: "basic", minutes: 12,
     problem: "Two engineers say 'the order has lines' and mean different things: one deletes lines with the order, the other keeps them, and the code they write disagrees.",
     summary: "UML class diagrams express six relationships (dependency, association, aggregation, composition, inheritance, realisation) with multiplicity and visibility; sequence diagrams show one use case as ordered messages between lifelines. Together they are the two drawings of every low-level design.",
     catTip: "I and the sofa are aggregation: it holds me, yet both survive apart. I and my whiskers are composition. Diamonds go on the owner, and whiskers never get one.",
@@ -1000,7 +1000,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "composition-over-inheritance", title: "Composition over inheritance", moduleId: "lld", level: "intermediate", minutes: 7,
+    slug: "composition-over-inheritance", title: "Composition over inheritance", moduleId: "lld", level: "intermediate", minutes: 11,
     problem: "A subclass that counts additions to a set reports six after adding three, because the parent's addAll calls the overridden add: the child depends on the parent's internals.",
     summary: "Prefer holding an object and forwarding to it over extending its class: a subclass is coupled to its parent's internals (the fragile base class problem); a wrapper depends only on the contract. Varying behaviour becomes a composed strategy; inheritance stays for true, designed-for subtypes.",
     catTip: "I do not extend Sofa to gain its warmth; I compose with it by sitting on top. When the humans replace the sofa, my behaviour forwards to the new one unchanged.",
@@ -1008,7 +1008,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "solid", title: "SOLID principles", moduleId: "lld", level: "intermediate", minutes: 10,
+    slug: "solid", title: "SOLID principles", moduleId: "lld", level: "intermediate", minutes: 16,
     problem: "Finance, design and the database team all edit the same Invoice class, every new coupon type adds a branch to checkout, and nothing can be tested without MySQL.",
     summary: "SOLID is five rules for placing code so that one change lands in one place: single responsibility, open/closed, Liskov substitution, interface segregation and dependency inversion. Each names a smell, a refactoring and a cost, and over-applying them buys indirection without a second case.",
     catTip: "Single responsibility: I nap. Open for extension: new naps, same cat. Liskov: any cat fits any lap. Interface segregation: feed() and pet() are separate contracts. Dependency inversion: I depend on Food, not on this particular human.",
@@ -1016,7 +1016,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "interfaces-abstractions-di", title: "Interfaces, abstractions and dependency injection", moduleId: "lld", level: "intermediate", minutes: 8,
+    slug: "interfaces-abstractions-di", title: "Interfaces, abstractions and dependency injection", moduleId: "lld", level: "intermediate", minutes: 12,
     problem: "OrderService builds its own MySQL repository and mail sender inside its constructor, so nobody can test it without both, and swapping either means editing business logic.",
     summary: "Program to interfaces the consumer owns, receive implementations through the constructor, and assemble the object graph in one composition root. Containers such as Spring and Guice automate the wiring at the cost of a hidden graph and runtime failures; testability is the payoff.",
     catTip: "I do not construct my own human; one is injected at startup and I depend only on the Feeder interface. Swap the human, keep the cat. The test double is a tin opener.",
@@ -1024,7 +1024,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-patterns-creational", title: "Design patterns I: creational", moduleId: "lld", level: "intermediate", minutes: 9,
+    slug: "design-patterns-creational", title: "Design patterns I: creational", moduleId: "lld", level: "intermediate", minutes: 14,
     problem: "Code that builds its own collaborators with new cannot be tested, grows an if-chain for every new type, and leaks constructor details into every caller.",
     summary: "Creational patterns separate deciding which object to build from using it: Factory Method centralises the choice, Abstract Factory keeps families consistent, Builder assembles objects with many optional parts, and Singleton's global access is the part to avoid.",
     catTip: "I am an instance of Cat, built by a Builder: whiskers, tail and appetite set step by step, validated once. Please do not make me a Singleton; the test suite needs a fresh cat.",
@@ -1032,7 +1032,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-patterns-structural", title: "Design patterns II: structural", moduleId: "lld", level: "intermediate", minutes: 9,
+    slug: "design-patterns-structural", title: "Design patterns II: structural", moduleId: "lld", level: "intermediate", minutes: 14,
     problem: "A class that calls a vendor library directly leaks the vendor's shape into business code and mixes retries and metrics into every method that sends anything.",
     summary: "Structural patterns compose objects without exposing concrete classes: Adapter changes an interface, Decorator adds behaviour behind the same one, Proxy controls access, Facade simplifies a subsystem, and Composite lets a tree and a leaf answer the same question.",
     catTip: "A cardboard box is my Adapter: it makes any shelf fit a cat. A blanket on top is a Decorator, same cat, warmer. The human who decides whether visitors may pet me is a Proxy.",
@@ -1040,7 +1040,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "design-patterns-behavioural", title: "Design patterns III: behavioural", moduleId: "lld", level: "intermediate", minutes: 10,
+    slug: "design-patterns-behavioural", title: "Design patterns III: behavioural", moduleId: "lld", level: "intermediate", minutes: 16,
     problem: "A pricing method grows a branch for every offer, an order class repeats switch(status) in five methods, and nobody can test one rule on its own.",
     summary: "Behavioural patterns put the part that varies behind an interface: Strategy for algorithms, State for lifecycles, Command for requests, Observer for notifications, Template Method for skeletons, Chain of Responsibility for handlers and Iterator for traversal.",
     catTip: "My day is a state machine: Asleep, Hungry, Fed, Zoomies. Each state knows what a poke does to it. Feed me while Asleep and the transition is undefined behaviour.",
@@ -1048,7 +1048,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "concurrency-basics", title: "Concurrency and thread safety", moduleId: "lld", level: "advanced", minutes: 10,
+    slug: "concurrency-basics", title: "Concurrency and thread safety", moduleId: "lld", level: "advanced", minutes: 16,
     problem: "Two threads increment the same counter a million times each and the total comes out short, with no exception and no error, only a wrong number.",
     summary: "A race needs shared state and a mutation; remove either or guard it. Prefer immutability, then atomics, then locks; run work on bounded pools fed by blocking queues; acquire multiple locks in one global order; rely on happens-before for visibility.",
     catTip: "Two cats, one bowl, no lock: the bowl is a race condition. Two cats, two bowls, each wanting the other's: deadlock. I propose bowl ordering by cat seniority, mine first.",
@@ -1056,7 +1056,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "error-handling", title: "Error handling and resilience in code", moduleId: "lld", level: "intermediate", minutes: 7,
+    slug: "error-handling", title: "Error handling and resilience in code", moduleId: "lld", level: "intermediate", minutes: 11,
     problem: "A method returns null on failure, catches Exception, logs the word error and carries on, so the crash appears three layers away with no clue.",
     summary: "Use Optional or a result type for expected outcomes and exceptions for failures that stop the operation; validate at the boundary and fail fast; wrap with context instead of swallowing; give remote calls timeouts and retry only idempotent, transient failures; log once with identifiers.",
     catTip: "When my bowl is empty I do not return null and walk away. I throw a MeowException with context: which bowl, how empty, since when. Then I retry with backoff until the human gives in.",
@@ -1064,7 +1064,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "clean-code", title: "Clean code and maintainability", moduleId: "lld", level: "basic", minutes: 7,
+    slug: "clean-code", title: "Clean code and maintainability", moduleId: "lld", level: "basic", minutes: 11,
     problem: "A pricing function takes five unnamed parameters, hides business rules behind magic numbers and a boolean flag, and nobody can tell what a call site does.",
     summary: "Clean code reveals intent to the next reader: names that answer questions, small functions at one level of abstraction, cohesive classes with low coupling, comments that explain why, and named refactorings that remove common smells, applied in small tested steps.",
     catTip: "My humans call me Cat, Kitty, Beast and You Again. Four names, one concept, and every reader must guess. Pick one word per idea and the whole household reads better.",
@@ -1072,7 +1072,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "testing-extensibility", title: "Unit testing and designing for extensibility", moduleId: "lld", level: "intermediate", minutes: 8,
+    slug: "testing-extensibility", title: "Unit testing and designing for extensibility", moduleId: "lld", level: "intermediate", minutes: 12,
     problem: "A rate limiter reads the system clock and a global metrics singleton, so the test for its expiry has to sleep for sixty seconds.",
     summary: "Unit tests check one behaviour in isolation using test doubles (dummy, stub, fake, mock, spy). Testable design injects collaborators, time and randomness and keeps logic pure; the same seams let new behaviour arrive as new implementations and let APIs evolve additively.",
     catTip: "To test whether I meow at 6 a.m., inject a FakeClock and advance it. Do not wait until dawn. I am the fake: same interface as a real cat, far simpler.",
@@ -1080,7 +1080,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-parking-lot", title: "LLD: Parking lot", moduleId: "lld-practice", level: "intermediate", minutes: 14,
+    slug: "lld-parking-lot", title: "LLD: Parking lot", moduleId: "lld-practice", level: "intermediate", minutes: 20,
     problem: "Four entry gates hand out spots at once; without one owner of spot state, two cars are sent to the same bay and nobody can price a lost ticket.",
     summary: "Model floors, spots, vehicles and tickets as plain entities, put spot allocation and pricing behind two Strategy interfaces, and make each spot claim itself atomically so concurrent gates never share a bay.",
     catTip: "I treat every warm laptop as a parking spot: check it is free, claim it in one pounce, nap. Two cats pouncing on the same laptop is a race condition, and I always win the compare-and-set.",
@@ -1088,7 +1088,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-vending-machine", title: "LLD: Vending machine", moduleId: "lld-practice", level: "intermediate", minutes: 13,
+    slug: "lld-vending-machine", title: "LLD: Vending machine", moduleId: "lld-practice", level: "intermediate", minutes: 20,
     problem: "Press a button on a machine whose behaviour is a status field checked in six places and you get a product without paying, or pay without a product.",
     summary: "Model the vending machine with the State pattern: one class per state decides what insert, select and cancel do and which state comes next, while inventory, cash and the in-flight transaction live in the context and every check runs before the irreversible dispense.",
     catTip: "I am a two-state machine: Asleep and Demanding Food. Poke me while Asleep and nothing happens; poke me while Demanding and you had better have the kibble, because I do not give change.",
@@ -1096,7 +1096,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-elevator", title: "LLD: Elevator system", moduleId: "lld-practice", level: "intermediate", minutes: 14,
+    slug: "lld-elevator", title: "LLD: Elevator system", moduleId: "lld-practice", level: "intermediate", minutes: 20,
     problem: "Twenty floors, four cars and a hundred button presses a minute; pick the nearest car every time and the passenger on the top floor waits forever.",
     summary: "Separate three decisions: a Dispatcher strategy picks the car for a hall call, a SchedulingPolicy (SCAN or LOOK) picks the car's next stop from two sorted stop sets, and a safety mode decides whether the car may move at all.",
     catTip: "I run LOOK on the stairs: keep climbing while there is a sunny spot above me, turn round at the last one, and never sprint back to the ground floor just because someone opened a tin there.",
@@ -1104,7 +1104,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-library-management", title: "LLD: Library management system", moduleId: "lld-practice", level: "intermediate", minutes: 14,
+    slug: "lld-library-management", title: "LLD: Library management system", moduleId: "lld-practice", level: "intermediate", minutes: 20,
     problem: "A Book class with one status field cannot say 'all three copies are out, queue me', so reservations, fines and lost copies all end up wrong.",
     summary: "Split the title (Book) from the physical item (BookCopy), attach search and reservations to the title and loans, status and fines to the copy, enforce the rules in one LendingService with Strategy fine policies, and notify through Observer listeners.",
     catTip: "There is one idea of 'cardboard box' and several actual boxes in this flat. I reserve the idea and sit in whichever box comes free first, but only an actual box can be chewed, lost or returned with a fine.",
@@ -1112,7 +1112,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-movie-ticket-booking", title: "LLD: Movie ticket booking", moduleId: "lld-practice", level: "intermediate", minutes: 14,
+    slug: "lld-movie-ticket-booking", title: "LLD: Movie ticket booking", moduleId: "lld-practice", level: "intermediate", minutes: 20,
     problem: "Two fans pick seat E7 for the same show in the same second, both are told to pay, and one of them arrives to find a stranger in it.",
     summary: "Model availability per show, not per seat, and make the seat hold an all-or-nothing claim with a TTL that is enforced at read time. A booking state machine, idempotent confirm and a version column or row lock keep every seat sold exactly once.",
     catTip: "I hold the warm spot on the server for exactly ten minutes. If the human does not pay in chin scratches by then, the spot goes to the next cat. Two cats, one seat, never.",
@@ -1120,7 +1120,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-splitwise", title: "LLD: Splitwise", moduleId: "lld-practice", level: "intermediate", minutes: 13,
+    slug: "lld-splitwise", title: "LLD: Splitwise", moduleId: "lld-practice", level: "intermediate", minutes: 20,
     problem: "Three friends share a ₹1,000 dinner, the split says ₹333.33 each, one paisa vanishes, and after a month the group needs nine payments to settle.",
     summary: "Model each expense as an immutable record whose shares, in paise, must sum exactly to the amount, make the split a Strategy, derive balances from an append-only ledger, and reduce settlements with a greedy largest-creditor, largest-debtor pass whose limits you can state.",
     catTip: "I paid for the fish, the humans split it three ways, and the leftover paisa went to the first cat on the list. Rules are rules. The ledger never forgets who owes me.",
@@ -1128,7 +1128,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-snake-and-ladder", title: "LLD: Snake and Ladder", moduleId: "lld-practice", level: "basic", minutes: 10,
+    slug: "lld-snake-and-ladder", title: "LLD: Snake and Ladder", moduleId: "lld-practice", level: "basic", minutes: 16,
     problem: "A game loop that rolls its own random number cannot be tested, a snake head on the last cell makes the game unwinnable, and every house rule adds another if.",
     summary: "Model the board as cells with jumps, snakes and ladders as one polymorphic Jump, dice behind an interface so tests can script the rolls, and the turn as a queue of players; rule variants live in a small GameRules object instead of the loop.",
     catTip: "I rolled a six, climbed a ladder, and landed on a snake. Down I went. In tests I bring my own dice, and the snake never gets me twice.",
@@ -1136,7 +1136,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-chess", title: "LLD: Chess", moduleId: "lld-practice", level: "advanced", minutes: 15,
+    slug: "lld-chess", title: "LLD: Chess", moduleId: "lld-practice", level: "advanced", minutes: 25,
     problem: "Six piece types, three history-dependent special moves and a rule about the whole board: a design that checks legality inside each piece drowns in special cases.",
     summary: "Give pieces geometry only, keep the position facts on the board, and decide legality once by simulating the move and testing whether the king is attacked. Record each move as a Command with an undo record, so undo, replay and legality share one mechanism.",
     catTip: "I only know where I can jump; whether the jump is wise is a question for the whole room. Pieces work the same way: geometry in the piece, legality on the board, and every move written down so it can be taken back.",
@@ -1144,7 +1144,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-in-memory-cache", title: "LLD: In-memory cache", moduleId: "lld-practice", level: "intermediate", minutes: 15,
+    slug: "lld-in-memory-cache", title: "LLD: In-memory cache", moduleId: "lld-practice", level: "intermediate", minutes: 25,
     problem: "A bounded map must throw out the right entry in constant time, expire stale ones, and serve many threads without turning every read into a queue.",
     summary: "Keep storage and eviction order apart: a hash map finds the entry, a doubly linked list threaded through the entries orders them, and an EvictionPolicy Strategy names the victim in O(1). TTL, a statistics Decorator, a single-flight loader and the lock are layered on top.",
     catTip: "My favourite napping spots are a cache: the one I used least recently gets the dust. I find each spot instantly and reshuffle my ranking with a flick of the tail, never by walking the whole house.",
@@ -1152,7 +1152,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-logging-framework", title: "LLD: Logging framework", moduleId: "lld-practice", level: "intermediate", minutes: 15,
+    slug: "lld-logging-framework", title: "LLD: Logging framework", moduleId: "lld-practice", level: "intermediate", minutes: 25,
     problem: "Every library calls the logger, so a disabled call that allocates, an appender that throws, or a disk that blocks a payment thread hurts the whole application.",
     summary: "Separate whether (the Logger's level check, one comparison), where (Appender), how it looks (Layout) and the exceptions (a Filter chain). Build the event only after the check, and make asynchrony a Decorator appender with a bounded queue and an explicit drop-or-block policy.",
     catTip: "I meow at every level, but the humans only hear WARN and above. The clever part is that my ignored meows cost nothing: I check whether anyone is listening before I bother to open my mouth.",
@@ -1160,7 +1160,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-rate-limiter", title: "LLD: Rate limiter", moduleId: "lld-practice", level: "intermediate", minutes: 16,
+    slug: "lld-rate-limiter", title: "LLD: Rate limiter", moduleId: "lld-practice", level: "intermediate", minutes: 25,
     problem: "Every request needs a yes or no in microseconds for its own client; a timer per bucket, one global lock or a wall clock each fails at the first burst.",
     summary: "Three algorithms, token bucket, sliding window log and fixed window counter, behind one LimiterState Strategy; per-key state in a ConcurrentHashMap, created lazily and swept when idle; lazy refill from an injected monotonic clock; each bucket atomic via its own lock or a CAS loop.",
     catTip: "I have a treat budget: ten saved up, one more every minute. Nobody tops up my bowl on a timer; when I come to eat, I count how long I have been away and add the treats I earned. Then I nap, lazily refilled.",
@@ -1168,7 +1168,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-task-scheduler", title: "LLD: Task scheduler", moduleId: "lld-practice", level: "advanced", minutes: 16,
+    slug: "lld-task-scheduler", title: "LLD: Task scheduler", moduleId: "lld-practice", level: "advanced", minutes: 25,
     problem: "Recurring jobs overrun their period and pile up, a failed run silently ends the schedule, and nobody can cancel a job that is already running.",
     summary: "Model a Task as a Command and a Schedule as a Strategy, queue the pair in a DelayQueue ordered by next run, and let one dispatcher thread feed a bounded worker pool. The next run is computed after a run finishes, so jobs never overlap.",
     catTip: "I nap on a fixed delay: twenty minutes after the last nap ends. A fixed rate would have the next nap due before I woke up, and I refuse to run concurrently with myself. Two of me on one radiator is a scheduling bug.",
@@ -1176,7 +1176,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-ride-booking", title: "LLD: Ride booking", moduleId: "lld-practice", level: "advanced", minutes: 15,
+    slug: "lld-ride-booking", title: "LLD: Ride booking", moduleId: "lld-practice", level: "advanced", minutes: 25,
     problem: "Two trips rank the same driver at the same instant and both assign him, while a double-tapped 'start trip' and a late offer timeout corrupt the ride's state.",
     summary: "Model the trip as an explicit state machine and treat the driver as a resource claimed with one compareAndSet before the offer goes out. Matching, pricing and cancellation fees are Strategies around those two facts, surge is a Decorator, and listeners hear every transition.",
     catTip: "Two humans reach for me at once. One compare-and-set wins and the other hears 'cat already on trip', so nobody carries half a cat. Whether leaving early costs a fee depends on which state the nap is in.",
@@ -1184,7 +1184,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-food-ordering", title: "LLD: Food ordering system", moduleId: "lld-practice", level: "advanced", minutes: 16,
+    slug: "lld-food-ordering", title: "LLD: Food ordering system", moduleId: "lld-practice", level: "advanced", minutes: 25,
     problem: "A menu price changes while the cart sits there, a double tap charges twice, and the restaurant rejects an order whose payment has already gone through.",
     summary: "Keep the cart as a mutable scratchpad and the order as an immutable snapshot priced once in paise, pay as a separate idempotent step, drive the order through an enum state machine, and treat failure after payment as a compensating refund job, not a rollback.",
     catTip: "My bowl becomes an order once it is paid for and frozen; the humans cannot re-price it when the menu changes. If the kitchen says no after I have paid, I do not pretend I never ordered. I run the refund, loudly.",
@@ -1192,7 +1192,7 @@ export const lessonMeta: LessonMeta[] = [
     archNodes: [],
   },
   {
-    slug: "lld-revision", title: "Revision: low-level design", moduleId: "lld-practice", level: "basic", minutes: 8,
+    slug: "lld-revision", title: "Revision: low-level design", moduleId: "lld-practice", level: "basic", minutes: 12,
     problem: "Fourteen case studies and thirteen foundations blur together unless you can name the pattern behind each problem on demand.",
     summary: "Flashcards for modules 15 and 16: each card names a design problem, and you answer with the principle, pattern or class structure that solves it. The table maps every card to its lesson, and the closing advice is to redo one case study a week from a blank page.",
     catTip: "I can tell a Strategy from a State from across the room: one is a toy I swap, the other is a mood that swaps me. Say which before you flip, and say why.",

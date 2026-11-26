@@ -34,7 +34,12 @@ export interface Layout {
 }
 
 /** Height changes smaller than this with the same width are browser toolbars, not a new layout. */
-const TOOLBAR_DELTA = 160;
+export const TOOLBAR_DELTA = 160;
+
+/** Same width and a small height change: a phone's toolbars sliding in or out (or a similar nudge), not a new layout. */
+export function isToolbarResize(prev: Size, next: Size): boolean {
+  return prev.w === next.w && Math.abs(prev.h - next.h) < TOOLBAR_DELTA;
+}
 /** How long the landing squash shows before the cat settles into its resting pose. */
 const LAND_MS = 280;
 /** Gravity used for the plain drop (physics off), px/s², matching the desktop profile. */
@@ -64,6 +69,11 @@ export function useCompanionPosition(options: PositionOptions) {
   const dragControls = useDragControls();
   const [initialLayout] = useState<Layout>(readLayout);
   const [layout, setLayout] = useState<Layout>(initialLayout);
+  /**
+   * The companion's frame hangs from the bottom of the viewport (see companion.tsx); this shifts it up by the
+   * viewport height, so x/y stay top-left viewport coordinates while the floor follows the real bottom edge.
+   */
+  const originY = useMotionValue(-initialLayout.view.h);
   const [phase, setPhase] = useState<BodyPhase>("resting");
   const [facing, setFacing] = useState<Facing>("left");
   const [rising, setRising] = useState(false);
@@ -104,9 +114,10 @@ export function useCompanionPosition(options: PositionOptions) {
     const next = readLayout();
     const prev = layoutRef.current;
     layoutRef.current = next;
+    originY.set(-next.view.h);
     if (prev.view.w !== next.view.w || prev.view.h !== next.view.h || prev.floorLine !== next.floorLine) setLayout(next);
     return next;
-  }, []);
+  }, [originY]);
 
   const stopMotion = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -386,9 +397,11 @@ export function useCompanionPosition(options: PositionOptions) {
         const next = refreshLayout();
         if (prev.view.w === next.view.w && prev.view.h === next.view.h && prev.floorLine === next.floorLine) return;
         const p = phaseRef.current;
-        if (prev.view.w === next.view.w && Math.abs(prev.view.h - next.view.h) < TOOLBAR_DELTA) {
-          // Mobile toolbars showing or hiding: keep a resting cat standing on the (moved) floor.
+        if (isToolbarResize(prev.view, next.view)) {
+          // Mobile toolbars showing or hiding. The frame hangs from the bottom, so the floor already moved with the
+          // screen; re-express her position for the new height so she stays put (standing, perched or mid-move).
           if (p === "resting" || p === "landing") y.set(world().floorY);
+          else if (p !== "dragging") y.set(y.get() + (next.view.h - prev.view.h));
         } else if (p === "resting" || p === "landing" || p === "perched") {
           // A perched cat is put back on the floor (the routine that owns the perch ends on its own).
           reproject();
@@ -544,6 +557,7 @@ export function useCompanionPosition(options: PositionOptions) {
   return {
     x,
     y,
+    originY,
     tilt,
     layout,
     view: layout.view,

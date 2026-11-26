@@ -3,6 +3,7 @@ import { LogIn } from "lucide-react";
 import { warmUp } from "@/lib/cloud/controller";
 import { cn } from "@/lib/utils";
 import { useAccountStore } from "@/stores/account-store";
+import { usePreferencesStore } from "@/stores/preferences-store";
 import { AccountDialog } from "./account-dialog";
 
 /**
@@ -14,10 +15,11 @@ export function AccountButton() {
   const user = useAccountStore((s) => s.user);
   const sync = useAccountStore((s) => s.sync.status);
   const open = useAccountStore((s) => s.openDialog);
+  const profileName = usePreferencesStore((s) => s.profile.name);
   if (phase === "disabled") return null;
 
   const signedIn = phase === "signed-in" || phase === "unverified";
-  const initial = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
+  const initial = (profileName || user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
   const dot = phase === "unverified" ? "bg-amber" : sync === "error" ? "bg-bad" : sync === "offline" ? "bg-ink-3" : null;
   const label = signedIn
     ? `Account: ${user?.email ?? ""}${phase === "unverified" ? " (email not verified yet)" : sync === "error" ? " (saving failed)" : sync === "offline" ? " (offline)" : ""}`

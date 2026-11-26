@@ -12,7 +12,7 @@ State the scope before drawing anything, because "scheduler" is a word people st
 - Cancel a job: a cancelled job never runs again, a running one is asked to stop.
 - Shut down gracefully: stop dispatching, let running tasks finish within a grace period, then interrupt the rest.
 
-**Assumptions**, stated so they can be challenged: about 10,000 jobs in one process, 16 worker threads, task durations from milliseconds to minutes, one-second granularity, task code in the same JVM, job identity by a caller-supplied id, and an injected `Clock` so tests never sleep (the trick the [rate limiter](/learn/lld-rate-limiter) used to test its buckets).
+**Assumptions**, stated so they can be challenged: about 10,000 jobs in one process, 16 worker threads, task durations from milliseconds to minutes, one-second granularity, task code in the same JVM, job identity by a caller-supplied id, and an injected `Clock` so tests never sleep (the trick the [rate limiter](/learn/lld-practice/lld-rate-limiter) used to test its buckets).
 
 **Out of scope**: dependencies between tasks (a workflow engine), a user interface, and several machines; we design the seam for the last and stop.
 
@@ -194,7 +194,7 @@ final class Dispatcher implements Runnable {
 }
 ```
 
-Backoff doubles from a base, is capped, carries jitter so a hundred jobs that failed together do not retry together, and gives up after a maximum or on a failure marked not worth retrying (the reasoning is in [Timeouts and retries](/learn/timeouts-retries)):
+Backoff doubles from a base, is capped, carries jitter so a hundred jobs that failed together do not retry together, and gives up after a maximum or on a failure marked not worth retrying (the reasoning is in [Timeouts and retries](/learn/reliability/timeouts-retries)):
 
 ```java
 interface RetryPolicy {
@@ -291,7 +291,7 @@ Absent on purpose: an Observer for job events until metrics need one (then a lis
 - **The task hangs.** The `TaskContext` carries a deadline that well-behaved tasks check. For the others, the scheduler schedules its own watchdog: a one-shot job at `now + timeout` that calls `cancel(true)` on the running `Future`. Interruption is cooperative: it throws inside a blocking `sleep`, `wait` or `join` and otherwise only sets a flag, so a loop that never checks keeps running, which is why the deadline comes first.
 - **Cancel during a run.** `cancel` moves Running to Cancelled; at the end of the run `requeue` tries Running to Scheduled, fails its compare-and-set and does not offer the job.
 - **Missed schedules after a restart.** Every persisted job whose `nextRunAt` is in the past needs a misfire decision: a one-shot runs now, once; a fixed-rate job runs once and skips to the next future slot rather than replaying 400 missed runs; cron picks the next matching minute. The overrun condition decides again.
-- **The process dies between the work and the bookkeeping.** The task ran, the state was not saved, the restart runs it again. Tasks must be idempotent (see [Idempotency](/learn/idempotency)): a report keyed by its period, a webhook with a delivery id, a sync that upserts.
+- **The process dies between the work and the bookkeeping.** The task ran, the state was not saved, the restart runs it again. Tasks must be idempotent (see [Idempotency](/learn/reliability/idempotency)): a report keyed by its period, a webhook with a delivery id, a sync that upserts.
 
 <Callout type="analogy" title="The out-patient desk">
 
@@ -301,7 +301,7 @@ An appointments book sorted by time is the queue. The receptionist (the dispatch
 
 ## Concurrency
 
-Name the shared mutable state first, as [Concurrency and thread safety](/learn/concurrency-basics) insists: the queue, each job's state, next-run time and attempt counter, and the pool.
+Name the shared mutable state first, as [Concurrency and thread safety](/learn/lld/concurrency-basics) insists: the queue, each job's state, next-run time and attempt counter, and the pool.
 
 The queue is thread-safe and the dispatcher is one thread, so the only producers competing with it are workers requeueing and callers scheduling, both through `offer`. Job state is an `AtomicReference` and every transition is a `compareAndSet`, so whichever of cancel, requeue or dispatch runs second fails and does nothing. `nextRunAt` is written only while the job is outside the queue, and is `volatile` so a status reader sees the latest value. The attempt counter is confined: at most one worker runs a job at a time. Passing a job through the queue and the executor gives the happens-before edge that lets the worker see what the dispatcher wrote.
 
@@ -313,7 +313,7 @@ Neither `DelayQueue` nor `PriorityBlockingQueue` promises first-in-first-out amo
 
 - **A new timing rule.** One record implementing `Schedule`; "run again when the previous run says so" is a schedule whose `nextRun` reads a value the task left in the context.
 - **Persistence.** The `JobStore` is written before `offer` and after every state change; a restart rebuilds the queue from it and applies the misfire policy.
-- **Several machines.** Either one dispatcher is active and the others stand by, which is [leader election](/learn/leader-election), or every machine dispatches from a shared store and claims a job with a conditional update, a [distributed lock](/learn/distributed-locks) per job. `move` becomes that conditional update; nothing else changes.
+- **Several machines.** Either one dispatcher is active and the others stand by, which is [leader election](/learn/distributed/leader-election), or every machine dispatches from a shared store and claims a job with a conditional update, a [distributed lock](/learn/distributed/distributed-locks) per job. `move` becomes that conditional update; nothing else changes.
 
 | Choice made | What it buys | What it costs |
 | --- | --- | --- |

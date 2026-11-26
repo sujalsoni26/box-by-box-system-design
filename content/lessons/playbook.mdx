@@ -2,7 +2,7 @@
 | --- | --- |
 | 1. Functional requirements | The core user actions, and what is out of scope |
 | 2. Non-functional requirements | Scale, latency, availability vs consistency (with the reason), durability |
-| 3. Estimation | Read and write QPS, storage, bandwidth (see [The formulas](/learn/estimation-formulas)), said out loud |
+| 3. Estimation | Read and write QPS, storage, bandwidth (see [The formulas](/learn/practice/estimation-formulas)), said out loud |
 | 4. API | Endpoints, requests, responses, error codes |
 | 5. Data model | Tables or documents, keys, indexes |
 | 6. High-level design | Start with one server and one database; add a box only when a requirement forces it |
@@ -26,7 +26,7 @@
 
 <Callout type="interview" title="Justify every non-functional choice">
 
-"Highly available, eventually consistent" with no reason invites a follow-up you may not survive. Tie it to [CAP and PACELC](/learn/cap): say what goes wrong for users under each choice, and why yours is the lesser harm.
+"Highly available, eventually consistent" with no reason invites a follow-up you may not survive. Tie it to [CAP and PACELC](/learn/data/cap): say what goes wrong for users under each choice, and why yours is the lesser harm.
 
 </Callout>
 

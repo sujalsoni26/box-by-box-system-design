@@ -10,7 +10,7 @@ Every lesson follows one pattern: **problem → what breaks → building block �
 - **Mark for review:** flag any lesson or case study to come back to. It is independent of "learned" and listed on the dashboard and the Progress page.
 - **Short forms:** a glossary of 181 terms. Only the first mention per lesson is hinted.
 - **Cache, the study cat:** throw her and she stays where she lands; feed, pet and play with her, send her for a lamp nap, and unlock accessories and costumes through progress. She explains lessons simply, asks quick revision questions, runs an adjustable focus timer (and plays during the breaks), shares the odd fact from the lesson you are reading, and asks (once) whether to mark a finished lesson as learned.
-- **Study notes:** a plain-text note per lesson, saved in the browser. On wide screens Notes and "On this page" share the right column as collapsible panels (one open at a time); smaller screens use a sheet.
+- **Study notes:** a plain-text note per lesson, saved in the browser. Every lesson has an "On this page" outline (sections, simulations, "Go deeper" parts, recall and checks). On wide screens Notes and "On this page" share the right column as collapsible panels (one open at a time); smaller screens get a folded outline at the top of the lesson and a notes sheet.
 - **Readable diagrams:** a diagram that is squeezed or overflows its column opens in an in-page lightbox with zoom and pan.
 - **Persistent progress:** saved in the browser, with light and dark themes, keyboard support and reduced-motion support.
 - **Optional accounts:** sign in with Google or email to keep progress, notes and settings in your account and use them on any device (Firebase, free plan). Guests keep everything in the browser as before. Setup: [docs/accounts.md](docs/accounts.md).
@@ -37,7 +37,7 @@ Accounts are off unless the Firebase variables are set (`NEXT_PUBLIC_FIREBASE_AP
 ## Project layout
 
 ```
-app/              routes: dashboard, /learn, /learn/[slug], /case-studies, /case-studies/[slug], /practice, /progress, /glossary
+app/              routes: dashboard, /learn, /learn/[module]/[slug] (old /learn/<slug> URLs redirect), /case-studies, /case-studies/[slug], /practice, /progress, /glossary
 content/lessons/  lesson bodies (MDX)
 data/             curriculum, quizzes, case studies, flashcards, glossary, lesson guides
 components/       UI, lesson layout, diagrams, quiz, glossary, companion

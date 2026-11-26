@@ -5,10 +5,14 @@
  * Data layout: users/{uid}/stores/{progress|preferences|notes|focus} = { json, rev, updatedAt }.
  * The rules (firebase/firestore.rules) let only the verified owner read and write, accept revision n+1 over n,
  * cap the size of each record and refuse writes less than two seconds apart.
+ *
+ * Firestore Lite: each read and write is one plain HTTPS request. The full SDK keeps a streaming connection
+ * (WebChannel) open for every read, which fills the browser console with reconnect warnings and failed
+ * "Listen/channel" requests whenever a tab sleeps or a network drops it; this app never needs live updates.
  */
 import type { FirebaseApp } from "firebase/app";
 import type { Auth } from "firebase/auth";
-import type { Firestore } from "firebase/firestore";
+import type { Firestore } from "firebase/firestore/lite";
 import { appCheckDebug, appCheckSiteKey, authDomainFor, cloudConfig } from "./config";
 import { SYNC_KEYS, type SyncKey } from "./merge";
 import { BackendError, type CloudBackend, type RemoteDoc } from "./sync-engine";
@@ -18,7 +22,7 @@ export interface FirebaseKit {
   auth: Auth;
   db: Firestore;
   a: typeof import("firebase/auth");
-  f: typeof import("firebase/firestore");
+  f: typeof import("firebase/firestore/lite");
 }
 
 let kit: Promise<FirebaseKit> | null = null;
@@ -28,7 +32,7 @@ export function loadFirebase(): Promise<FirebaseKit> {
   if (!config) return Promise.reject(new Error("Accounts are not configured on this site."));
   if (!kit) {
     kit = (async () => {
-      const [appMod, a, f] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore")]);
+      const [appMod, a, f] = await Promise.all([import("firebase/app"), import("firebase/auth"), import("firebase/firestore/lite")]);
       const app = appMod.getApps()[0] ?? appMod.initializeApp({ ...config, authDomain: authDomainFor(window.location, config.authDomain) });
       if (appCheckSiteKey) {
         // App Check: requests carry a token proving they come from this site (enforced in the console).
@@ -38,8 +42,10 @@ export function loadFirebase(): Promise<FirebaseKit> {
       }
       const auth = a.getAuth(app);
       auth.useDeviceLanguage();
-      // Memory cache only: the stores already keep everything in this browser.
-      const db = f.initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+      const db = f.getFirestore(app);
+      // A refused save is part of normal syncing (another device saved first, or two saves within 2 s); the engine
+      // merges and retries, so the SDK's per-request warnings would only be noise in the console.
+      f.setLogLevel("error");
       return { app, auth, db, a, f };
     })();
     kit.catch(() => {
@@ -93,8 +99,8 @@ export function firestoreBackend({ db, f }: FirebaseKit): CloudBackend {
       }
     },
     async write(uid, key, json, rev) {
-      // Firestore queues writes while offline instead of failing; give up waiting after a while so the
-      // engine can report "offline" and retry (a queued write that lands later is reconciled by revision).
+      // A request on a stalled connection can hang for a long time; give up waiting after a while so the engine
+      // can report "offline" and retry (a write that lands later anyway is reconciled by revision).
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([
