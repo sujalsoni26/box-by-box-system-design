@@ -28,6 +28,19 @@ export const SIDE_BODY_POSE: Record<SideMode, { y: number; scaleX: number; scale
   leap: { y: -1, scaleX: 1.07, scaleY: 0.97 },
 };
 
+/**
+ * The `initial` for a part of the side view: the first frame of its `animate` target. The side view mounts when a
+ * walk (or crouch, or leap) begins, and `initial={false}` would jump straight to the target and never start a
+ * looping keyframe animation (the stride, the tail, the cape, the crouch wiggle): in a production build the legs
+ * froze in their first pose. (Development hid it: React's Strict Mode mounts twice, and the second mount started
+ * the loop.) Starting from the first frame looks the same and starts the loop.
+ */
+export function startOf<T extends Record<string, number | number[]>>(target: T): { [K in keyof T]: number } {
+  return Object.fromEntries(Object.entries(target).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])) as {
+    [K in keyof T]: number;
+  };
+}
+
 export function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, rising }: SideBodyProps) {
   const spec = GAITS[gait];
   const bodyMotion = !animated
@@ -64,7 +77,7 @@ export function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, 
           <path d={SIDE_BODY_D} />
         </clipPath>
       </defs>
-      <motion.g style={pivot(66, 106)} initial={false} {...bodyMotion}>
+      <motion.g style={pivot(66, 106)} initial={startOf(bodyMotion.animate)} {...bodyMotion}>
         {/* Legs go through the same mosaic as the body, on the same grid (the filter sits on this unrotated group,
             so its blocks line up with the body's): they read as part of the same pixel cat, and a stride steps from
             block to block like pixel art. */}
@@ -76,7 +89,7 @@ export function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, 
         </g>
         <g filter={fur}>
           {/* tail, behind the body */}
-          <motion.g style={pivot(32, 82)} initial={false} {...tailMotion}>
+          <motion.g style={pivot(32, 82)} initial={startOf(tailMotion.animate)} {...tailMotion}>
             <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-line)" strokeWidth={10.5} strokeLinecap="round" />
             <path d={SIDE_TAIL_D} className="fill-none stroke-(--cat-fur)" strokeWidth={7} strokeLinecap="round" />
           </motion.g>
@@ -117,7 +130,7 @@ export function SideBody({ fur, flip, animated, wear, suit, clipId, mode, gait, 
             strokeWidth={1.4}
             strokeLinejoin="round"
             style={pivot(80, 71)}
-            initial={false}
+            initial={startOf(capeMotion.animate)}
             {...capeMotion}
           />
         ) : null}
@@ -173,12 +186,12 @@ export function SideLeg({ x, far, front, phase, mode, gait, rising, animated }: 
     <motion.g
       data-leg={`${far ? "far" : "near"}-${front ? "front" : "hind"}`}
       style={pivot(x, 89)}
-      initial={false}
+      initial={startOf({ rotate: upper })}
       animate={{ rotate: upper }}
       transition={transition}
     >
       <path d={front ? foreD(x) : thighD(x)} className={cn(tone, "stroke-(--cat-line)")} strokeWidth={1.8} strokeLinejoin="round" />
-      <motion.g style={pivot(x, 98)} initial={false} animate={{ rotate: knee }} transition={transition}>
+      <motion.g style={pivot(x, 98)} initial={startOf({ rotate: knee })} animate={{ rotate: knee }} transition={transition}>
         <path d={shinD(x)} className={cn(tone, "stroke-(--cat-line)")} strokeWidth={1.8} strokeLinejoin="round" />
         <circle cx={x} cy={98.4} r={3.1} className={tone} />
         {far ? null : <ellipse cx={x} cy={106.4} rx={3.6} ry={1.8} className="fill-(--cat-cream)" />}

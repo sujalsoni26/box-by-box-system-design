@@ -112,3 +112,18 @@ test("the fish is held in front of the body, between the head and the paws, and 
 test("the yawn has its own open mouth", () => {
   assert.match(cat({ mood: "yawning" }), /cx="60" cy="59.4" rx="3.6" ry="4.8"/);
 });
+
+test("the side view's loops start when it mounts (legs, tail and cape swing in production builds too)", async () => {
+  // initial={false} on a part that mounts with a looping keyframe animation jumps to the pose and never starts the
+  // loop; development hides it (Strict Mode mounts twice). Every animated part of the side view starts from the
+  // first frame of its target instead.
+  const { readFile } = await import("node:fs/promises");
+  const src = await readFile(new URL("../../components/companion/cat/side-view.tsx", import.meta.url), "utf8");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  assert.doesNotMatch(code, /initial=\{false\}/);
+  assert.equal(code.match(/initial=\{startOf\(/g)?.length, 5, "body, tail, cape, thigh and shin");
+  const { startOf } = await appModule("components/companion/cat/side-view.tsx");
+  assert.deepEqual(startOf({ rotate: [-5, 6, -5] }), { rotate: -5 });
+  assert.deepEqual(startOf({ y: 2.6, scaleX: 1.05, rotate: [0, 1.8, 0] }), { y: 2.6, scaleX: 1.05, rotate: 0 });
+  assert.deepEqual(startOf({ rotate: 9 }), { rotate: 9 });
+});
