@@ -7,12 +7,12 @@ import {
   useSyncExternalStore,
   type ChangeEvent,
   type KeyboardEvent,
-  type MouseEvent,
   type SyntheticEvent,
 } from "react";
 import { ChevronDown, Copy, Maximize2, NotebookPen, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useBackdropDismiss } from "@/lib/hooks/use-backdrop-dismiss";
 import { cn } from "@/lib/utils";
 import { NOTE_MAX_LENGTH, useNotesHydrated, useNotesStore } from "@/stores/notes-store";
 
@@ -438,11 +438,7 @@ export function LessonNotesChip({ slug, title }: { slug: string; title: string }
     chipRef.current?.focus();
   };
 
-  const onBackdropClick = (e: MouseEvent<HTMLDialogElement>) => {
-    if (e.target !== e.currentTarget) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close();
-  };
+  const backdrop = useBackdropDismiss(close);
 
   return (
     <>
@@ -466,7 +462,7 @@ export function LessonNotesChip({ slug, title }: { slug: string; title: string }
         aria-labelledby={titleId}
         data-companion-avoid=""
         onClose={onClose}
-        onClick={onBackdropClick}
+        {...backdrop}
         onKeyDown={trapTab}
         className="m-0 mt-auto w-full max-w-none overflow-hidden rounded-t-2xl border border-b-0 border-line-strong bg-surface p-0 text-ink shadow-[var(--shadow-lift)] backdrop:bg-ink/35 sm:mx-auto sm:mb-4 sm:max-w-xl sm:rounded-2xl sm:border-b"
       >
@@ -558,11 +554,7 @@ export function LessonNotesFocus({ slug, title }: { slug: string; title: string 
     returnTo.current?.focus({ preventScroll: true });
   };
 
-  const onBackdropClick = (e: MouseEvent<HTMLDialogElement>) => {
-    if (e.target !== e.currentTarget) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialogRef.current?.close();
-  };
+  const backdrop = useBackdropDismiss(() => dialogRef.current?.close());
 
   return (
     <dialog
@@ -572,7 +564,7 @@ export function LessonNotesFocus({ slug, title }: { slug: string; title: string 
       data-companion-avoid=""
       data-testid="notes-focus"
       onClose={onClose}
-      onClick={onBackdropClick}
+      {...backdrop}
       onKeyDown={trapTab}
       className="m-auto h-[min(48rem,calc(100dvh-2rem))] w-[min(56rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-[var(--shadow-lift)] backdrop:bg-ink/45 max-sm:h-dvh max-sm:w-screen max-sm:max-h-none max-sm:rounded-none max-sm:border-0"
     >

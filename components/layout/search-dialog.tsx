@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { glossary } from "@/data/glossary";
+import { useBackdropDismiss } from "@/lib/hooks/use-backdrop-dismiss";
 import { lessons, lessonHref } from "@/lib/curriculum";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +70,7 @@ export function SearchDialog() {
     window.setTimeout(() => inputRef.current?.focus(), 0);
   };
   const close = () => dialogRef.current?.close();
+  const backdrop = useBackdropDismiss(close);
   const choose = (r: Result | undefined) => {
     if (!r) return;
     close();
@@ -103,9 +105,7 @@ export function SearchDialog() {
         ref={dialogRef}
         aria-label="Search"
         data-companion-avoid=""
-        onClick={(e) => {
-          if (e.target === dialogRef.current) close();
-        }}
+        {...backdrop}
         className="m-auto mt-[12vh] w-[min(36rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-[var(--shadow-lift)] backdrop:bg-ink/30 backdrop:backdrop-blur-[2px]"
       >
         <div className="flex items-center gap-3 border-b border-line px-4">

@@ -34,6 +34,7 @@ import {
 } from "@/lib/cloud/controller";
 import { BASE_PASSWORD_RULES, passwordChecks, passwordProblems, type PasswordRules } from "@/lib/cloud/guards";
 import { welcomeSignedIn as welcome } from "@/lib/companion/reactions";
+import { useBackdropDismiss } from "@/lib/hooks/use-backdrop-dismiss";
 import { cn } from "@/lib/utils";
 import { useAccountStore, type AccountView } from "@/stores/account-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
@@ -66,6 +67,7 @@ export function AccountDialog() {
   const titleId = useId();
   const user = useAccountStore((s) => s.user);
   const lastPhase = useRef(phase);
+  const backdrop = useBackdropDismiss(() => ref.current?.close());
 
   // Signing in finishes the job: close the dialog and let Cache say hello. An email account that still has to
   // verify its address goes on to the "verify" step instead.
@@ -94,6 +96,7 @@ export function AccountDialog() {
   return (
     <dialog
       ref={ref}
+      {...backdrop}
       aria-labelledby={titleId}
       data-testid="account-dialog"
       data-view={view ?? ""}
