@@ -513,10 +513,11 @@ export function LessonNotesFocus({ slug, title }: { slug: string; title: string 
   const titleId = useId();
 
   // N opens it (like the arrow keys for next/previous lesson: not while typing or inside another dialog).
+  // Browser autofill (picking a saved email or password) sends keydown events with no `key`, so check it is there.
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.repeat || e.key.toLowerCase() !== "n") return;
-      const t = e.target as HTMLElement | null;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.repeat || typeof e.key !== "string" || e.key.toLowerCase() !== "n") return;
+      const t = e.target instanceof HTMLElement ? e.target : null;
       if (t && (t.closest("input, textarea, select, [contenteditable], [data-interactive], dialog, [role='slider']") || t.isContentEditable)) return;
       if (document.querySelector("dialog[open]")) return;
       e.preventDefault();

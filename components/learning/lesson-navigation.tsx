@@ -13,7 +13,7 @@ export function LessonNavigation({ prev, next }: { prev?: Lesson; next?: Lesson 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-      const t = e.target as HTMLElement | null;
+      const t = e.target instanceof HTMLElement ? e.target : null;
       if (t && (t.closest("input, textarea, select, [contenteditable], [data-interactive], dialog, [role='slider']") || t.isContentEditable)) return;
       if (e.key === "ArrowRight" && next) router.push(lessonHref(next.slug));
       if (e.key === "ArrowLeft" && prev) router.push(lessonHref(prev.slug));
