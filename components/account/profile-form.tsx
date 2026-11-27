@@ -9,6 +9,7 @@ import {
   cleanProfile,
   DEFAULT_CALL_ME,
   PROFILE_LIMITS,
+  sameProfile,
   usePreferencesStore,
   type LearningGoal,
   type Profile,
@@ -62,6 +63,13 @@ function ProfileFields({ onDone, inDialog }: { onDone?: () => void; inDialog: bo
   const setProfile = usePreferencesStore((s) => s.setProfile);
   const completed = useProgressStore((s) => s.completed);
   const [draft, setDraft] = useState<Profile>(saved);
+  // The saved profile the form last showed. When the saved one changes underneath (the account's copy arrives
+  // after the page loads, or another tab saves), the form shows it, unless the learner has typed something new.
+  const [shown, setShown] = useState<Profile>(saved);
+  if (saved !== shown) {
+    setShown(saved);
+    if (sameProfile(draft, shown) || sameProfile(draft, saved)) setDraft(saved);
+  }
   const [note, setNote] = useState<string | null>(null);
   const goalLabel = useId();
   const set = (patch: Partial<Profile>) => {
@@ -73,7 +81,7 @@ function ProfileFields({ onDone, inDialog }: { onDone?: () => void; inDialog: bo
   const now = new Date();
   const pace = suggestedPace(draft.targetDate, now, { lessons: left.length, minutes: left.reduce((s, l) => s + l.minutes, 0) });
   const route = GOALS.find((g) => g.value === draft.goal)?.route;
-  const dirty = JSON.stringify(cleanProfile(draft)) !== JSON.stringify(saved);
+  const dirty = !sameProfile(draft, saved);
 
   return (
     <form

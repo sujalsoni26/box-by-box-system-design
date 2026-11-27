@@ -124,6 +124,24 @@ function mergeNotes(l: Json, r: Json): Json {
   return { ...r, ...l, notes };
 }
 
+/** When a profile was last saved (0: never, or saved before edits were timed). */
+const profileTime = (p: unknown): number => num(obj(p).updatedAt) ?? 0;
+
+/**
+ * The profile: the most recent save wins whole, as for notes (so a cleared field stays cleared). Profiles saved
+ * before saves were timed: the account's answers win field by field and this browser's fill the gaps.
+ */
+function mergeProfile(lp: Json, rp: Json): Json | null {
+  const lt = profileTime(lp);
+  const rt = profileTime(rp);
+  if (lt || rt) return lt > rt ? lp : rp;
+  const keys = new Set([...Object.keys(lp), ...Object.keys(rp)]);
+  if (!keys.size) return null;
+  const profile: Json = {};
+  for (const k of keys) profile[k] = rp[k] !== undefined && rp[k] !== null && rp[k] !== "" ? rp[k] : (lp[k] ?? null);
+  return profile;
+}
+
 function mergePreferences(l: Json, r: Json): Json {
   const lc = obj(l.companion);
   const rc = obj(r.companion);
@@ -132,15 +150,11 @@ function mergePreferences(l: Json, r: Json): Json {
   const stats: Record<string, number> = {};
   for (const k of new Set([...Object.keys(ls), ...Object.keys(rs)])) stats[k] = Math.max(num(ls[k]) ?? 0, num(rs[k]) ?? 0);
   const equippedR = obj(rc.equipped);
-  // Profile: the account's answers win field by field; one only this browser has (set as a guest) is kept.
-  const lp = obj(l.profile);
-  const rp = obj(r.profile);
-  const profile: Json = {};
-  for (const k of new Set([...Object.keys(lp), ...Object.keys(rp)])) profile[k] = rp[k] !== undefined && rp[k] !== null && rp[k] !== "" ? rp[k] : (lp[k] ?? null);
+  const profile = mergeProfile(obj(l.profile), obj(r.profile));
   return {
     ...l,
     ...r,
-    ...(Object.keys(profile).length ? { profile } : {}),
+    ...(profile ? { profile } : {}),
     // The account's settings win; lists and counters are combined.
     theme: r.theme ?? l.theme,
     knownTerms: unionStrings(l.knownTerms, r.knownTerms),
@@ -199,7 +213,10 @@ export function forUpload(key: SyncKey, local: string): string {
   return serialize(env);
 }
 
-/** The account's copy, applied to this browser, keeping this device's own fields. */
+/**
+ * The account's copy, applied to this browser, keeping this device's own fields, and a profile saved here more
+ * recently than the account's (saved before syncing started on this page load; the engine then uploads it).
+ */
 export function applyRemote(key: SyncKey, local: string | null, remote: string): string {
   const r = parseEnvelope(remote);
   if (!r) return local ?? remote;
@@ -208,7 +225,8 @@ export function applyRemote(key: SyncKey, local: string | null, remote: string):
   if (key === "preferences") {
     const rc = obj(r.state.companion);
     const lc = obj(l?.state.companion);
-    return serialize({ ...r, state: { ...r.state, companion: { ...rc, position: lc.position ?? null } } });
+    const newerProfile = profileTime(l?.state.profile) > profileTime(r.state.profile) ? { profile: l!.state.profile } : {};
+    return serialize({ ...r, state: { ...r.state, ...newerProfile, companion: { ...rc, position: lc.position ?? null } } });
   }
   return serialize(r);
 }
