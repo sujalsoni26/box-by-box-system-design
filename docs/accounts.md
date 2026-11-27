@@ -33,8 +33,11 @@ as before.
   moves on to the "Verify your email" step instead.
 - **Profile** (Progress page → Your profile, or the account dialog → Edit profile): a name, what Cache calls the
   learner ("hooman" until they choose), why they are here and an optional interview or exam date with a suggested
-  daily pace. Nothing sensitive is asked. Guests keep it in the browser; accounts sync it with the settings (on the
-  first sign-in, the account's answers win field by field and a guest's own answers fill the gaps).
+  daily pace. Nothing sensitive is asked. Guests keep it in the browser; accounts sync it with the settings. Each
+  save records when it was made, and the most recent save wins everywhere, as for notes: on sign-in, when the
+  account's copy loads after the page (a save made while it was still loading is kept and uploaded), and when two
+  devices save at once. Profiles saved before saves were timed fall back to the account's answers field by field,
+  with this browser's filling the gaps.
 - **Set a password** (account dialog, Google accounts): links a password to the same account, so the learner can
   still sign in with that email and password, and keep their progress, if Google sign-in stops working for them.
   Firebase may ask them to confirm with Google first. Accounts that have a password can **change** it there

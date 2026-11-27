@@ -389,3 +389,46 @@ test("signed out: nothing uploads; device-only fields never reach the account; o
   assert.equal(a.statuses.at(-1), "error");
   assert.equal(cloud.get("u1", "notes"), null, "nothing oversized is sent");
 });
+
+test("a profile saved before syncing starts on a page load is kept and uploaded, not replaced by the account's", async () => {
+  const clock = makeClock();
+  const cloud = makeCloud(clock);
+  const prefsWith = (name, updatedAt) => ({ theme: "light", knownTerms: [], companion: { position: null }, profile: { name, callMe: "", goal: null, targetDate: null, updatedAt } });
+  const a = makeDevice(cloud, clock);
+  a.storage.set("preferences", env(prefsWith("", 0)));
+  await a.engine.start("u1");
+  assert.equal(stateOf(cloud.get("u1", "preferences").json).profile.name, "");
+
+  // The next page load: the learner saves their name while Firebase is still loading, so the engine has not
+  // started and the save is not counted as a pending change; then syncing resumes.
+  a.engine.stop();
+  clock.now += 60_000;
+  a.storage.set("preferences", env(prefsWith("Sujal", clock.now)));
+  await a.engine.start("u1");
+  assert.equal(a.state("preferences").profile.name, "Sujal", "the browser keeps the save");
+  assert.equal(stateOf(cloud.get("u1", "preferences").json).profile.name, "Sujal", "and the account gets it");
+
+  // Another page load with nothing new: the account's copy (now with the name) is applied, and nothing is re-sent.
+  a.engine.stop();
+  clock.now += 60_000;
+  const rev = cloud.get("u1", "preferences").rev;
+  await a.engine.start("u1");
+  assert.equal(a.state("preferences").profile.name, "Sujal");
+  assert.equal(cloud.get("u1", "preferences").rev, rev, "no extra upload");
+
+  // A second device saves other settings first (with its copy of the profile); then A saves a new name. A's save
+  // is refused (B got there first) and merged with the account's copy: the newer name must win over B's older one.
+  const b = makeDevice(cloud, clock);
+  b.storage.set("preferences", env(prefsWith("", 0)));
+  clock.now += 5_000;
+  await b.engine.start("u1");
+  assert.equal(b.state("preferences").profile.name, "Sujal", "a new device gets the name");
+  clock.now += 5_000;
+  b.edit("preferences", { ...b.state("preferences"), theme: "dark" });
+  await clock.advance(5_000);
+  a.edit("preferences", prefsWith("Sujal Soni", clock.now));
+  await clock.advance(15_000);
+  assert.equal(a.state("preferences").profile.name, "Sujal Soni", "A keeps its new name");
+  assert.equal(a.state("preferences").theme, "dark", "and takes B's theme");
+  assert.equal(stateOf(cloud.get("u1", "preferences").json).profile.name, "Sujal Soni", "the account has the newer name");
+});

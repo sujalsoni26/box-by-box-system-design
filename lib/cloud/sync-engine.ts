@@ -272,8 +272,10 @@ export function createSyncEngine(o: EngineOptions): SyncEngine {
         next = r && r.rev !== (meta.revs[key] ?? 0) ? mergeStored(key, l, r.json) : l;
         up = next !== null && (!r || forUpload(key, next) !== r.json);
       } else if (r) {
-        // Resume, nothing unsent: the account's copy wins (deletions made elsewhere carry over).
+        // Resume, nothing unsent: the account's copy wins (deletions made elsewhere carry over), except what
+        // applyRemote keeps as newer here (a profile saved before syncing started); that is uploaded.
         next = applyRemote(key, l, r.json);
+        up = forUpload(key, next) !== r.json;
       } else {
         up = l !== null;
       }

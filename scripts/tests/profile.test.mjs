@@ -33,6 +33,39 @@ test("profile sync: the account's answers win field by field, a guest's own answ
   assert.ok(!("profile" in noProfile), "no empty profile invented");
 });
 
+test("profile sync: the most recent save wins whole, either way round, and a cleared field stays cleared", () => {
+  const older = { name: "Old name", callMe: "boss", goal: "work", targetDate: "2027-03-01", updatedAt: 1_000 };
+  const newer = { name: "New name", callMe: "", goal: null, targetDate: null, updatedAt: 2_000 };
+  const prefsWith = (profile) => env({ theme: "light", knownTerms: [], companion: {}, profile });
+  const merged = (l, r) => JSON.parse(merge.mergeStored("preferences", prefsWith(l), prefsWith(r))).state.profile;
+  assert.deepEqual(merged(newer, older), newer, "this browser's newer save beats the account's older one");
+  assert.deepEqual(merged(older, newer), newer, "the account's newer save beats this browser's older one");
+  // A save timed against a profile from before saves were timed: the timed one is the newer.
+  const legacy = { name: "Legacy", callMe: "pal", goal: null, targetDate: null };
+  assert.deepEqual(merged(newer, legacy), newer);
+  assert.deepEqual(merged(legacy, newer), newer);
+
+  // Applying the account's copy keeps a profile saved here more recently (before syncing started), else takes the account's.
+  const kept = JSON.parse(merge.applyRemote("preferences", prefsWith(newer), prefsWith(older))).state.profile;
+  assert.deepEqual(kept, newer);
+  const taken = JSON.parse(merge.applyRemote("preferences", prefsWith(older), prefsWith(newer))).state.profile;
+  assert.deepEqual(taken, newer);
+});
+
+test("profile: a save is timed only when an answer changes", () => {
+  const store = prefs.usePreferencesStore;
+  store.setState({ profile: prefs.emptyProfile });
+  store.getState().setProfile({ name: "Ada" });
+  const first = store.getState().profile;
+  assert.equal(first.name, "Ada");
+  assert.ok(first.updatedAt > 0, "the save is timed");
+  store.getState().setProfile({ name: "  Ada " });
+  assert.equal(store.getState().profile, first, "the same answer is not a new edit");
+  assert.ok(prefs.sameProfile({ ...first, updatedAt: 1 }, first), "the time is not an answer");
+  assert.equal(prefs.cleanProfile({ updatedAt: -5 }).updatedAt, 0);
+  assert.equal(prefs.cleanProfile({ updatedAt: "soon" }).updatedAt, 0);
+});
+
 test("Cache calls the learner by their chosen name, or hooman", () => {
   lines.setYouSource(() => "");
   assert.equal(lines.fill("Hi {you}!", {}), "Hi hooman!");

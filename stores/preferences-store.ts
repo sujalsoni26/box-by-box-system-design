@@ -19,11 +19,16 @@ export interface Profile {
   goal: LearningGoal | null;
   /** An interview or exam date, YYYY-MM-DD, for a suggested pace. */
   targetDate: string | null;
+  /**
+   * When the learner last saved it (ms; 0 = never). Syncing keeps the most recent edit, so a save made while the
+   * account's copy is still loading, or while another device or tab saves its settings, is never undone.
+   */
+  updatedAt: number;
 }
 
 export const PROFILE_LIMITS = { name: 40, callMe: 24 } as const;
 export const DEFAULT_CALL_ME = "hooman";
-export const emptyProfile: Profile = { name: "", callMe: "", goal: null, targetDate: null };
+export const emptyProfile: Profile = { name: "", callMe: "", goal: null, targetDate: null, updatedAt: 0 };
 
 const GOALS: readonly LearningGoal[] = ["interview", "work", "study", "curious"];
 
@@ -37,7 +42,15 @@ export function cleanProfile(input: unknown): Profile {
     callMe: text(p.callMe, PROFILE_LIMITS.callMe),
     goal: GOALS.includes(p.goal as LearningGoal) ? (p.goal as LearningGoal) : null,
     targetDate: isCalendarDate(p.targetDate) ? p.targetDate : null,
+    updatedAt: typeof p.updatedAt === "number" && Number.isFinite(p.updatedAt) && p.updatedAt > 0 ? Math.floor(p.updatedAt) : 0,
   };
+}
+
+/** The same answers (the edit time aside). */
+export function sameProfile(a: unknown, b: unknown): boolean {
+  const x = cleanProfile(a);
+  const y = cleanProfile(b);
+  return x.name === y.name && x.callMe === y.callMe && x.goal === y.goal && x.targetDate === y.targetDate;
 }
 
 /** A real YYYY-MM-DD date (not 2026-02-31). */
@@ -95,7 +108,11 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
       companion: defaultCompanionSettings,
       profile: emptyProfile,
       setTheme: (theme) => set({ theme }),
-      setProfile: (patch) => set((s) => ({ profile: cleanProfile({ ...s.profile, ...patch }) })),
+      setProfile: (patch) =>
+        set((s) => {
+          const next = cleanProfile({ ...s.profile, ...patch });
+          return sameProfile(next, s.profile) ? s : { profile: { ...next, updatedAt: Date.now() } };
+        }),
       setTermKnown: (term, known) =>
         set((s) => ({
           knownTerms: known ? Array.from(new Set([...s.knownTerms, term])) : s.knownTerms.filter((t) => t !== term),
